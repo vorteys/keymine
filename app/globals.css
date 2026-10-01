@@ -205,3 +205,33 @@ body {
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
   }
 }
+
+/* --- Thème clair (UI-3) --------------------------------------------------
+   Bascule via le bouton de PixelShell (voir components/PixelShell.tsx), qui
+   pose data-theme="light" sur <html> et le garde en localStorage. Le fond
+   général et les panneaux s'éclaircissent; les textes à l'intérieur des
+   panneaux (.pixel-panel/.pixel-slot) gardent leurs couleurs d'origine,
+   déjà lisibles sur fond clair comme sur fond sombre. */
+:root[data-theme="light"] {
+  --color-ink: #cdbf9c;
+  --color-ink-dark: #a8966e;
+  --color-panel: #e9e4d6;
+  --color-panel-dark: #b9b19a;
+}
+
+[data-theme="light"] .pixel-night {
+  background-image:
+    repeating-conic-gradient(rgba(0, 0, 0, 0.08) 0% 25%, transparent 0% 50%),
+    repeating-conic-gradient(rgba(255, 255, 255, 0.4) 0% 25%, transparent 0% 50%);
+  background-position:
+    0 0,
+    12px 12px;
+  background-size:
+    32px 32px,
+    24px 24px;
+  background-color: var(--color-ink);
+}
+
+[data-theme="light"] .pixel-key {
+  color: #2b2b2b;
+}

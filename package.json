@@ -8,16 +8,28 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "dev:all": "bun run scripts/dev-all.mjs",
+    "db:dev": "bun run scripts/dev-db.mjs",
+    "db:migrate": "bun run db/migrate.ts",
+    "realtime": "bun run realtime/server.ts"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "jose": "^6.2.12",
+    "kysely": "^0.29.6",
+    "nanoid": "^6.0.1",
     "next": "16.3.8",
+    "pg": "^8.23.1",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "server-only": "^0.0.1",
+    "ws": "^8.22.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
@@ -26,9 +38,11 @@
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",
     "@types/node": "^20",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.1.1",
+    "embedded-postgres": "^18.4.0-beta.17",
     "eslint": "^9",
     "eslint-config-next": "16.3.8",
     "jsdom": "^30.1.1",
@@ -44,6 +58,8 @@
     "unrs-resolver"
   ],
   "trustedDependencies": [
+    "@embedded-postgres/linux-arm64",
+    "esbuild",
     "sharp",
     "unrs-resolver"
   ]

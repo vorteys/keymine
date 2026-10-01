@@ -1,13 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { PixelShell } from "@/components/PixelShell";
 import { PixelButton, PixelLabel, PixelPanel, PixelSlot } from "@/components/ui";
+import { generateRaceText } from "@/lib/text/generate";
+import type { BotLevel } from "@/db/types";
 
-type Access = "publique" | "code" | "privee";
+type Access = "public" | "unlisted" | "private";
 type ErrorMode = "accumuler" | "bloquer";
-type TextMode = "texte" | "desordre" | "cible";
-type BotLevel = "débutant" | "intermédiaire" | "expert" | "impossible";
+type TextMode = "texte" | "desordre" | "accents" | "cible";
+
+const DURATIONS = [
+  ["5 minutes", 300],
+  ["10 minutes", 600],
+  ["30 minutes", 1800],
+  ["2 heures", 7200],
+] as const;
 
 function Chip({
   on,
@@ -33,20 +42,86 @@ function toggle<T>(set: Set<T>, value: T): Set<T> {
 }
 
 export default function CreerCoursePage() {
-  const [access, setAccess] = useState<Access>("publique");
-  const [language, setLanguage] = useState<"FR" | "EN">("FR");
-  const [duration, setDuration] = useState("5 minutes");
+  const router = useRouter();
+  const [access, setAccess] = useState<Access>("public");
+  const [language, setLanguage] = useState<"fr" | "en">("fr");
+  const [duration, setDuration] = useState(300);
   const [lobbySize, setLobbySize] = useState(30);
   const [errorMode, setErrorMode] = useState<ErrorMode>("accumuler");
   const [penalty, setPenalty] = useState(true);
-  const [bots, setBots] = useState<Set<BotLevel>>(new Set(["intermédiaire", "expert"]));
-  const [bonus, setBonus] = useState(false);
+  const [bots, setBots] = useState<Set<BotLevel>>(new Set(["intermediaire", "expert"]));
   const [textMode, setTextMode] = useState<TextMode>("desordre");
   const [length, setLength] = useState(40);
-  const [cutOff, setCutOff] = useState(false);
   const [accents, setAccents] = useState<Set<string>>(new Set(["é", "è", "ç"]));
   const [targets, setTargets] = useState<Set<string>>(new Set(["z"]));
   const [options, setOptions] = useState<Set<string>>(new Set(["Majuscules", "Ponctuation"]));
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const preview = useMemo(() => {
+    try {
+      const text = generateRaceText({
+        mode: textMode,
+        language,
+        length: 12,
+        uppercase: options.has("Majuscules"),
+        punctuation: options.has("Ponctuation"),
+        digits: options.has("Chiffres"),
+        symbols: options.has("Symboles"),
+        targetChars: [...targets],
+        accentChars: [...accents],
+      });
+      return text;
+    } catch {
+      return "";
+    }
+  }, [textMode, language, options, targets, accents]);
+
+  async function createLobby() {
+    setError(null);
+    setPending(true);
+    try {
+      const res = await fetch("/api/lobbies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          access,
+          language,
+          durationSeconds: duration,
+          maxPlayers: lobbySize,
+          textMode,
+          textLength: length,
+          errorMode,
+          penaltySeconds: penalty ? 1 : 0,
+          uppercase: options.has("Majuscules"),
+          punctuation: options.has("Ponctuation"),
+          digits: options.has("Chiffres"),
+          symbols: options.has("Symboles"),
+          targetChars: [...targets],
+          accentChars: [...accents],
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Impossible de créer la salle");
+        return;
+      }
+
+      for (const level of bots) {
+        await fetch(`/api/lobbies/${data.code}/bots`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ level }),
+        });
+      }
+
+      router.push(`/jouer/${data.code}`);
+    } catch {
+      setError("Impossible de contacter le serveur");
+    } finally {
+      setPending(false);
+    }
+  }
 
   return (
     <PixelShell active="jouer">
@@ -62,9 +137,9 @@ export default function CreerCoursePage() {
               <div className="grid grid-cols-3 gap-2">
                 {(
                   [
-                    ["publique", "PUBLIQUE", "Listée à l’accueil"],
-                    ["code", "PAR CODE", "Cachée, on entre avec un code"],
-                    ["privee", "PRIVÉE", "Un lien unique par invité"],
+                    ["public", "PUBLIQUE", "Listée à l’accueil"],
+                    ["unlisted", "PAR CODE", "Cachée, on entre avec un code"],
+                    ["private", "PRIVÉE", "Accessible par le code seulement"],
                   ] as const
                 ).map(([key, title, sub]) => (
                   <button
@@ -85,9 +160,9 @@ export default function CreerCoursePage() {
               <div>
                 <PixelLabel>LANGUE DE LA COURSE</PixelLabel>
                 <div className="flex gap-2">
-                  {(["FR", "EN"] as const).map((lang) => (
+                  {(["fr", "en"] as const).map((lang) => (
                     <Chip key={lang} on={language === lang} onClick={() => setLanguage(lang)}>
-                      {lang}
+                      {lang.toUpperCase()}
                     </Chip>
                   ))}
                 </div>
@@ -98,12 +173,13 @@ export default function CreerCoursePage() {
                   aria-label="Durée maximale"
                   className="pixel-slot h-10 w-full px-2.5 text-2xl text-white"
                   value={duration}
-                  onChange={(e) => setDuration(e.target.value)}
+                  onChange={(e) => setDuration(Number(e.target.value))}
                 >
-                  <option>5 minutes</option>
-                  <option>10 minutes</option>
-                  <option>30 minutes</option>
-                  <option>2 heures</option>
+                  {DURATIONS.map(([label, seconds]) => (
+                    <option key={seconds} value={seconds}>
+                      {label}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -157,7 +233,7 @@ export default function CreerCoursePage() {
             <div>
               <PixelLabel>BOTS ({bots.size} ajoutés)</PixelLabel>
               <div className="flex flex-wrap gap-2">
-                {(["débutant", "intermédiaire", "expert", "impossible"] as const).map((lvl) => (
+                {(["debutant", "intermediaire", "expert", "impossible"] as const).map((lvl) => (
                   <Chip key={lvl} on={bots.has(lvl)} onClick={() => setBots(toggle(bots, lvl))}>
                     {lvl.toUpperCase()}
                   </Chip>
@@ -165,14 +241,9 @@ export default function CreerCoursePage() {
               </div>
             </div>
 
-            <label className="flex items-center gap-2.5 text-xl">
-              <input
-                type="checkbox"
-                checked={bonus}
-                onChange={(e) => setBonus(e.target.checked)}
-                className="h-5 w-5 accent-[#3f7d24]"
-              />
-              Activer les bonus (Rallonge, Raccourci, Flou)
+            <label className="flex items-center gap-2.5 text-xl text-[#6b6b6b]">
+              <input type="checkbox" disabled className="h-5 w-5 accent-[#3f7d24]" />
+              Activer les bonus (Rallonge, Raccourci, Flou) — à venir
             </label>
           </div>
         </PixelPanel>
@@ -186,6 +257,7 @@ export default function CreerCoursePage() {
                   [
                     ["texte", "TEXTE"],
                     ["desordre", "DÉSORDRE"],
+                    ["accents", "ACCENTS"],
                     ["cible", "CIBLÉ"],
                   ] as const
                 ).map(([key, label]) => (
@@ -194,15 +266,16 @@ export default function CreerCoursePage() {
                     type="button"
                     onClick={() => setTextMode(key)}
                     data-on={textMode === key}
-                    className="pixel-chip flex-1 justify-center text-xl"
+                    disabled={key === "accents" && language !== "fr"}
+                    className="pixel-chip flex-1 justify-center text-xl disabled:opacity-40"
                   >
                     {label}
                   </button>
                 ))}
               </div>
               <p className="mt-1.5 text-lg text-[#3a3a3a]">
-                Texte: vrais mots et phrases. Désordre: mots sans lien. Ciblé: on travaille des
-                caractères précis.
+                Texte: vrais mots et phrases. Désordre: mots sans lien. Accents: mots en désordre
+                avec accents (FR seulement). Ciblé: on travaille des caractères précis.
               </p>
             </div>
 
@@ -210,22 +283,16 @@ export default function CreerCoursePage() {
               <PixelLabel>LONGUEUR: {length} MOTS</PixelLabel>
               <input
                 type="range"
-                min={5}
+                min={10}
                 max={300}
                 value={length}
                 onChange={(e) => setLength(Number(e.target.value))}
                 aria-label="Longueur du texte"
                 className="w-full accent-[#3f7d24]"
               />
-              <label className="mt-1 flex items-center gap-2.5 text-lg">
-                <input
-                  type="checkbox"
-                  checked={cutOff}
-                  onChange={(e) => setCutOff(e.target.checked)}
-                  className="h-4 w-4 accent-[#3f7d24]"
-                />
-                Couper net dans un extrait
-              </label>
+              <p className="mt-1 text-lg text-[#3a3a3a]">
+                Un extrait peut toujours être coupé net à la longueur choisie.
+              </p>
             </div>
 
             <div>
@@ -264,7 +331,7 @@ export default function CreerCoursePage() {
             <div>
               <PixelLabel>APERÇU</PixelLabel>
               <PixelSlot className="px-3.5 py-3 text-3xl leading-snug text-white">
-                Zèbre forêt garçon Élève zigzag pâte Noël
+                {preview || "…"}
               </PixelSlot>
             </div>
           </div>
@@ -273,14 +340,19 @@ export default function CreerCoursePage() {
 
       <div className="mt-8 flex flex-col items-center gap-4 border-t-4 border-black bg-[#241a10] px-4 py-5 sm:flex-row sm:justify-between">
         <p className="text-2xl text-[#f1e6c9]">
-          Minimum 2 participants, bots inclus. Tu seras le Chef de la course.
+          {error ?? "Minimum 2 participants, bots inclus. Tu seras le Chef de la course."}
         </p>
         <div className="flex gap-3.5">
           <PixelButton href="/" variant="slate" className="h-13 px-5 text-[13px]">
             ANNULER
           </PixelButton>
-          <PixelButton href="/jouer/km4f7q" variant="green" className="h-13 px-7 text-[15px]">
-            CRÉER LA SALLE
+          <PixelButton
+            type="button"
+            onClick={createLobby}
+            variant="green"
+            className="h-13 px-7 text-[15px]"
+          >
+            {pending ? "..." : "CRÉER LA SALLE"}
           </PixelButton>
         </div>
       </div>

@@ -1,30 +1,123 @@
+"use client";
+
 import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { PixelShell } from "@/components/PixelShell";
 import { PixelAvatar, PixelButton, PixelPanel, PixelSlot } from "@/components/ui";
+import type { BotLevel } from "@/db/types";
 
-const players = [
-  { initial: "A", name: "Alexy", tag: "CHEF · TOI", color: "#3d6fc4" },
-  { initial: "L", name: "Léa", tag: "PRÊTE", color: "#b03a7a" },
-  { initial: "M", name: "Maxime", tag: "PRÊT", color: "#a85512" },
-  { initial: "S", name: "Sam", tag: "PRÊT", color: "#17706f" },
-  { initial: "I", name: "Inès", tag: "PRÊTE", color: "#7a45b0" },
-  { initial: "N", name: "Noah", tag: "PRÊT", color: "#3f7d24" },
-  { initial: "Z", name: "Zoé", tag: "PRÊTE", color: "#b63a32" },
-  { initial: "B", name: "Bot Intermédiaire", tag: "BOT", color: "#555555" },
-  { initial: "B", name: "Bot Expert", tag: "BOT", color: "#555555" },
-];
+type Player = {
+  id: string;
+  name: string;
+  role: "participant" | "spectator";
+  isBot: boolean;
+  botLevel: BotLevel | null;
+  isSelf: boolean;
+};
 
-const rules = [
-  ["Langue", "Français"],
-  ["Texte", "Désordre + accents"],
-  ["Longueur", "40 mots"],
-  ["Durée max", "5 min"],
-  ["Erreurs", "Accumuler (+1 s)"],
-  ["Bonus", "Désactivés"],
-];
+type LobbyData = {
+  code: string;
+  name: string;
+  access: string;
+  language: string;
+  maxPlayers: number;
+  durationSeconds: number;
+  textMode: string;
+  errorMode: string;
+  status: string;
+  isHost: boolean;
+};
 
-export default async function LobbyPage({ params }: PageProps<"/jouer/[code]">) {
-  const { code } = await params;
+const DURATION_LABEL = (s: number) =>
+  s >= 3600 ? `${Math.round(s / 3600)} h` : `${Math.round(s / 60)} min`;
+
+const TEXT_MODE_LABEL: Record<string, string> = {
+  texte: "Texte",
+  desordre: "Désordre",
+  accents: "Accents",
+  cible: "Caractères ciblés",
+};
+
+const AVATAR_COLORS = ["#3d6fc4", "#b03a7a", "#a85512", "#17706f", "#7a45b0", "#3f7d24", "#b63a32"];
+
+export default function LobbyPage() {
+  const router = useRouter();
+  const params = useParams<{ code: string }>();
+  const code = params.code.toUpperCase();
+
+  const [lobby, setLobby] = useState<LobbyData | null>(null);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const joined = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function ensureJoined() {
+      if (joined.current) return;
+      joined.current = true;
+      await fetch(`/api/lobbies/${code}/join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: "participant" }),
+      }).catch(() => {});
+    }
+
+    async function poll() {
+      const res = await fetch(`/api/lobbies/${code}`);
+      if (cancelled) return;
+      if (!res.ok) {
+        setError("Salle introuvable");
+        return;
+      }
+      const data = await res.json();
+      setLobby(data.lobby);
+      setPlayers(data.players);
+      if (data.activeRace) {
+        router.push(`/course/${code}`);
+      }
+    }
+
+    async function heartbeat() {
+      await fetch(`/api/lobbies/${code}/heartbeat`, { method: "POST" }).catch(() => {});
+    }
+
+    ensureJoined().then(poll);
+    const pollId = setInterval(poll, 1500);
+    const hbId = setInterval(heartbeat, 15_000);
+    return () => {
+      cancelled = true;
+      clearInterval(pollId);
+      clearInterval(hbId);
+    };
+  }, [code, router]);
+
+  async function addBot(level: BotLevel) {
+    await fetch(`/api/lobbies/${code}/bots`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ level }),
+    });
+  }
+
+  async function start() {
+    const res = await fetch(`/api/lobbies/${code}/start`, { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) {
+      setError(data.error ?? "Impossible de démarrer");
+      return;
+    }
+    router.push(`/course/${code}`);
+  }
+
+  async function closeLobby() {
+    await fetch(`/api/lobbies/${code}`, { method: "DELETE" });
+    router.push("/");
+  }
+
+  const participants = players.filter((p) => p.role === "participant");
+  const spectators = players.filter((p) => p.role === "spectator");
 
   return (
     <PixelShell active="jouer">
@@ -33,41 +126,45 @@ export default async function LobbyPage({ params }: PageProps<"/jouer/[code]">) 
           <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
             <div>
               <div className="font-pixel mb-2.5 text-[10px] text-[#ffd84a]">
-                SALLE D&rsquo;ATTENTE · PUBLIQUE · FR
+                SALLE D&rsquo;ATTENTE · {(lobby?.access ?? "public").toUpperCase()} ·{" "}
+                {(lobby?.language ?? "fr").toUpperCase()}
               </div>
               <h1 className="font-pixel text-xl text-white [text-shadow:4px_4px_0_#000]">
-                FRANÇAIS 3E – MME ROY
+                {lobby?.name.toUpperCase() ?? "…"}
               </h1>
             </div>
             <div className="flex items-center gap-2">
-              {code
-                .toUpperCase()
-                .split("")
-                .map((c, i) => (
-                  <span
-                    key={i}
-                    className="pixel-slot font-pixel flex h-14 w-11 items-center justify-center text-xl text-white"
-                  >
-                    {c}
-                  </span>
-                ))}
+              {code.split("").map((c, i) => (
+                <span
+                  key={i}
+                  className="pixel-slot font-pixel flex h-14 w-11 items-center justify-center text-xl text-white"
+                >
+                  {c}
+                </span>
+              ))}
             </div>
           </div>
 
           <PixelPanel className="p-5">
             <div className="mb-3.5 flex items-center justify-between">
               <span className="font-pixel text-sm text-[#2b2b2b]">
-                JOUEURS {players.length} / 30
+                JOUEURS {participants.length} / {lobby?.maxPlayers ?? "…"}
               </span>
-              <span className="text-2xl text-[#3a3a3a]">2 spectateurs</span>
+              <span className="text-2xl text-[#3a3a3a]">{spectators.length} spectateurs</span>
             </div>
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-              {players.map((p, i) => (
-                <PixelSlot key={i} className="flex h-16 items-center gap-3 px-2.5">
-                  <PixelAvatar label={p.initial} color={p.color} className="h-9 w-9 text-sm" />
+              {participants.map((p, i) => (
+                <PixelSlot key={p.id} className="flex h-16 items-center gap-3 px-2.5">
+                  <PixelAvatar
+                    label={p.name[0]?.toUpperCase() ?? "?"}
+                    color={p.isBot ? "#555555" : AVATAR_COLORS[i % AVATAR_COLORS.length]!}
+                    className="h-9 w-9 text-sm"
+                  />
                   <div className="min-w-0 flex-grow leading-none">
                     <div className="truncate text-2xl text-white">{p.name}</div>
-                    <div className="font-pixel mt-1 text-[8px] text-[#ffe08a]">{p.tag}</div>
+                    <div className="font-pixel mt-1 text-[8px] text-[#ffe08a]">
+                      {p.isBot ? "BOT" : p.isSelf ? "TOI" : "PRÊT"}
+                    </div>
                   </div>
                 </PixelSlot>
               ))}
@@ -79,11 +176,18 @@ export default async function LobbyPage({ params }: PageProps<"/jouer/[code]">) 
           <PixelPanel className="p-5">
             <div className="mb-2 flex items-center justify-between">
               <span className="font-pixel text-sm text-[#2b2b2b]">RÉGLAGES</span>
-              <Link href="/jouer/creer" className="text-2xl text-[#2b2b2b] underline">
-                Modifier
-              </Link>
+              {lobby?.isHost && (
+                <Link href="/jouer/creer" className="text-2xl text-[#2b2b2b] underline">
+                  Nouvelle salle
+                </Link>
+              )}
             </div>
-            {rules.map(([k, v]) => (
+            {[
+              ["Langue", (lobby?.language ?? "fr").toUpperCase()],
+              ["Texte", TEXT_MODE_LABEL[lobby?.textMode ?? "texte"]],
+              ["Durée max", DURATION_LABEL(lobby?.durationSeconds ?? 300)],
+              ["Erreurs", lobby?.errorMode === "bloquer" ? "Bloquer" : "Accumuler"],
+            ].map(([k, v]) => (
               <div
                 key={k}
                 className="flex justify-between border-b-2 border-dotted border-[#8b8b8b] py-0.5"
@@ -94,39 +198,47 @@ export default async function LobbyPage({ params }: PageProps<"/jouer/[code]">) 
             ))}
           </PixelPanel>
 
-          <PixelPanel className="flex flex-col gap-3 p-5">
-            <span className="font-pixel text-sm text-[#2b2b2b]">CHEF DE LA COURSE</span>
-            <label htmlFor="host" className="text-2xl text-[#3a3a3a]">
-              Transférer le rôle à
-            </label>
-            <select
-              id="host"
-              className="pixel-slot h-11 px-2.5 text-3xl text-white"
-              defaultValue="Alexy"
-            >
-              <option>Alexy (toi)</option>
-              <option>Léa</option>
-              <option>Maxime</option>
-            </select>
-            <div className="flex gap-2.5">
-              <PixelButton href="/jouer/creer" variant="slate" className="h-12 flex-1 text-[11px]">
-                + BOT
-              </PixelButton>
-              <PixelButton href="/" variant="red" className="h-12 flex-1 text-[11px]">
+          {lobby?.isHost && (
+            <PixelPanel className="flex flex-col gap-3 p-5">
+              <span className="font-pixel text-sm text-[#2b2b2b]">HÔTE DE LA COURSE</span>
+              <p className="text-xl text-[#3a3a3a]">
+                Transféré automatiquement si tu es inactif plus de 60 s.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {(["debutant", "intermediaire", "expert", "impossible"] as const).map((lvl) => (
+                  <button
+                    key={lvl}
+                    type="button"
+                    onClick={() => addBot(lvl)}
+                    className="pixel-chip text-lg"
+                  >
+                    + {lvl.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+              <PixelButton type="button" onClick={closeLobby} variant="red" className="h-12 text-[11px]">
                 FERMER LA SALLE
               </PixelButton>
+            </PixelPanel>
+          )}
+
+          {error && (
+            <div className="border-4 border-black bg-[#f39a8c] px-3.5 py-2.5 text-xl text-black">
+              {error}
             </div>
-          </PixelPanel>
+          )}
 
-          <div className="border-4 border-black bg-[#fff8dc] px-3.5 py-2.5 text-2xl leading-tight text-black">
-            Départ automatique dans 0:24 si le Chef est inactif.
-          </div>
-
-          <PixelButton href={`/course/${code}`} variant="green" className="h-24 text-2xl">
-            DÉMARRER
-          </PixelButton>
+          {lobby?.isHost ? (
+            <PixelButton type="button" onClick={start} variant="green" className="h-24 text-2xl">
+              DÉMARRER
+            </PixelButton>
+          ) : (
+            <div className="border-4 border-black bg-[#fff8dc] px-3.5 py-2.5 text-center text-2xl text-black">
+              En attente que l&rsquo;hôte démarre la course…
+            </div>
+          )}
           <p className="-mt-3 text-center text-xl text-[#f1e6c9]">
-            {players.length} prêts · minimum 2 participants
+            {participants.length} prêts · minimum 2 participants
           </p>
         </div>
       </div>

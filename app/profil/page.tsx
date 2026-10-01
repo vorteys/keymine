@@ -1,34 +1,5 @@
 import { PixelShell } from "@/components/PixelShell";
-import { PixelAvatar, PixelButton, PixelSlot } from "@/components/ui";
-
-function heatColor(pct: number) {
-  if (pct >= 95) return "#7fd36a";
-  if (pct >= 90) return "#b9e05a";
-  if (pct >= 85) return "#f2d24a";
-  if (pct >= 78) return "#f5a34a";
-  return "#ff7b6b";
-}
-
-const keyboardRows: { indent: string; keys: [string, number][] }[] = [
-  {
-    indent: "0px",
-    keys: [
-      ["Q", 94], ["W", 91], ["E", 98], ["R", 96], ["T", 95],
-      ["Y", 88], ["U", 93], ["I", 97], ["O", 92], ["P", 79],
-    ],
-  },
-  {
-    indent: "14px",
-    keys: [
-      ["A", 97], ["S", 95], ["D", 96], ["F", 98], ["G", 90],
-      ["H", 94], ["J", 96], ["K", 93], ["L", 91],
-    ],
-  },
-  {
-    indent: "30px",
-    keys: [["Z", 68], ["X", 74], ["C", 90], ["V", 92], ["B", 89], ["N", 95], ["M", 96]],
-  },
-];
+import { PixelAvatar, PixelButton, PixelKeyboard, PixelSlot } from "@/components/ui";
 
 const history = [
   { day: "Aujourd’hui", mode: "Désordre", result: "68 MPM", rank: "3e" },
@@ -145,42 +116,27 @@ export default function ProfilPage() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-6 sm:flex-row">
-            <div className="pixel-panel flex-1 p-5">
-              <div className="font-pixel mb-2.5 text-sm">TOUCHES À TRAVAILLER</div>
-              <div className="flex flex-col gap-1">
-                {keyboardRows.map((row, i) => (
-                  <div key={i} className="flex gap-1" style={{ marginLeft: row.indent }}>
-                    {row.keys.map(([letter, pct]) => (
-                      <div
-                        key={letter}
-                        className="font-pixel flex h-9 w-8 flex-col items-center justify-center gap-0.5 border-2 border-black text-[#1b1b1b]"
-                        style={{ background: heatColor(pct) }}
-                      >
-                        <b className="text-[10px] font-normal">{letter}</b>
-                        <span className="text-sm">{pct}</span>
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-              <p className="mt-2 text-xl text-[#3a3a3a]">Rouge: à améliorer · Vert: maîtrisé</p>
+          <div className="pixel-panel p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <span className="font-pixel text-sm">TOUCHES À TRAVAILLER</span>
+              <span className="text-xl text-[#3a3a3a]">Rouge: à améliorer · Vert: maîtrisé</span>
             </div>
+            <PixelKeyboard className="mx-auto w-full max-w-3xl" />
+          </div>
 
-            <div className="pixel-panel flex-1 p-5">
-              <div className="font-pixel mb-2.5 text-sm">HISTORIQUE</div>
-              {history.map((h, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between border-b-2 border-dotted border-[#8b8b8b] py-1 text-xl"
-                >
-                  <span>{h.day}</span>
-                  <span className="text-[#3a3a3a]">{h.mode}</span>
-                  <b className="font-normal">{h.result}</b>
-                  <span className="font-pixel text-[10px]">{h.rank}</span>
-                </div>
-              ))}
-            </div>
+          <div className="pixel-panel p-5">
+            <div className="font-pixel mb-2.5 text-sm">HISTORIQUE</div>
+            {history.map((h, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between border-b-2 border-dotted border-[#8b8b8b] py-1 text-xl"
+              >
+                <span>{h.day}</span>
+                <span className="text-[#3a3a3a]">{h.mode}</span>
+                <b className="font-normal">{h.result}</b>
+                <span className="font-pixel text-[10px]">{h.rank}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>

@@ -47,8 +47,8 @@ const lobbies = [
 export default function Home() {
   return (
     <PixelShell active="lobbys">
-      <div className="flex flex-col gap-10 lg:flex-row lg:items-start">
-        <div className="flex w-full flex-col gap-5 lg:w-[34rem] lg:flex-none">
+      <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:gap-16">
+        <div className="flex w-full flex-col gap-5 lg:w-[30rem] lg:flex-none">
           <h1 className="font-pixel text-3xl leading-relaxed text-white [text-shadow:4px_4px_0_#000]">
             TAPE PLUS VITE QUE TA CLASSE.
           </h1>

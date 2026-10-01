@@ -4,8 +4,14 @@
 // Usage: bun run db:dev
 import EmbeddedPostgres from "embedded-postgres";
 import path from "node:path";
+import { existsSync } from "node:fs";
 
 const dataDir = path.join(import.meta.dirname, "..", ".data", "pgdata");
+// `initialise()` (= initdb) refuse de tourner sur un dossier déjà rempli —
+// normal, c'est voulu côté Postgres. On ne l'appelle donc qu'une seule fois,
+// à la toute première exécution; les fois suivantes on démarre juste la
+// base déjà initialisée.
+const alreadyInitialised = existsSync(path.join(dataDir, "PG_VERSION"));
 const port = Number(process.env.DEV_DB_PORT ?? 54329);
 const user = "keymine";
 const password = "keymine";
@@ -22,7 +28,9 @@ const pg = new EmbeddedPostgres({
 const url = `postgresql://${user}:${password}@127.0.0.1:${port}/${database}`;
 
 async function main() {
-  await pg.initialise();
+  if (!alreadyInitialised) {
+    await pg.initialise();
+  }
   await pg.start();
 
   try {

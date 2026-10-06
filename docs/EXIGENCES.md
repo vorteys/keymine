@@ -11,8 +11,8 @@ Statuts : **complet** (fait et vérifié), **partiel** (existe mais incomplet ou
 | TECH-03 | complet | `app/globals.css`, composants | — | Tailwind v4. |
 | TECH-04 | partiel | `db/migrations/`, `db/migrate.ts`, `db/types.ts` | — | PostgreSQL + Kysely (query builder, pas un ORM — choix à défendre dans l'ADR), migrations SQL versionnées. **Script de seed absent.** |
 | TECH-05 | non fait | — | — | Déploiement VPS + HTTPS à faire par l'étudiant ; fichiers de déploiement (Docker, Caddy) à préparer. |
-| TECH-06 | partiel | `realtime/server.ts` | — | WebSocket via serveur `ws` séparé. Piste de progression temps réel non terminée. |
-| TECH-07 | partiel | `lib/lobby-schema.ts`, `app/api/**` | — | Zod sur plusieurs routes API. **Messages WebSocket non validés** (`JSON.parse` brut) et couverture des routes à vérifier. |
+| TECH-06 | partiel | realtime/server.ts, realtime/lobby-channel.ts, components/useLobbyLive.ts | tests/db/realtime.test.ts | WebSocket (ws) authentifié par cookie signé + contrôle d'origine ; salle d'attente en direct via LISTEN/NOTIFY avec repli HTTP. Course : protocole validé, mais la fréquence d'envoi côté client n'est pas encore réduite. |
+| TECH-07 | partiel | realtime/protocol.ts, lib/lobby-schema.ts, app/api/** | tests/unit/realtime-protocol.test.ts | Messages WebSocket validés par Zod (course et salle). Couverture Zod des routes API restant à auditer route par route. |
 | TECH-08 | complet | — | — | Aucun service payant ; Postgres embarqué en dev seulement. |
 | TECH-09 | partiel | `.github/workflows/ci.yml` | — | Lint, `tsc`, tests unitaires, build, e2e. Première exécution sur GitHub à confirmer. |
 | TECH-10 | complet | `.env.example` | — | Toutes les variables documentées ; `.env` ignoré par git. |
@@ -29,16 +29,16 @@ Statuts : **complet** (fait et vérifié), **partiel** (existe mais incomplet ou
 | AUTH-05 | non fait | — | — | Modification du pseudo non implémentée. |
 | AUTH-06 | partiel | `app/profil/page.tsx` | — | Stats et progression MPM présentes ; victoires et MPM moyen à vérifier. |
 | SALLE-01 | partiel | `app/api/lobbies/route.ts` | — | Création OK ; hôte non limité aux utilisateurs connectés ; choix participant/spectateur absent. |
-| SALLE-02 | complet | `lib/lobby.ts` | — | 6 caractères, alphabet sans 0/O/1/I/L, unicité vérifiée. |
+| SALLE-02 | complet | lib/lobby.ts, lib/lobby-snapshot.ts | tests/db/realtime.test.ts | Code 6 caractères sans 0/O/1/I/L, unicité vérifiée, affiché et diffusé en direct. |
 | SALLE-03 | partiel | `db/migrations/0001_init.sql` | — | Trois valeurs d'accès existent ; sémantique « privée = lien d'invitation » absente. |
 | SALLE-04 | non fait | — | — | Liens d'invitation à usage unique non implémentés. |
 | SALLE-05 | partiel | `lib/lobby-schema.ts` | — | Capacité maximale 30 gérée ; bornes 2–30 et exclusion des spectateurs à vérifier. |
 | SALLE-06 | complet | `db/migrations/0002_une_salle_et_corpus.sql`, `lib/lobby.ts` | `tests/db/rooms.test.ts` | Index uniques partiels + déclencheur de libération à la fermeture. Interface : message « déjà dans une salle » avec choix de quitter (`useRoomEntry`). |
 | SALLE-07 | non fait | — | — | Expulsion non implémentée. |
-| SALLE-08 | partiel | `lib/lobby.ts` | — | Hôte = compte seulement (interprétation de « personne humaine connectée »). Transfert sur inactivité ; fermeture de la salle s il ne reste aucun compte : à faire. |
+| SALLE-08 | partiel | lib/lobby-sweep.ts, realtime/lobby-channel.ts | tests/db/sweep.test.ts | Hôte absent 30 s : transfert au compte connecté présent depuis le plus longtemps, sinon fermeture. Invités exclus du rôle d'hôte (interprétation). Pas encore géré pendant une course. |
 | SALLE-09 | partiel | `app/api/lobbies/[code]/join/route.ts` | — | Refus pendant le décompte et la course ; accepté en attente et sur l écran des résultats. |
 | SALLE-10 | non fait | — | — | Limite de tentatives par IP absente. |
-| JOIN-01 | partiel | `components/HomeActions.tsx` | — | Champ de code présent sur l'accueil. |
+| JOIN-01 | partiel | components/HomeActions.tsx, components/useLobbyLive.ts | tests/db/realtime.test.ts | Champ de code sur l'accueil ; liste des présents mise à jour en direct. Limitation de tentatives (SALLE-10) à faire. |
 | JOIN-02 | partiel | `app/page.tsx` | — | Liste des salles publiques ; filtres et mise à jour sans rechargement absents. |
 | JOIN-03 | partiel | `app/api/play/quick/route.ts` | — | Choisit la salle publique la plus proche de sa capacité maximale (égalité : la plus ancienne) ; état vide pour invité, création proposée aux comptes. |
 | CONF-01 | partiel | `app/jouer/creer/page.tsx` | — | Durées actuelles 5 min à 2 h ; demandé : aucune ou 30 s à 10 min. |
@@ -87,7 +87,7 @@ Statuts : **complet** (fait et vérifié), **partiel** (existe mais incomplet ou
 | TEST-02 | partiel | `tests/e2e/home.spec.ts` | 2 parcours | Non exécuté dans cet environnement. |
 | TEST-03 | partiel | `tests/e2e/` | — | Connexion par mot de passe seulement : aucun test d'authentification encore. |
 | PERF-01 | non fait | — | — | Lighthouse non mesuré. |
-| PERF-02 | non fait | `app/course/[code]/page.tsx` | — | Le client envoie la progression à chaque frappe : à regrouper. |
+| PERF-02 | partiel | realtime/protocol.ts | tests/unit/realtime-protocol.test.ts | Limiteur de débit côté serveur (120 msg/s en course, 30/10 s en salle). Le client envoie encore une progression par frappe : à regrouper. |
 | PERF-03 | non fait | — | — | Non testé avec 30 participants. |
 | A11Y-01 | partiel | — | — | Contrastes non vérifiés en WCAG AA. |
 | A11Y-02 | partiel | — | — | Balises sémantiques partielles ; tableau des résultats à vérifier. |

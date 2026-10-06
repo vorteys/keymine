@@ -5,30 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { PixelShell } from "@/components/PixelShell";
 import { PixelAvatar, PixelButton, PixelPanel, PixelSlot } from "@/components/ui";
+import { useLobbyLive } from "@/components/useLobbyLive";
 import { useRoomEntry } from "@/components/useRoomEntry";
 import type { BotLevel } from "@/db/types";
-
-type Player = {
-  id: string;
-  name: string;
-  role: "participant" | "spectator";
-  isBot: boolean;
-  botLevel: BotLevel | null;
-  isSelf: boolean;
-};
-
-type LobbyData = {
-  code: string;
-  name: string;
-  access: string;
-  language: string;
-  maxPlayers: number;
-  durationSeconds: number;
-  textMode: string;
-  errorMode: string;
-  status: string;
-  isHost: boolean;
-};
 
 const DURATION_LABEL = (s: number) =>
   s >= 3600 ? `${Math.round(s / 3600)} h` : `${Math.round(s / 60)} min`;
@@ -47,9 +26,7 @@ export default function LobbyPage() {
   const params = useParams<{ code: string }>();
   const code = params.code.toUpperCase();
 
-  const [lobby, setLobby] = useState<LobbyData | null>(null);
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [startError, setError] = useState<string | null>(null);
   const [entered, setEntered] = useState(false);
   const joined = useRef(false);
   const { run, panel } = useRoomEntry(() => setEntered(true));
@@ -67,38 +44,19 @@ export default function LobbyPage() {
     );
   }, [code, run]);
 
+  // Présence en direct (WebSocket, repli HTTP) — SALLE-01, SALLE-02, JOIN-01.
+  const { view, status } = useLobbyLive(code, entered);
+  const error = status === "missing" ? "Salle introuvable" : startError;
+  const lobby = view?.lobby ?? null;
+  const players = view?.players ?? [];
+
   useEffect(() => {
-    if (!entered) return;
-    let cancelled = false;
+    if (view?.activeRace) router.push(`/course/${code}`);
+  }, [view?.activeRace, code, router]);
 
-    async function poll() {
-      const res = await fetch(`/api/lobbies/${code}`);
-      if (cancelled) return;
-      if (!res.ok) {
-        setError("Salle introuvable");
-        return;
-      }
-      const data = await res.json();
-      setLobby(data.lobby);
-      setPlayers(data.players);
-      if (data.activeRace) {
-        router.push(`/course/${code}`);
-      }
-    }
-
-    async function heartbeat() {
-      await fetch(`/api/lobbies/${code}/heartbeat`, { method: "POST" }).catch(() => {});
-    }
-
-    void poll();
-    const pollId = setInterval(poll, 1500);
-    const hbId = setInterval(heartbeat, 15_000);
-    return () => {
-      cancelled = true;
-      clearInterval(pollId);
-      clearInterval(hbId);
-    };
-  }, [code, router, entered]);
+  useEffect(() => {
+    if (status === "closed" || status === "removed") router.push("/");
+  }, [status, router]);
 
   async function addBot(level: BotLevel) {
     await fetch(`/api/lobbies/${code}/bots`, {
@@ -171,7 +129,17 @@ export default function LobbyPage() {
                   <div className="min-w-0 flex-grow leading-none">
                     <div className="truncate text-2xl text-white">{p.name}</div>
                     <div className="font-pixel mt-1 text-[8px] text-[#ffe08a]">
-                      {p.isBot ? "BOT" : p.isSelf ? "TOI" : "PRÊT"}
+                      {p.isBot
+                        ? "BOT"
+                        : !p.connected
+                          ? "HORS LIGNE"
+                          : p.isHost
+                            ? p.isSelf
+                              ? "HÔTE · TOI"
+                              : "HÔTE"
+                            : p.isSelf
+                              ? "TOI"
+                              : "PRÊT"}
                     </div>
                   </div>
                 </PixelSlot>
@@ -210,7 +178,7 @@ export default function LobbyPage() {
             <PixelPanel className="flex flex-col gap-3 p-5">
               <span className="font-pixel text-sm text-[#2b2b2b]">HÔTE DE LA COURSE</span>
               <p className="text-xl text-[#3a3a3a]">
-                Transféré automatiquement si tu es inactif plus de 60 s.
+                Transféré automatiquement si tu quittes la salle (30 s).
               </p>
               <div className="flex flex-wrap gap-2">
                 {(["debutant", "intermediaire", "expert", "impossible"] as const).map((lvl) => (

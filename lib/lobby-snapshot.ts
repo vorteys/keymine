@@ -1,0 +1,168 @@
+import { db } from "@/lib/db";
+import type { BotLevel } from "@/db/types";
+
+// État d'une salle tel que diffusé aux clients (SALLE-01, SALLE-02, CONF-12).
+// Partagé entre la route HTTP GET /api/lobbies/[code] et le serveur temps réel,
+// donc sans dépendance à Next.js.
+
+export type RawPlayer = {
+  id: string;
+  userId: string | null;
+  guestId: string | null;
+  name: string;
+  role: "participant" | "spectator";
+  isBot: boolean;
+  botLevel: BotLevel | null;
+  joinedAt: Date;
+};
+
+export type RawLobbySnapshot = {
+  lobby: {
+    id: string;
+    code: string;
+    name: string;
+    access: string;
+    language: string;
+    maxPlayers: number;
+    durationSeconds: number;
+    textMode: string;
+    textLength: number;
+    errorMode: string;
+    status: string;
+    hostUserId: string | null;
+    hostGuestId: string | null;
+  };
+  players: RawPlayer[];
+  activeRace: { id: string; status: string; startsAt: Date } | null;
+};
+
+export type Viewer = { userId: string | null; guestId: string | null };
+
+export type PlayerView = {
+  id: string;
+  name: string;
+  role: "participant" | "spectator";
+  isBot: boolean;
+  botLevel: BotLevel | null;
+  isSelf: boolean;
+  isHost: boolean;
+  connected: boolean;
+};
+
+export type LobbyView = {
+  lobby: Omit<RawLobbySnapshot["lobby"], "id" | "hostUserId" | "hostGuestId"> & { isHost: boolean };
+  players: PlayerView[];
+  activeRace: { id: string; status: string; startsAt: string } | null;
+};
+
+export async function loadLobbySnapshot(code: string): Promise<RawLobbySnapshot | null> {
+  const lobby = await db
+    .selectFrom("lobbies")
+    .selectAll()
+    .where("code", "=", code.toUpperCase())
+    .executeTakeFirst();
+  if (!lobby) return null;
+
+  const players = await db
+    .selectFrom("lobby_players")
+    .leftJoin("users", "users.id", "lobby_players.user_id")
+    .select([
+      "lobby_players.id",
+      "lobby_players.user_id",
+      "lobby_players.guest_id",
+      "lobby_players.guest_name",
+      "lobby_players.role",
+      "lobby_players.is_bot",
+      "lobby_players.bot_level",
+      "lobby_players.joined_at",
+      "users.display_name",
+    ])
+    .where("lobby_players.lobby_id", "=", lobby.id)
+    .where("lobby_players.active", "=", true)
+    .orderBy("lobby_players.joined_at", "asc")
+    .execute();
+
+  const activeRace = await db
+    .selectFrom("races")
+    .select(["id", "status", "starts_at"])
+    .where("lobby_id", "=", lobby.id)
+    .where("status", "in", ["countdown", "racing"])
+    .orderBy("created_at", "desc")
+    .executeTakeFirst();
+
+  return {
+    lobby: {
+      id: lobby.id,
+      code: lobby.code,
+      name: lobby.name,
+      access: lobby.access,
+      language: lobby.language,
+      maxPlayers: lobby.max_players,
+      durationSeconds: lobby.duration_seconds,
+      textMode: lobby.text_mode,
+      textLength: lobby.text_length,
+      errorMode: lobby.error_mode,
+      status: lobby.status,
+      hostUserId: lobby.host_user_id,
+      hostGuestId: lobby.host_guest_id,
+    },
+    players: players.map((p) => ({
+      id: p.id,
+      userId: p.user_id,
+      guestId: p.guest_id,
+      name: p.is_bot ? `Bot ${p.bot_level}` : (p.display_name ?? p.guest_name ?? "Joueur"),
+      role: p.role,
+      isBot: p.is_bot,
+      botLevel: p.bot_level,
+      joinedAt: new Date(p.joined_at),
+    })),
+    activeRace: activeRace
+      ? { id: activeRace.id, status: activeRace.status, startsAt: new Date(activeRace.starts_at) }
+      : null,
+  };
+}
+
+function isSameViewer(p: { userId: string | null; guestId: string | null }, v: Viewer | null) {
+  if (!v) return false;
+  if (v.userId && p.userId === v.userId) return true;
+  return !!v.guestId && p.guestId === v.guestId;
+}
+
+/**
+ * Vue adaptée à une personne : qui est l'hôte, qui est « moi », et qui est
+ * actuellement connecté (ensemble de clés `u:<id>` ou `g:<id>` fourni par le
+ * serveur temps réel ; absent pour la route HTTP).
+ */
+export function viewLobby(
+  raw: RawLobbySnapshot,
+  viewer: Viewer | null,
+  connectedKeys?: ReadonlySet<string>,
+): LobbyView {
+  const { id: _id, hostUserId, hostGuestId, ...publicLobby } = raw.lobby;
+  void _id;
+  const host = { userId: hostUserId, guestId: hostGuestId };
+  return {
+    lobby: { ...publicLobby, isHost: isSameViewer(host, viewer) },
+    players: raw.players.map((p) => ({
+      id: p.id,
+      name: p.name,
+      role: p.role,
+      isBot: p.isBot,
+      botLevel: p.botLevel,
+      isSelf: isSameViewer(p, viewer),
+      isHost: isSameViewer(p, host),
+      connected: p.isBot
+        ? true
+        : connectedKeys
+          ? connectedKeys.has(p.userId ? `u:${p.userId}` : `g:${p.guestId}`)
+          : true,
+    })),
+    activeRace: raw.activeRace
+      ? {
+          id: raw.activeRace.id,
+          status: raw.activeRace.status,
+          startsAt: raw.activeRace.startsAt.toISOString(),
+        }
+      : null,
+  };
+}

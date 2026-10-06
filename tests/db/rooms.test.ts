@@ -71,3 +71,26 @@ describe("une personne ne peut être que dans une seule salle (SALLE-06)", () =>
     ).rejects.toMatchObject({ code: "23505" });
   });
 });
+
+describe("notifications temps réel de la salle (SALLE-01, JOIN-01)", () => {
+  it("émet lobby_changed quand un joueur rejoint une salle", async () => {
+    const listener = new Client({ connectionString: databaseUrl });
+    await listener.connect();
+    const received: string[] = [];
+    listener.on("notification", (msg) => {
+      if (msg.channel === "lobby_changed" && msg.payload) received.push(msg.payload);
+    });
+    await listener.query("listen lobby_changed");
+
+    const host = await createUser("hote");
+    const player = await createUser("joueur");
+    const code = `N${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
+    const lobby = await createLobby(host, code);
+    await join(lobby, player);
+
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    await listener.end();
+    expect(received).toContain(code);
+    expect(received.filter((c) => c === code).length).toBeGreaterThanOrEqual(2);
+  });
+});

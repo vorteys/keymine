@@ -1,4 +1,3 @@
-import "server-only";
 import { customAlphabet } from "nanoid";
 import { db } from "@/lib/db";
 import type { Identity } from "@/lib/auth/identity";

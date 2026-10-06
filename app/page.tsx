@@ -1,43 +1,12 @@
-import Link from "next/link";
 import { PixelShell } from "@/components/PixelShell";
-import { PixelButton, PixelPanel, PixelSlot } from "@/components/ui";
+import { PixelButton, PixelSlot } from "@/components/ui";
+import { PublicLobbies } from "@/components/PublicLobbies";
+import { listPublicLobbies } from "@/lib/public-lobbies";
 import { JoinByCodeForm, QuickPlayButton } from "@/components/HomeActions";
 import { db } from "@/lib/db";
 import { peekIdentity } from "@/lib/auth/identity";
 
 export const dynamic = "force-dynamic";
-
-async function getPublicLobbies() {
-  const lobbies = await db
-    .selectFrom("lobbies")
-    .where("status", "=", "lobby")
-    .where("access", "=", "public")
-    .select((eb) => [
-      "code",
-      "name",
-      "language",
-      "text_type",
-      "complexity",
-      "max_players",
-      eb
-        .selectFrom("lobby_players")
-        .select((inner) => inner.fn.countAll<number>().as("count"))
-        .whereRef("lobby_players.lobby_id", "=", "lobbies.id")
-        .where("role", "=", "participant")
-        .as("player_count"),
-    ])
-    .orderBy("created_at", "desc")
-    .limit(5)
-    .execute();
-
-  return lobbies.map((l) => ({
-    name: l.name,
-    sub: `Publique · ${l.text_type} · ${l.language.toUpperCase()}`,
-    count: `${Number(l.player_count ?? 0)}/${l.max_players}`,
-    full: Number(l.player_count ?? 0) >= l.max_players,
-    href: `/jouer/${l.code}`,
-  }));
-}
 
 async function getMiniStats() {
   const identity = await peekIdentity();
@@ -65,7 +34,7 @@ async function getMiniStats() {
 }
 
 export default async function Home() {
-  const [lobbies, stats] = await Promise.all([getPublicLobbies(), getMiniStats()]);
+  const [lobbies, stats] = await Promise.all([listPublicLobbies(), getMiniStats()]);
 
   return (
     <PixelShell active="lobbys">
@@ -99,35 +68,8 @@ export default async function Home() {
           </p>
         </div>
 
-        <PixelPanel className="w-full flex-grow self-start p-5">
-          <div className="mb-3 flex items-center justify-between">
-            <span className="font-pixel text-sm text-[#2b2b2b]">LOBBYS PUBLICS</span>
-            <span className="text-2xl text-[#3a3a3a]">{lobbies.length} salles</span>
-          </div>
-
-          <div className="flex flex-col gap-2.5">
-            {lobbies.length === 0 && (
-              <p className="text-2xl text-[#3a3a3a]">
-                Aucune salle publique pour l’instant. Lance la première avec « Créer une course »!
-              </p>
-            )}
-            {lobbies.map((l) => (
-              <PixelSlot key={l.href} className="flex items-center gap-3.5 px-3.5 py-2.5">
-                <div className="min-w-0 flex-grow">
-                  <div className="text-2xl leading-none text-white">{l.name}</div>
-                  <div className="text-xl text-[#e3e3e3]">{l.sub}</div>
-                </div>
-                <div className="font-pixel text-xs text-white">{l.count}</div>
-                <Link
-                  href={l.href}
-                  className="pixel-btn h-11 w-36 text-[11px]"
-                  data-variant={l.full ? "slate" : "green"}
-                >
-                  {l.full ? "PLEIN" : "REJOINDRE"}
-                </Link>
-              </PixelSlot>
-            ))}
-          </div>
+        <div className="flex w-full flex-grow flex-col gap-3">
+          <PublicLobbies initial={lobbies} />
 
           <div className="mt-3 grid grid-cols-3 gap-2.5">
             <PixelSlot className="px-3 py-2">
@@ -145,7 +87,7 @@ export default async function Home() {
               </div>
             </PixelSlot>
           </div>
-        </PixelPanel>
+        </div>
       </div>
     </PixelShell>
   );

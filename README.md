@@ -32,7 +32,7 @@ pour ta propre passe de correction.
   passage à une stack 100% compatible avec un accès réseau restreint.
 - **Dev local sans serveur Postgres à installer**: le paquet
   `embedded-postgres` télécharge et lance un vrai binaire PostgreSQL 18 dans
-  un dossier du projet (`.data/`, ignoré par git) — voir `scripts/dev-db.mjs`.
+  un dossier du projet (`.data/`, ignoré par git) — voir `scripts/dev-db.ts`.
   En production, c'est un Postgres normal (managé ou auto-hébergé) via
   `DATABASE_URL`.
 - **Temps réel: serveur WebSocket séparé** (`realtime/server.ts`, paquet
@@ -83,10 +83,9 @@ valeurs par défaut — elles fonctionnent telles quelles pour le dev local.
 | `bun run lint` / `typecheck` / `test` | Qualité de code et tests unitaires |
 | `bun run test:e2e` | Tests Playwright (bout en bout) |
 
-`scripts/build-with-db.mjs` et `scripts/smoke-test-db.mjs` sont des scripts
-utilitaires qui démarrent un Postgres embarqué jetable, appliquent les
-migrations, lancent une commande donnée, puis arrêtent Postgres — utiles en
-CI ou pour vérifier rapidement que tout compile contre une vraie base.
+`scripts/build-with-db.ts` démarre un Postgres embarqué jetable, applique les
+migrations, lance une commande donnée, puis arrête Postgres — utile pour
+vérifier rapidement que tout compile contre une vraie base.
 
 ## Variables d'environnement
 

@@ -13,8 +13,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "format": "prettier --write .",
-    "dev:all": "bun run scripts/dev-all.mjs",
-    "db:dev": "bun run scripts/dev-db.mjs",
+    "dev:all": "bun run scripts/dev-all.ts",
+    "db:dev": "bun run scripts/dev-db.ts",
     "db:migrate": "bun run db/migrate.ts",
     "realtime": "bun run realtime/server.ts"
   },
@@ -41,6 +41,7 @@
     "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/ws": "^8.18.2",
     "@vitejs/plugin-react": "^6.1.1",
     "embedded-postgres": "^18.4.0-beta.17",
     "eslint": "^9",

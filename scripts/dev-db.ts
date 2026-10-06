@@ -1,4 +1,3 @@
-#!/usr/bin/env bun
 // Lance un vrai PostgreSQL local pour le développement, sans rien installer
 // sur la machine (binaire embarqué via le paquet npm "embedded-postgres").
 // Usage: bun run db:dev

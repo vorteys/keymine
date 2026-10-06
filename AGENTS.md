@@ -18,9 +18,8 @@ référence**, avec ses identifiants (`AUTH-01`, `SALLE-04`, `COURSE-06`,
 
 ## Règles non négociables du cahier des charges
 
-- **TypeScript à 100 %** : aucun `.js`/`.jsx` (les scripts `.mjs` dans
-  `scripts/` sont les seuls tolérés tant qu'ils ne sont pas portés en `.ts`),
-  `strict: true`, aucun `any` explicite, aucun `@ts-ignore` /
+- **TypeScript à 100 %** : aucun `.js`/`.jsx`/`.mjs` écrit à la main (les
+  scripts de `scripts/` sont en `.ts`), `strict: true`, aucun `any` explicite, aucun `@ts-ignore` /
   `@ts-expect-error` sans commentaire justificatif.
 - **PostgreSQL** obligatoire. Migrations SQL versionnées dans `db/migrations/`
   (runner maison `db/migrate.ts`) et un script de **seed** (corpus de textes,
@@ -86,7 +85,7 @@ et `LayoutProps` sont générés par Next).
   lint/typecheck/tests/build **dans la copie**, puis commiter depuis
   `~/mnt/keymine`.
 - `bun` est dans `~/.local/bin` (pas dans le PATH par défaut).
-- Postgres embarqué : `scripts/build-with-db.mjs <commande>` démarre une base
+- Postgres embarqué : `scripts/build-with-db.ts <commande>` démarre une base
   jetable, migre, exécute la commande et arrête la base. Toujours
   `rm -rf .data` avant dans la copie de travail.
 - Git ne peut pas supprimer ses verrous tant que la suppression n'est pas

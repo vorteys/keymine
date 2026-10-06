@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { HostSettingsEditor } from "@/components/lobby/HostSettingsEditor";
 import { PixelShell } from "@/components/PixelShell";
 import { PixelAvatar, PixelButton, PixelPanel, PixelSlot } from "@/components/ui";
 import { useLobbyLive } from "@/components/useLobbyLive";
@@ -33,6 +33,7 @@ export default function LobbyPage() {
 
   const [startError, setError] = useState<string | null>(null);
   const [entered, setEntered] = useState(false);
+  const [editing, setEditing] = useState(false);
   const joined = useRef(false);
   const { run, panel } = useRoomEntry(() => setEntered(true));
 
@@ -121,6 +122,10 @@ export default function LobbyPage() {
             </div>
           </div>
 
+          {editing && lobby?.isHost && (
+            <HostSettingsEditor code={code} lobby={lobby} onClose={() => setEditing(false)} />
+          )}
+
           <PixelPanel className="p-5">
             <div className="mb-3.5 flex items-center justify-between">
               <span className="font-pixel text-sm text-[#2b2b2b]">
@@ -163,9 +168,14 @@ export default function LobbyPage() {
             <div className="mb-2 flex items-center justify-between">
               <span className="font-pixel text-sm text-[#2b2b2b]">RÉGLAGES</span>
               {lobby?.isHost && (
-                <Link href="/jouer/creer" className="text-2xl text-[#2b2b2b] underline">
-                  Nouvelle salle
-                </Link>
+                <button
+                  type="button"
+                  onClick={() => setEditing((v) => !v)}
+                  aria-expanded={editing}
+                  className="text-2xl text-[#2b2b2b] underline"
+                >
+                  Modifier
+                </button>
               )}
             </div>
             {[

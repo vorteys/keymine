@@ -25,9 +25,9 @@ Statuts : **complet** (fait et vérifié), **partiel** (existe mais incomplet ou
 | AUTH-01 | partiel | `app/api/auth/**`, `lib/auth/oauth.ts` | — | Discord, GitHub et mot de passe écrits ; OAuth jamais testé avec de vraies clés. |
 | AUTH-02 | partiel | `lib/auth/guest.ts`, `lib/auth/pseudo.ts`, `app/api/auth/guest/route.ts`, `components/useRoomEntry.tsx` | `tests/unit/guest-pseudo.test.ts` | Pseudo 3–20 caractères validé par Zod, cookie JWT signé (7 jours). Parcours navigateur non encore vérifié. |
 | AUTH-03 | partiel | `app/api/lobbies/route.ts`, `lib/lobby.ts` | — | Création refusée côté serveur aux invités (403) ; seuls les comptes peuvent être hôtes. Test automatisé à ajouter. Avatar généré pour invité à faire. |
-| AUTH-04 | non fait | — | — | Téléversement de photo non implémenté. |
-| AUTH-05 | non fait | — | — | Modification du pseudo non implémentée. |
-| AUTH-06 | partiel | `app/profil/page.tsx` | — | Stats et progression MPM présentes ; victoires et MPM moyen à vérifier. |
+| AUTH-04 | partiel | lib/avatar.ts, app/api/profile/avatar/route.ts, app/api/avatars/[id]/route.ts, components/ProfileEditor.tsx, db/migrations/0008_photo_profil.sql | tests/unit/avatar.test.ts | JPEG/PNG/WebP reconnus par leur signature binaire, 2 Mo maximum vérifié côté serveur, image décodée, recadrée et ré-encodée en WebP 256 px (EXIF supprimé), stockée en base. Parcours navigateur non vérifié. |
+| AUTH-05 | partiel | app/api/profile/route.ts, components/ProfileEditor.tsx | tests/unit/guest-pseudo.test.ts | PATCH validé par Zod (3 à 20 caractères), comptes seulement ; le nouveau nom apparaît aux prochaines entrées en salle. Parcours navigateur non vérifié. |
+| AUTH-06 | partiel | lib/stats.ts, app/profil/page.tsx | tests/db/history.test.ts | Meilleur MPM, MPM moyen, précision moyenne, courses, victoires (1re place d'une course terminée) calculés en base et testés ; graphique de progression des 20 dernières courses. Rendu non vérifié dans un navigateur. |
 | SALLE-01 | partiel | app/api/lobbies/route.ts, app/jouer/creer/page.tsx, lib/lobby.ts | tests/db/join.test.ts | Création réservée aux comptes ; l'hôte choisit participant ou spectateur (conservé au retour dans la salle). À valider par e2e. |
 | SALLE-02 | complet | lib/lobby.ts, lib/lobby-snapshot.ts | tests/db/realtime.test.ts | Code 6 caractères sans 0/O/1/I/L, unicité vérifiée, affiché et diffusé en direct. |
 | SALLE-03 | partiel | lib/lobby-access.ts, app/api/lobbies/[code]/join/route.ts, app/page.tsx | tests/db/invites.test.ts | Publique : listée + code ; Sur code : code ou lien, non listée ; Privée : lien d'invitation seulement (l'hôte et les présents restent admis). Interface à valider dans un navigateur. |
@@ -94,7 +94,7 @@ Statuts : **complet** (fait et vérifié), **partiel** (existe mais incomplet ou
 | A11Y-03 | partiel | — | — | Textes alternatifs et libellés à auditer. |
 | A11Y-04 | partiel | — | — | Parcours clavier et focus visible à auditer. |
 | SEC-01 | partiel | `lib/lobby.ts`, `app/api/lobbies/[code]/**` | — | Démarrer, bots, fermer vérifiés côté serveur ; liens et expulsion à venir. |
-| SEC-02 | non fait | — | — | Aucun téléversement pour l'instant. |
+| SEC-02 | partiel | lib/avatar.ts, app/api/profile/avatar/route.ts | tests/unit/avatar.test.ts | Type réel (signature) et taille validés côté serveur, image ré-encodée (un fichier déguisé est rejeté) ; seul téléversement de l'application. |
 | SEC-03 | complet | `lib/auth/password.ts` | — | bcrypt (12 tours), jamais journalisé. |
 
 ## Choix documentés

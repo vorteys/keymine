@@ -21,6 +21,8 @@ export interface UsersTable {
   display_name: string;
   avatar_url: string | null;
   avatar_source: Generated<AvatarSource>;
+  avatar_data: Buffer | null;
+  avatar_updated_at: ColumnType<Date, Date | null, Date | null> | null;
   discord_id: string | null;
   github_id: string | null;
   failed_login_attempts: Generated<number>;

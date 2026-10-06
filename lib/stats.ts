@@ -101,3 +101,38 @@ export async function mergeKeyStats(
       .execute();
   }
 }
+
+export type ProfileStats = {
+  bestWpm: number;
+  avgWpm: number | null;
+  avgAccuracy: number | null;
+  races: number;
+  wins: number;
+};
+
+/**
+ * AUTH-06 : statistiques du profil. Une victoire = première place dans une course
+ * terminée à laquelle on a réellement participé (les abandons ne comptent pas).
+ */
+export async function loadProfileStats(userId: string): Promise<ProfileStats> {
+  const row = await db
+    .selectFrom("race_participants")
+    .where("user_id", "=", userId)
+    .where("status", "=", "finished")
+    .where("role", "=", "participant")
+    .select((eb) => [
+      eb.fn.max("wpm").as("best_wpm"),
+      eb.fn.avg<string>("wpm").as("avg_wpm"),
+      eb.fn.avg<string>("accuracy").as("avg_accuracy"),
+      eb.fn.countAll<string>().as("races"),
+      sql<string>`count(*) filter (where rank = 1)`.as("wins"),
+    ])
+    .executeTakeFirst();
+  return {
+    bestWpm: row?.best_wpm ?? 0,
+    avgWpm: row?.avg_wpm != null ? Number(row.avg_wpm) : null,
+    avgAccuracy: row?.avg_accuracy != null ? Number(row.avg_accuracy) : null,
+    races: Number(row?.races ?? 0),
+    wins: Number(row?.wins ?? 0),
+  };
+}

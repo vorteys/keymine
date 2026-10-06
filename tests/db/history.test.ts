@@ -123,3 +123,25 @@ describe("résultats d'une course passée (HIST-02, RES-04)", () => {
     expect(await isPersonalRecord(user, third, 50)).toBe(false);
   });
 });
+
+describe("statistiques du profil (AUTH-06)", () => {
+  it("compte victoires, courses, moyennes et meilleur MPM sur les courses terminées seulement", async () => {
+    const { loadProfileStats } = await import("@/lib/stats");
+    const user = await newUser();
+    const lobby = await newLobby(user);
+    await race(lobby.id, user, 40, 30); // rang 1
+    await race(lobby.id, user, 60, 20); // rang 1
+    const lost = await race(lobby.id, user, 50, 10);
+    await client.query(`update race_participants set rank = 2 where race_id = $1 and user_id = $2`, [lost, user]);
+    const quit = await race(lobby.id, user, 10, 5);
+    await client.query(`update race_participants set status = 'abandoned', rank = 2 where race_id = $1 and user_id = $2`, [quit, user]);
+
+    const stats = await loadProfileStats(user);
+    expect(stats).toMatchObject({ bestWpm: 60, races: 3, wins: 2 });
+    expect(stats.avgWpm).toBeCloseTo(50, 5);
+    expect(stats.avgAccuracy).toBeCloseTo(97, 5);
+
+    const none = await loadProfileStats(await newUser());
+    expect(none).toEqual({ bestWpm: 0, avgWpm: null, avgAccuracy: null, races: 0, wins: 0 });
+  });
+});

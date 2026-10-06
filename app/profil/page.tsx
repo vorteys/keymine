@@ -1,8 +1,10 @@
 import { PixelShell } from "@/components/PixelShell";
 import Link from "next/link";
 import { PixelAvatar, PixelButton, PixelKeyboard, PixelSlot } from "@/components/ui";
-import { formatDate, formatNumber } from "@/lib/format";
+import { formatDate, formatNumber, formatPercent } from "@/lib/format";
 import { loadHistory } from "@/lib/history";
+import { loadProfileStats } from "@/lib/stats";
+import { ProfileEditor } from "@/components/ProfileEditor";
 import { getRequestLang } from "@/lib/i18n-server";
 import { translate } from "@/lib/i18n-dictionary";
 import { GuestProfile } from "@/components/GuestProfile";
@@ -33,19 +35,7 @@ export default async function ProfilPage() {
     .where("id", "=", identity.userId)
     .executeTakeFirstOrThrow();
 
-  const avgAcc = await db
-    .selectFrom("race_participants")
-    .select((eb) => eb.fn.avg<number>("accuracy").as("avg_accuracy"))
-    .where("user_id", "=", identity.userId)
-    .where("status", "=", "finished")
-    .executeTakeFirst();
-
-  const avgWpm = await db
-    .selectFrom("race_participants")
-    .select((eb) => eb.fn.avg<number>("wpm").as("avg_wpm"))
-    .where("user_id", "=", identity.userId)
-    .where("status", "=", "finished")
-    .executeTakeFirst();
+  const stats = await loadProfileStats(identity.userId);
 
   const keyStats = await db
     .selectFrom("key_stats")
@@ -92,12 +82,14 @@ export default async function ProfilPage() {
             <PixelAvatar
               label={user.display_name[0]?.toUpperCase() ?? "?"}
               color="#3d6fc4"
+              src={user.avatar_url}
               className="h-32 w-32 border-[5px] text-5xl"
             />
             <div className="font-pixel text-lg">{user.display_name.toUpperCase()}</div>
             <p className="text-center text-xl leading-tight text-[#3a3a3a]">
-              Compte créé le {new Date(user.created_at).toLocaleDateString("fr-CA")}
+              Compte créé le {formatDate(lang, user.created_at)}
             </p>
+            <ProfileEditor displayName={user.display_name} hasPhoto={user.avatar_source === "upload" && user.avatar_url !== null} />
           </div>
 
           <div className="pixel-panel flex flex-col gap-2.5 p-5">
@@ -127,13 +119,14 @@ export default async function ProfilPage() {
         </div>
 
         <div className="flex w-full flex-grow flex-col gap-6">
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-5">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
             {[
-              ["MEILLEUR", `${Math.round(user.best_wpm)} MPM`],
-              ["MOYENNE", `${avgWpm?.avg_wpm ? Math.round(avgWpm.avg_wpm) : 0} MPM`],
-              ["PRÉCISION", `${avgAcc?.avg_accuracy ? avgAcc.avg_accuracy.toFixed(1) : "100"} %`],
-              ["COURSES", String(user.total_races)],
-              ["SÉRIE", `${user.current_streak_days} jours`],
+              ["MEILLEUR", `${formatNumber(lang, stats.bestWpm)} MPM`],
+              ["MOYENNE", `${stats.avgWpm != null ? formatNumber(lang, stats.avgWpm) : "—"} MPM`],
+              ["PRÉCISION", stats.avgAccuracy != null ? formatPercent(lang, stats.avgAccuracy, 1) : "—"],
+              ["COURSES", formatNumber(lang, stats.races)],
+              ["VICTOIRES", formatNumber(lang, stats.wins)],
+              ["SÉRIE", `${user.current_streak_days} j`],
             ].map(([label, value]) => (
               <PixelSlot key={label} className="p-2.5 leading-none">
                 <b className="font-pixel mb-1 block text-[9px] text-[#ffefb3]">{label}</b>

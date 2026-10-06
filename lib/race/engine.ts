@@ -236,8 +236,9 @@ export class RaceEngine {
 
     r.progress = progress;
     r.errors = Math.max(r.errors, Math.min(input.errorCount, 1_000_000));
-    if (input.keyCorrect) r.keyCorrect = sanitizeCounts(input.keyCorrect);
-    if (input.keyErrors) r.keyErrors = sanitizeCounts(input.keyErrors);
+    // Après un rechargement de page le client repart de zéro : on ne diminue jamais un compteur.
+    if (input.keyCorrect) r.keyCorrect = mergeMax(r.keyCorrect, sanitizeCounts(input.keyCorrect));
+    if (input.keyErrors) r.keyErrors = mergeMax(r.keyErrors, sanitizeCounts(input.keyErrors));
     r.lastUpdateMs = now;
 
     if (r.progress >= r.text.length) this.finish(r, now);
@@ -486,6 +487,12 @@ function cmpId(a: Racer, b: Racer): number {
 
 function round1(n: number): number {
   return Math.round(n * 10) / 10;
+}
+
+function mergeMax(a: Record<string, number>, b: Record<string, number>): Record<string, number> {
+  const out = { ...a };
+  for (const [key, value] of Object.entries(b)) out[key] = Math.max(out[key] ?? 0, value);
+  return out;
 }
 
 function sanitizeCounts(input: Record<string, number>): Record<string, number> {

@@ -52,18 +52,18 @@ Statuts : **complet** (fait et vérifié), **partiel** (existe mais incomplet ou
 | CONF-09 | partiel | db/migrations/0005_configuration_du_texte.sql, app/jouer/creer/page.tsx | — | Réglage enregistré en base ; les bonus eux-mêmes ne sont pas encore implémentés (voir BONUS). |
 | CONF-10 | partiel | `app/api/lobbies/[code]/bots/route.ts` | — | 4 niveaux au lieu de 5 ; retrait d'un bot absent. |
 | CONF-11 | partiel | `app/jouer/creer/page.tsx` | — | Visibilité et capacité réglables à la création. |
-| CONF-12 | non fait | `app/jouer/[code]/page.tsx` | — | Pas de modification de la configuration en salle d'attente, ni diffusion en direct. |
+| CONF-12 | partiel | app/api/lobbies/[code]/route.ts, lib/lobby-schema.ts | — | PATCH validé par Zod (hôte seulement, salle en attente) ; panneau d'édition dans la salle et diffusion en direct restent à faire. |
 | COURSE-01 | complet | lib/race/state.ts, app/api/lobbies/[code]/start/route.ts, realtime/race-room.ts | tests/unit/race-state.test.ts, tests/db/race.test.ts | Machine à états codée (table de transitions) ; diagramme dans ARCHITECTURE.md. Transitions appliquées au démarrage (verrou transactionnel) et en fin de course. |
 | COURSE-02 | complet | lib/race/state.ts, app/api/lobbies/[code]/start/route.ts | tests/unit/race-state.test.ts | ≥ 2 participants dont ≥ 1 humain, bots comptés, spectateurs non. |
-| COURSE-03 | partiel | `app/api/lobbies/[code]/start/route.ts` | — | Décompte de 5 s ; révélation du texte au début du décompte à vérifier. |
-| COURSE-04 | partiel | `app/course/[code]/page.tsx` | — | Retour visuel, MPM et précision en direct, collage désactivé. |
-| COURSE-05 | partiel | `app/course/[code]/page.tsx` | — | Classement en direct ; piste avec avatars et interpolation absente. |
+| COURSE-03 | partiel | app/api/lobbies/[code]/start/route.ts, app/course/[code]/page.tsx | tests/db/race.test.ts | Décompte de 3 s fixé côté serveur (starts_at) et affiché 3, 2, 1 ; texte envoyé seulement à partir du décompte. Rendu à valider dans un navigateur. |
+| COURSE-04 | partiel | app/course/[code]/page.tsx, components/race/ | tests/unit/race-engine.test.ts | Retour visuel caractère par caractère, MPM/précision en direct, collage bloqué ; calculs testés, rendu non vérifié dans un navigateur. |
+| COURSE-05 | partiel | components/race/Track.tsx, app/course/[code]/page.tsx | — | Piste avec avatar, nom, position et MPM, mises à jour toutes les 250 ms ; fluidité à valider dans un navigateur. |
 | COURSE-06 | complet | lib/race/engine.ts, realtime/race-room.ts | tests/unit/race-engine.test.ts, tests/db/race.test.ts | Départ, fin, progression, classement et bonus décidés par le serveur ; sauts et vitesses irréalistes (> 250 MPM + marge) rejetés ; MPM jamais lu du client. |
-| COURSE-07 | partiel | `realtime/server.ts` | — | Abandon existe ; confirmation à vérifier. |
+| COURSE-07 | partiel | app/course/[code]/page.tsx, lib/race/engine.ts | tests/unit/race-engine.test.ts, tests/db/race.test.ts | Bouton ABANDONNER avec boîte de confirmation ; abandon testé côté serveur ; boîte non vérifiée dans un navigateur. |
 | COURSE-08 | partiel | lib/race/engine.ts, realtime/race-room.ts | tests/unit/race-engine.test.ts | Moteur : reprise sous 30 s, abandon au-delà (testé). Côté page de course : rechargement à vérifier manuellement. |
 | COURSE-09 | complet | lib/race/engine.ts | tests/unit/race-engine.test.ts, tests/db/race.test.ts | Fin quand tous ont terminé/abandonné ou temps écoulé. |
 | COURSE-10 | complet | lib/race/engine.ts | tests/unit/race-engine.test.ts | Arrivés par temps, puis temps écoulé par progression, puis abandons par progression. |
-| COURSE-11 | non fait | — | — | Relancer une course ou fermer la salle depuis les résultats absents. |
+| COURSE-11 | partiel | app/api/lobbies/[code]/rematch/route.ts, app/api/lobbies/[code]/route.ts, components/results/ResultsActions.tsx | — | REJOUER (hôte) remet la salle en attente avec les mêmes participants ; FERMER LA SALLE ; les autres suivent la salle et y reviennent automatiquement. Modification de la config en salle d'attente (CONF-12) à faire. Pas encore de test automatisé de l'API rematch. |
 | BOT-01 | complet | lib/race/bots.ts | tests/unit/race-bots.test.ts | Noob, Débutant, Intermédiaire, Expert, Impossible ; plages et taux d'erreur documentés dans le code. |
 | BOT-02 | complet | lib/race/bots.ts | tests/unit/race-bots.test.ts | Accélérations, hésitations aux espaces, ralentissement sur mots longs/accentués. |
 | BOT-03 | complet | lib/race/bots.ts | tests/unit/race-bots.test.ts | Erreurs avec temps de correction ; correction obligatoire plus lente que le mode libre. |
@@ -71,23 +71,23 @@ Statuts : **complet** (fait et vérifié), **partiel** (existe mais incomplet ou
 | BOT-05 | complet | lib/race/bots.ts, lib/text/rng.ts | tests/unit/race-bots.test.ts | Moteur déterministe à partir d'une graine ; l'arrivée est indépendante de la cadence du tick. |
 | BONUS-01 | complet | lib/race/bonus.ts, lib/race/engine.ts | tests/unit/race-bonus.test.ts, tests/unit/race-engine.test.ts | Règle documentée dans ARCHITECTURE.md §7 : points de contrôle à 25/50/75 % du meneur, retardataire = dernier ou > 25 points, 1 bonus par point, 3 max. |
 | BONUS-02 | complet | lib/race/bonus.ts | tests/unit/race-engine.test.ts | Trois types : -3 mots (retardataire), +3 mots (meneur), brouillard (meneur). |
-| BONUS-03 | partiel | lib/race/engine.ts, realtime/race-room.ts | — | Événement « bonus » diffusé à tous ; annonce visuelle sur la piste et chez le joueur ciblé à faire dans la page de course. |
+| BONUS-03 | partiel | app/course/[code]/page.tsx, components/race/Track.tsx | — | Annonce diffusée à tous sur la piste et bannière chez le joueur ciblé ; rendu à valider dans un navigateur. |
 | BONUS-04 | complet | lib/race/engine.ts | tests/unit/race-engine.test.ts | Progression et MPM mesurés sur le texte courant du joueur ; bots re-simulés. |
-| RES-01 | partiel | `app/resultats/[code]/page.tsx` | — | Podium des 3 premiers. |
-| RES-02 | partiel | `app/resultats/[code]/page.tsx` | — | Tableau du classement ; MPM brut, temps, statut et bonus à compléter. |
-| RES-03 | partiel | `app/resultats/[code]/page.tsx`, `lib/heatmap.ts` | `tests/unit/heatmap.test.ts` | Carte de chaleur du clavier faite ; graphique de l'évolution du MPM absent. |
-| RES-04 | non fait | — | — | Indicateur de record personnel absent. |
-| RES-05 | partiel | `lib/stats.ts` | — | Résultats persistés ; série temporelle du MPM absente. |
-| HIST-01 | non fait | `app/profil/page.tsx` | — | Seules les dernières courses sont affichées, sans pagination. |
-| HIST-02 | non fait | — | — | Réaffichage d'une course passée absent. |
+| RES-01 | partiel | app/resultats/[code]/page.tsx | — | Podium des 3 premiers ; rendu à valider visuellement. |
+| RES-02 | complet | app/resultats/[code]/page.tsx, lib/results.ts | tests/db/history.test.ts | Rang, participant, MPM, MPM brut, précision, erreurs, temps, statut (terminé/temps écoulé/abandon) et bonus reçus. |
+| RES-03 | complet | components/results/WpmChart.tsx, lib/heatmap.ts | tests/unit/heatmap.test.ts, tests/db/history.test.ts | Deux graphiques : MPM de tous les participants dans le temps (SVG accessible) et clavier en carte de chaleur. |
+| RES-04 | complet | lib/results.ts, app/resultats/[code]/page.tsx | tests/db/history.test.ts | Bandeau « nouveau record personnel » si le MPM dépasse toutes les courses terminées précédentes du compte. |
+| RES-05 | complet | realtime/race-room.ts, lib/results.ts | tests/db/race.test.ts, tests/db/history.test.ts | Résultats et série temporelle du MPM (wpm_series) persistés ; les graphiques se réaffichent depuis la base. |
+| HIST-01 | complet | app/historique/page.tsx, lib/history.ts | tests/db/history.test.ts | Historique paginé (10 par page) du compte connecté, plus récent d'abord. |
+| HIST-02 | complet | app/historique/page.tsx, app/resultats/[code]/page.tsx | tests/db/history.test.ts | Chaque ligne ouvre /resultats/CODE?course=ID ; accès limité aux participants de la course. |
 | I18N-01 | partiel | `lib/i18n.tsx` | — | Dictionnaire FR/EN avec interpolation et métadonnées ; la plupart des pages restent à migrer vers le dictionnaire. |
 | I18N-02 | partiel | `lib/i18n.tsx`, `lib/i18n-dictionary.ts`, `lib/i18n-server.ts`, `app/layout.tsx` | — | Langue choisie côté serveur (cookie km_lang, sinon Accept-Language) : aucun flash. Sélecteur dans l en-tête de chaque page. Couverture des textes encore partielle (voir I18N-01). |
-| I18N-03 | non fait | — | — | Formatage localisé des dates et nombres absent. |
+| I18N-03 | partiel | lib/format.ts, app/resultats/[code]/page.tsx, app/historique/page.tsx | — | Dates, nombres, pourcentages et durées formatés selon la langue sur les résultats et l'historique ; autres pages à migrer. |
 | TEST-01 | partiel | `tests/unit/` | 9 tests | Texte, carte de chaleur, composants UI ; logique de course et bots à couvrir. |
 | TEST-02 | partiel | `tests/e2e/home.spec.ts` | 2 parcours | Non exécuté dans cet environnement. |
 | TEST-03 | partiel | `tests/e2e/` | — | Connexion par mot de passe seulement : aucun test d'authentification encore. |
 | PERF-01 | non fait | — | — | Lighthouse non mesuré. |
-| PERF-02 | partiel | realtime/protocol.ts | tests/unit/realtime-protocol.test.ts | Limiteur de débit côté serveur (120 msg/s en course, 30/10 s en salle). Le client envoie encore une progression par frappe : à regrouper. |
+| PERF-02 | partiel | realtime/protocol.ts, realtime/race-room.ts | tests/unit/realtime-protocol.test.ts | Limiteur côté serveur (25 msg/s en course). Le client envoie encore une progression par frappe : à regrouper. |
 | PERF-03 | non fait | — | — | Non testé avec 30 participants. |
 | A11Y-01 | partiel | — | — | Contrastes non vérifiés en WCAG AA. |
 | A11Y-02 | partiel | — | — | Balises sémantiques partielles ; tableau des résultats à vérifier. |

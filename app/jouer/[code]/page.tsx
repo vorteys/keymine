@@ -59,6 +59,11 @@ export default function LobbyPage() {
     if (view?.activeRace) router.push(`/course/${code}`);
   }, [view?.activeRace, code, router]);
 
+  // Course terminée : la salle affiche les résultats jusqu'à ce que l'hôte relance.
+  useEffect(() => {
+    if (lobby?.status === "finished") router.push(`/resultats/${code}`);
+  }, [lobby?.status, code, router]);
+
   useEffect(() => {
     if (status === "closed" || status === "removed") router.push("/");
   }, [status, router]);

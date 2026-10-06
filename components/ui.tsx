@@ -81,18 +81,26 @@ export function PixelAvatar({
   label,
   color,
   className = "",
+  src,
 }: {
   label: string;
   color: string;
   className?: string;
+  /** Photo de profil (facultative) : sinon on affiche l'initiale sur fond de couleur. */
+  src?: string | null;
 }) {
   return (
     <span
-      className={`pixel-avatar ${className}`}
+      className={`pixel-avatar overflow-hidden ${className}`}
       style={{ backgroundColor: color }}
       aria-hidden="true"
     >
-      {label}
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element -- avatar utilisateur de taille minuscule
+        <img src={src} alt="" className="h-full w-full object-cover" />
+      ) : (
+        label
+      )}
     </span>
   );
 }

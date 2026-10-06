@@ -317,7 +317,7 @@ export async function attachRaceSocket(
   }
   send(socket, stateMessage(room, Date.now()));
 
-  const limiter = createRateLimiter(120, 1_000); // PERF-02
+  const limiter = createRateLimiter(25, 1_000); // PERF-02 : au plus 25 messages par seconde (le client en envoie 10)
   socket.on("message", (raw) => {
     if (!racerId || !limiter.allow()) return;
     const m = parseMessage(raceClientMessage, raw);

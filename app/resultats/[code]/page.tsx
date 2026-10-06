@@ -1,11 +1,18 @@
 import { Fragment } from "react";
-import { redirect } from "next/navigation";
 import { PixelShell } from "@/components/PixelShell";
-import { PixelAvatar, PixelButton, PixelKeyboard, PixelPanel } from "@/components/ui";
-import { db } from "@/lib/db";
+import { PixelAvatar, PixelKeyboard, PixelPanel } from "@/components/ui";
+import { ResultsActions } from "@/components/results/ResultsActions";
+import { WpmChart } from "@/components/results/WpmChart";
 import { peekIdentity } from "@/lib/auth/identity";
+import { formatNumber, formatPercent, formatRaceTime } from "@/lib/format";
 import { heatmapRowsFromCounts } from "@/lib/heatmap";
-import { getLobbyByCode } from "@/lib/lobby";
+import { getRequestLang } from "@/lib/i18n-server";
+import { translate, type DictKey, type SiteLang } from "@/lib/i18n-dictionary";
+import { db } from "@/lib/db";
+import { getLobbyByCode, isHost } from "@/lib/lobby";
+import { isPersonalRecord, latestFinishedRaceId, loadRaceResults, type ResultRow } from "@/lib/results";
+
+export const dynamic = "force-dynamic";
 
 const PODIUM_STYLE = [
   { height: "h-44", bg: "bg-[#f0b429]", text: "text-[#1b1e13]", size: "text-4xl", avatar: "h-14 w-14 text-2xl", label: "1" },
@@ -13,188 +20,240 @@ const PODIUM_STYLE = [
   { height: "h-24", bg: "bg-[#9a6b3c]", text: "text-white", size: "text-2xl", avatar: "h-13 w-13 text-xl", label: "3" },
 ];
 
-export default async function ResultatsPage({ params }: PageProps<"/resultats/[code]">) {
+const STATUS_KEY: Record<string, DictKey> = {
+  finished: "res.status_finished",
+  timeout: "res.status_timeout",
+  abandoned: "res.status_abandoned",
+};
+
+const BONUS_KEY = {
+  minus_words: "res.bonus_minus_words",
+  plus_words: "res.bonus_plus_words",
+  fog: "res.bonus_fog",
+} as const satisfies Record<string, DictKey>;
+
+function bonusSummary(lang: SiteLang, row: ResultRow): string {
+  if (row.bonuses.length === 0) return translate(lang, "res.bonus_none");
+  return row.bonuses.map((b) => translate(lang, BONUS_KEY[b.kind])).join(", ");
+}
+
+function Message({ lang, text }: { lang: SiteLang; text: DictKey }) {
+  return (
+    <PixelShell active="lobbys">
+      <p role="alert" className="font-pixel text-sm text-white">
+        {translate(lang, text)}
+      </p>
+    </PixelShell>
+  );
+}
+
+export default async function ResultatsPage({
+  params,
+  searchParams,
+}: PageProps<"/resultats/[code]">) {
   const { code } = await params;
+  const query = await searchParams;
+  const lang = await getRequestLang();
+  const t = (key: DictKey, p?: Record<string, string | number>) => translate(lang, key, p);
+
   const lobby = await getLobbyByCode(code);
-  if (!lobby) {
-    return (
-      <PixelShell active="lobbys">
-        <p className="font-pixel text-white">Salle introuvable.</p>
-      </PixelShell>
-    );
-  }
+  if (!lobby) return <Message lang={lang} text="res.not_found" />;
 
-  const race = await db
-    .selectFrom("races")
-    .selectAll()
-    .where("lobby_id", "=", lobby.id)
-    .orderBy("created_at", "desc")
-    .executeTakeFirst();
-
-  if (!race) {
-    return (
-      <PixelShell active="lobbys">
-        <p className="font-pixel text-white">Aucune course pour cette salle pour l’instant.</p>
-      </PixelShell>
-    );
-  }
-  if (race.status !== "finished") {
-    redirect(`/course/${code}`);
-  }
-
-  const participants = await db
-    .selectFrom("race_participants")
-    .selectAll()
-    .where("race_id", "=", race.id)
-    .where("role", "=", "participant")
-    .orderBy("rank", "asc")
-    .execute();
+  // HIST-02 : ?course=<id> rouvre les résultats d'une course passée de cette salle.
+  const requested = typeof query.course === "string" ? query.course : null;
+  const raceId = requested ?? (await latestFinishedRaceId(lobby.id));
+  const results = raceId ? await loadRaceResults(raceId) : null;
+  if (!results || results.race.lobbyId !== lobby.id) return <Message lang={lang} text="res.not_found" />;
+  if (results.race.status !== "finished") return <Message lang={lang} text="res.not_finished" />;
 
   const identity = await peekIdentity();
-  const me = participants.find(
-    (p) =>
-      (identity?.kind === "user" && p.user_id === identity.userId) ||
-      (identity?.kind === "guest" && p.guest_id === identity.guestId),
-  );
+  const myKey = identity ? (identity.kind === "user" ? `u:${identity.userId}` : `g:${identity.guestId}`) : null;
+  const me = myKey ? (results.rows.find((r) => r.ownerKey === myKey) ?? null) : null;
+  const isSpectator = myKey ? results.spectatorKeys.includes(myKey) : false;
+  if (!me && !isSpectator) return <Message lang={lang} text="res.not_allowed" />;
+
+  const rows = results.rows;
+  const podium = rows.slice(0, 3);
 
   let avgWpm: number | null = null;
-  if (me?.user_id) {
+  let record = false;
+  if (me?.userId) {
     const avg = await db
       .selectFrom("race_participants")
       .select((eb) => eb.fn.avg<number>("wpm").as("avg_wpm"))
-      .where("user_id", "=", me.user_id)
+      .where("user_id", "=", me.userId)
       .where("status", "=", "finished")
-      .where("race_id", "!=", race.id)
+      .where("race_id", "!=", results.race.id)
       .executeTakeFirst();
-    avgWpm = avg?.avg_wpm ?? null;
+    avgWpm = avg?.avg_wpm != null ? Number(avg.avg_wpm) : null;
+    record = me.status === "finished" && (await isPersonalRecord(me.userId, results.race.id, me.wpm));
   }
 
-  const podium = participants.slice(0, 3);
-  const heatmapRows = me
-    ? heatmapRowsFromCounts(
-        (me.key_correct as Record<string, number> | null) ?? {},
-        (me.key_errors as Record<string, number> | null) ?? {},
-      )
-    : null;
-
+  const heatmapRows = me ? heatmapRowsFromCounts(me.keyCorrect, me.keyErrors) : null;
   const worstKeys = heatmapRows
     ? heatmapRows
         .flatMap((r) => r.keys)
+        .filter(([, pct]) => pct < 100)
         .sort((a, b) => a[1] - b[1])
         .slice(0, 3)
     : [];
 
+  const roomOpen = lobby.status !== "closed";
+  const isCurrentRace = !requested || requested === (await latestFinishedRaceId(lobby.id));
+  const host = identity ? isHost(identity, lobby) : false;
+  const delta = me && avgWpm != null ? Math.round(me.wpm - avgWpm) : null;
+
   return (
     <PixelShell active="lobbys">
       <div className="mb-5 flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="font-pixel text-xl text-white [text-shadow:4px_4px_0_#000]">
-          COURSE TERMINÉE
-        </h1>
+        <h1 className="font-pixel text-xl text-white [text-shadow:4px_4px_0_#000]">{t("res.title")}</h1>
         <span className="text-2xl text-[#f1e6c9]">
-          Salle {code} · {participants.length} participants
+          {t("res.room_meta", { code, count: rows.length })}
         </span>
       </div>
 
       <div className="flex flex-col gap-7 lg:flex-row lg:items-start">
         <div className="flex w-full flex-col gap-6 lg:w-[32rem] lg:flex-none">
           <PixelPanel className="p-5">
-            <div className="font-pixel mb-3.5 text-sm text-[#2b2b2b]">PODIUM</div>
-            <div className="flex h-72 items-end justify-center gap-2.5">
+            <h2 className="font-pixel mb-3.5 text-sm text-[#2b2b2b]">{t("res.podium")}</h2>
+            <ol className="flex h-72 items-end justify-center gap-2.5">
               {[podium[1], podium[0], podium[2]].map((p, i) => {
-                const style = [PODIUM_STYLE[1], PODIUM_STYLE[0], PODIUM_STYLE[2]][i]!;
-                if (!p) return <div key={i} className="w-36" />;
+                const place = [1, 0, 2][i]!;
+                const style = PODIUM_STYLE[place]!;
+                if (!p) return <li key={i} aria-hidden="true" className="w-36" />;
                 return (
-                  <div key={p.id} className="flex w-36 flex-col items-center gap-1">
+                  <li key={p.id} className="flex w-36 flex-col items-center gap-1">
                     <PixelAvatar
-                      label={p.display_name[0]?.toUpperCase() ?? "?"}
-                      color={p.is_bot ? "#555555" : "#3d6fc4"}
-                      className={`${style.avatar}`}
+                      label={p.name[0]?.toUpperCase() ?? "?"}
+                      color={p.isBot ? "#555555" : "#3d6fc4"}
+                      src={p.avatarUrl}
+                      className={style.avatar}
                     />
-                    <div className="truncate text-2xl leading-none">{p.display_name}</div>
+                    <div className="max-w-full truncate text-2xl leading-none">{p.name}</div>
                     <div className="text-xl leading-none text-[#3a3a3a]">
-                      {p.wpm ? Math.round(p.wpm) : 0} MPM
+                      {formatNumber(lang, p.wpm)} {t("race.wpm")}
                     </div>
                     <div
                       className={`font-pixel flex w-full items-center justify-center border-4 border-black ${style.height} ${style.bg} ${style.text} ${style.size}`}
                     >
+                      <span className="sr-only">{t("res.col_rank")} </span>
                       {style.label}
                     </div>
-                  </div>
+                  </li>
                 );
               })}
-            </div>
+            </ol>
           </PixelPanel>
 
           {me && (
             <PixelPanel className="p-5">
-              <div className="flex items-center justify-between">
-                <span className="font-pixel text-sm text-[#2b2b2b]">TON RÉSULTAT</span>
-                {avgWpm != null && (
-                  <span className="font-pixel border-4 border-black bg-[#3f7d24] px-2 py-1.5 text-[9px] text-white">
-                    {me.wpm && me.wpm >= avgWpm ? "+" : ""}
-                    {me.wpm ? Math.round(me.wpm - avgWpm) : 0} MPM VS TA MOYENNE
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="font-pixel text-sm text-[#2b2b2b]">{t("res.your_result")}</h2>
+                {delta != null && (
+                  <span
+                    className={`font-pixel border-4 border-black px-2 py-1.5 text-[9px] text-white ${
+                      delta >= 0 ? "bg-[#3f7d24]" : "bg-[#9b3a2e]"
+                    }`}
+                  >
+                    {t("res.vs_average", { delta: `${delta >= 0 ? "+" : ""}${delta}` })}
                   </span>
                 )}
               </div>
+              {record && (
+                <p className="font-pixel mt-3 border-4 border-black bg-[#f0b429] px-2 py-2 text-[10px] text-[#1b1e13]">
+                  ★ {t("res.record")}
+                </p>
+              )}
               <div className="mt-3 grid grid-cols-3 gap-2.5">
                 <div className="pixel-slot px-3 py-2 leading-none">
-                  <div className="font-pixel text-[9px] text-[#ffefb3]">VITESSE</div>
-                  <div className="mt-1 text-4xl text-white">{Math.round(me.wpm ?? 0)} MPM</div>
+                  <div className="font-pixel text-[9px] text-[#ffefb3]">{t("race.speed")}</div>
+                  <div className="mt-1 text-4xl text-white">
+                    {formatNumber(lang, me.wpm)} {t("race.wpm")}
+                  </div>
                 </div>
                 <div className="pixel-slot px-3 py-2 leading-none">
-                  <div className="font-pixel text-[9px] text-[#ffefb3]">PRÉCISION</div>
-                  <div className="mt-1 text-4xl text-white">{Math.round(me.accuracy ?? 100)} %</div>
+                  <div className="font-pixel text-[9px] text-[#ffefb3]">{t("race.accuracy")}</div>
+                  <div className="mt-1 text-4xl text-white">{formatPercent(lang, me.accuracy)}</div>
                 </div>
                 <div className="pixel-slot px-3 py-2 leading-none">
-                  <div className="font-pixel text-[9px] text-[#ffefb3]">ERREURS</div>
-                  <div className="mt-1 text-4xl text-white">{me.error_count}</div>
+                  <div className="font-pixel text-[9px] text-[#ffefb3]">{t("race.errors")}</div>
+                  <div className="mt-1 text-4xl text-white">{me.errors}</div>
                 </div>
               </div>
             </PixelPanel>
           )}
         </div>
 
-        <div className="flex w-full flex-grow flex-col gap-6">
+        <div className="flex w-full min-w-0 flex-grow flex-col gap-6">
           <PixelPanel className="p-5">
-            <div className="font-pixel mb-2.5 text-sm text-[#2b2b2b]">
-              CLASSEMENT DE LA COURSE
-            </div>
-            <div className="grid grid-cols-[36px_1fr_74px_84px_66px] gap-x-2.5 gap-y-1 text-xl leading-tight">
-              <span className="font-pixel text-[8px] text-[#3a3a3a]">#</span>
-              <span className="font-pixel text-[8px] text-[#3a3a3a]">JOUEUR</span>
-              <span className="font-pixel text-[8px] text-[#3a3a3a]">MPM</span>
-              <span className="font-pixel text-[8px] text-[#3a3a3a]">PRÉCISION</span>
-              <span className="font-pixel text-[8px] text-[#3a3a3a]">ERREURS</span>
-              {participants.map((p) => (
-                <Fragment key={p.id}>
-                  <span className="font-pixel pt-1 text-[11px]">{p.rank ?? "—"}</span>
-                  <span>
-                    {p.display_name}
-                    {p.status === "abandoned" ? " (abandon)" : ""}
+            <h2 className="font-pixel mb-2.5 text-sm text-[#2b2b2b]">{t("res.ranking")}</h2>
+            <div className="overflow-x-auto">
+              <div className="grid min-w-[40rem] grid-cols-[36px_minmax(0,1.4fr)_64px_72px_84px_60px_72px_100px_minmax(0,1fr)] items-baseline gap-x-2.5 gap-y-1 text-xl leading-tight">
+                {(
+                  [
+                    "res.col_rank",
+                    "res.col_player",
+                    "res.col_wpm",
+                    "res.col_raw",
+                    "res.col_accuracy",
+                    "res.col_errors",
+                    "res.col_time",
+                    "res.col_status",
+                    "res.col_bonus",
+                  ] as const
+                ).map((key) => (
+                  <span key={key} className="font-pixel text-[8px] text-[#3a3a3a]">
+                    {t(key)}
                   </span>
-                  <span>{Math.round(p.wpm ?? 0)}</span>
-                  <span>{Math.round(p.accuracy ?? 0)} %</span>
-                  <span>{p.error_count}</span>
-                </Fragment>
-              ))}
+                ))}
+                {rows.map((p) => (
+                  <Fragment key={p.id}>
+                    <span className="font-pixel pt-1 text-[11px]">{p.rank}</span>
+                    <span className={`truncate ${p.ownerKey && p.ownerKey === myKey ? "font-bold" : ""}`}>
+                      {p.name}
+                    </span>
+                    <span>{formatNumber(lang, p.wpm)}</span>
+                    <span>{formatNumber(lang, p.rawWpm)}</span>
+                    <span>{formatPercent(lang, p.accuracy)}</span>
+                    <span>{p.errors}</span>
+                    <span>{p.status === "finished" ? formatRaceTime(lang, p.timeMs) : "—"}</span>
+                    <span>{t(STATUS_KEY[p.status] ?? "res.status_other")}</span>
+                    <span className="truncate">{bonusSummary(lang, p)}</span>
+                  </Fragment>
+                ))}
+              </div>
             </div>
+          </PixelPanel>
+
+          <PixelPanel className="p-5">
+            <h2 className="font-pixel mb-3 text-sm text-[#2b2b2b]">{t("res.chart")}</h2>
+            <WpmChart
+              title={t("res.chart")}
+              description={t("res.chart_desc")}
+              xLabel={t("res.chart_x")}
+              yLabel={t("res.chart_y")}
+              series={rows.map((r) => ({
+                id: r.id,
+                name: `${r.name} · ${formatNumber(lang, r.wpm)} ${t("race.wpm")}`,
+                isBot: r.isBot,
+                isMe: r.ownerKey != null && r.ownerKey === myKey,
+                points: r.series.map((s) => ({ t: Math.round(s.t / 1000), wpm: s.wpm })),
+              }))}
+            />
           </PixelPanel>
 
           {heatmapRows && (
             <PixelPanel className="p-5">
-              <div className="mb-3 flex items-center justify-between">
-                <span className="font-pixel text-sm text-[#2b2b2b]">HEATMAP DU CLAVIER</span>
-                <span className="text-xl text-[#3a3a3a]">Rouge: à améliorer · Vert: maîtrisé</span>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h2 className="font-pixel text-sm text-[#2b2b2b]">{t("res.heatmap")}</h2>
+                <span className="text-xl text-[#3a3a3a]">{t("res.heatmap_legend")}</span>
               </div>
               <PixelKeyboard rows={heatmapRows} />
               {worstKeys.length > 0 && (
                 <p className="mt-2.5 text-xl">
-                  À travailler en priorité:{" "}
+                  {t("res.worst_keys")}{" "}
                   {worstKeys.map(([letter, pct]) => (
-                    <b
-                      key={letter}
-                      className="mr-1.5 border-2 border-black bg-[#ff7b6b] px-1.5 font-normal"
-                    >
+                    <b key={letter} className="mr-1.5 border-2 border-black bg-[#ff7b6b] px-1.5 font-normal">
                       {letter} ({pct}%)
                     </b>
                   ))}
@@ -205,17 +264,12 @@ export default async function ResultatsPage({ params }: PageProps<"/resultats/[c
         </div>
       </div>
 
-      <div className="mt-8 flex flex-wrap justify-end gap-3.5 border-t-4 border-black bg-[#241a10] px-4 py-5">
-        <PixelButton href="/profil" variant="gold" className="h-13 px-5 text-xs">
-          MES STATS
-        </PixelButton>
-        <PixelButton href="/" variant="slate" className="h-13 px-5 text-xs">
-          ACCUEIL
-        </PixelButton>
-        <PixelButton href="/jouer/creer" variant="green" className="h-13 px-7 text-sm">
-          REJOUER
-        </PixelButton>
-      </div>
+      <ResultsActions
+        code={code}
+        isHost={host}
+        hasHistory={identity?.kind === "user"}
+        roomOpen={roomOpen && isCurrentRace && lobby.status === "finished"}
+      />
     </PixelShell>
   );
 }

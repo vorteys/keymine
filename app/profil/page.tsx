@@ -1,5 +1,10 @@
 import { PixelShell } from "@/components/PixelShell";
-import { PixelAvatar, PixelKeyboard, PixelSlot } from "@/components/ui";
+import Link from "next/link";
+import { PixelAvatar, PixelButton, PixelKeyboard, PixelSlot } from "@/components/ui";
+import { formatDate, formatNumber } from "@/lib/format";
+import { loadHistory } from "@/lib/history";
+import { getRequestLang } from "@/lib/i18n-server";
+import { translate } from "@/lib/i18n-dictionary";
 import { GuestProfile } from "@/components/GuestProfile";
 import { LogoutButton } from "@/components/LogoutButton";
 import { db } from "@/lib/db";
@@ -73,22 +78,8 @@ export default async function ProfilPage() {
     })
     .join(" ");
 
-  const history = await db
-    .selectFrom("race_participants")
-    .innerJoin("races", "races.id", "race_participants.race_id")
-    .select([
-      "race_participants.wpm",
-      "race_participants.accuracy",
-      "race_participants.rank",
-      "race_participants.created_at",
-      "races.language",
-      "races.lobby_id",
-    ])
-    .where("race_participants.user_id", "=", identity.userId)
-    .where("race_participants.status", "=", "finished")
-    .orderBy("race_participants.created_at", "desc")
-    .limit(6)
-    .execute();
+  const lang = await getRequestLang();
+  const history = (await loadHistory(identity.userId, 1)).rows.slice(0, 6);
 
   const rankLabel = (r: number | null) =>
     r === 1 ? "1er" : r === 2 ? "2e" : r === 3 ? "3e" : r ? `${r}e` : "—";
@@ -202,20 +193,23 @@ export default async function ProfilPage() {
             {history.length === 0 && (
               <p className="text-xl text-[#3a3a3a]">Aucune course terminée pour l’instant.</p>
             )}
-            {history.map((h, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between border-b-2 border-dotted border-[#8b8b8b] py-1 text-xl"
+            {history.map((h) => (
+              <Link
+                key={h.raceId}
+                href={`/resultats/${h.lobbyCode}?course=${h.raceId}`}
+                className="flex items-center justify-between border-b-2 border-dotted border-[#8b8b8b] py-1 text-xl hover:bg-[#00000010]"
               >
-                <span>{new Date(h.created_at).toLocaleDateString("fr-CA")}</span>
-                <span className="text-[#3a3a3a]">{h.language.toUpperCase()}</span>
-                <b className="font-normal">{Math.round(h.wpm ?? 0)} MPM</b>
+                <span>{formatDate(lang, h.playedAt)}</span>
+                <b className="font-normal">{formatNumber(lang, h.wpm)} MPM</b>
                 <span className="font-pixel text-[10px]">{rankLabel(h.rank)}</span>
-              </div>
+              </Link>
             ))}
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <PixelButton href="/historique" variant="gold" className="h-11 px-5 text-[10px]">
+              {translate(lang, "res.history")}
+            </PixelButton>
             <LogoutButton />
           </div>
         </div>

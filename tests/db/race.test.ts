@@ -114,10 +114,13 @@ describe("course de bout en bout", () => {
     expect(rows[1]).toMatchObject({ display_name: "Joueuse", status: "abandoned", rank: 2 });
     expect(rows[1].text_length).toBe(TEXT.length);
 
-    const lobbyRow = await client.query(`select status from lobbies where id = $1`, [lobby]);
-    expect(lobbyRow.rows[0].status).toBe("finished");
-    const raceRow = await client.query(`select status from races where id = $1`, [raceId]);
-    expect(raceRow.rows[0].status).toBe("finished");
+    // Les statuts de la salle et de la course sont écrits après les lignes des joueurs.
+    const statuses = await waitForAsync(async () => {
+      const lobbyRow = await client.query(`select status from lobbies where id = $1`, [lobby]);
+      const raceRow = await client.query(`select status from races where id = $1`, [raceId]);
+      return lobbyRow.rows[0].status === "finished" && raceRow.rows[0].status === "finished" ? true : null;
+    });
+    expect(statuses).toBe(true);
     conn.ws.close();
   }, 40_000);
 

@@ -257,7 +257,7 @@ export default async function ResultatsPage({
                 <h2 className="font-pixel text-sm text-[#2b2b2b]">{t("res.heatmap")}</h2>
                 <span className="text-xl text-[#3a3a3a]">{t("res.heatmap_legend")}</span>
               </div>
-              <PixelKeyboard rows={heatmapRows} />
+              <PixelKeyboard rows={heatmapRows} label={t("res.heatmap")} />
               {worstKeys.length > 0 && (
                 <p className="mt-2.5 text-xl">
                   {t("res.worst_keys")}{" "}

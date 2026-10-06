@@ -141,26 +141,32 @@ export const keyboardRows: { indent: string; keys: [string, number][] }[] = [
 export function PixelKeyboard({
   rows = keyboardRows,
   className = "",
+  label,
 }: {
   rows?: { indent: string; keys: [string, number][] }[];
   className?: string;
+  /** Nom accessible de la zone : sur écran étroit elle défile horizontalement, donc elle doit être atteignable au clavier. */
+  label?: string;
 }) {
   return (
-    <div className={`flex flex-col gap-2 ${className}`}>
-      {rows.map((row, i) => (
-        <div key={i} className="flex gap-2" style={{ marginLeft: row.indent }}>
-          {row.keys.map(([letter, pct]) => (
-            <div
-              key={letter}
-              className="pixel-keymap-key font-pixel"
-              style={{ background: heatColor(pct) }}
-            >
-              <b className="text-base font-normal sm:text-lg">{letter}</b>
-              <span className="text-xs sm:text-sm">{pct}</span>
-            </div>
-          ))}
-        </div>
-      ))}
+    // 360 px (DES-06) : le clavier garde une taille lisible et défile dans sa zone plutôt que de faire défiler la page.
+    <div className="overflow-x-auto" role="group" aria-label={label} tabIndex={label ? 0 : undefined}>
+      <div className={`flex min-w-[30rem] flex-col gap-2 ${className}`}>
+        {rows.map((row, i) => (
+          <div key={i} className="flex gap-2" style={{ marginLeft: row.indent }}>
+            {row.keys.map(([letter, pct]) => (
+              <div
+                key={letter}
+                className="pixel-keymap-key font-pixel"
+                style={{ background: heatColor(pct) }}
+              >
+                <b className="text-base font-normal sm:text-lg">{letter}</b>
+                <span className="text-xs sm:text-sm">{pct}</span>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

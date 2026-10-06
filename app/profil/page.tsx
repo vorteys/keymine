@@ -177,7 +177,7 @@ export default async function ProfilPage() {
                 <span className="font-pixel text-sm">{t("profile.worst_keys")}</span>
                 <span className="text-xl text-[#3a3a3a]">{t("res.heatmap_legend")}</span>
               </div>
-              <PixelKeyboard rows={heatmapRows} />
+              <PixelKeyboard rows={heatmapRows} label={t("res.heatmap")} />
             </div>
           </div>
 

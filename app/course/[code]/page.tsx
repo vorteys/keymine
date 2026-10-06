@@ -250,6 +250,9 @@ export default function CoursePage() {
         <main className="flex flex-col items-center gap-4 px-4 py-12 text-center">
           <h1 className="font-pixel text-base text-white">{t("race.mobile_title")}</h1>
           <p className="max-w-sm text-2xl text-[#f1e6c9]">{t("race.mobile_text")}</p>
+          <PixelButton href={`/resultats/${code}`} variant="gold" className="h-12 px-6 text-[12px]">
+            {t("race.mobile_results")}
+          </PixelButton>
           <PixelButton href="/" variant="slate" className="h-12 px-6 text-[12px]">
             KEYMINE
           </PixelButton>

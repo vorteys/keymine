@@ -30,7 +30,7 @@
 **Détection.** En écrivant les tests d'intégration contre une vraie base (`tests/db/join.test.ts`, `tests/db/sweep.test.ts`) : le cas « libéré puis de retour » n'avait jamais été exercé à la main.
 **Correction.** Réactivation de la ligne existante au lieu d'une insertion, rôle conservé, capacité vérifiée, et transfert limité aux comptes ; les tests restent dans la CI.
 
-Autres erreurs corrigées en cours de route (plus petites) : curseur de capacité allant jusqu'à 100 alors que la validation serveur plafonne à 30 (le formulaire aurait été refusé), copie de travail effacée par une option `rsync` trop large, types `ws` manquants qui cassaient `tsc`.
+Autres erreurs corrigées en cours de route (plus petites) : curseur de capacité allant jusqu'à 100 alors que la validation serveur plafonne à 30 (le formulaire aurait été refusé), copie de travail effacée par une option `rsync` trop large, types `ws` manquants qui cassaient `tsc`. Les premiers tests dans un vrai navigateur ont aussi révélé quatre défauts que lint, types et tests unitaires ne voyaient pas : deux erreurs d'hydratation React sur la page de création de salle (durée formatée par `Intl` avec une espace insécable différente entre Node et Chrome, aperçu de texte tiré au hasard côté serveur), un changement de langue qui ne rafraîchissait pas les pages rendues côté serveur, et des textes illisibles en thème clair (couleurs fixes sur fond variable).
 
 ## Réflexion sur notre façon de travailler avec les agents
 

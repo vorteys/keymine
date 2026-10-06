@@ -77,8 +77,32 @@ export interface LobbyPlayersTable {
   role: Generated<PlayerRole>;
   is_bot: Generated<boolean>;
   bot_level: BotLevel | null;
+  active: Generated<boolean>;
   joined_at: ColumnType<Date, string | undefined, never>;
   last_seen_at: ColumnType<Date, string | undefined, Date | string>;
+}
+
+export type Difficulty = "easy" | "medium" | "hard";
+
+export interface CorpusTextsTable {
+  id: Generated<number>;
+  language: Language;
+  title: string;
+  source: Generated<string>;
+  content: string;
+  word_count: number;
+  difficulty: Generated<Difficulty>;
+  has_accents: Generated<boolean>;
+  has_digits: Generated<boolean>;
+  has_punctuation: Generated<boolean>;
+}
+
+export interface CorpusWordsTable {
+  id: Generated<number>;
+  language: Language;
+  word: string;
+  frequency_rank: Generated<number>;
+  has_accents: Generated<boolean>;
 }
 
 export interface RacesTable {
@@ -123,4 +147,6 @@ export interface Database {
   lobby_players: LobbyPlayersTable;
   races: RacesTable;
   race_participants: RaceParticipantsTable;
+  corpus_texts: CorpusTextsTable;
+  corpus_words: CorpusWordsTable;
 }

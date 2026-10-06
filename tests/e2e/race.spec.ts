@@ -51,6 +51,8 @@ test("course complète : hôte + invité + bot, résultats, rejouer (COURSE-03/0
   // Le classement est un vrai tableau (A11Y-03).
   await expect(host.getByRole("table")).toBeVisible();
   await expect(host.getByRole("table")).toContainText(guestName);
+  // Les résultats sont complets dès l'arrivée sur la page : une courbe de MPM par coureur (RES-03).
+  await expect(host.locator("figure svg polyline")).toHaveCount(3);
 
   // L'hôte relance avec les mêmes participants.
   await host.getByRole("button", { name: "REJOUER" }).click();

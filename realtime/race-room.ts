@@ -183,6 +183,8 @@ function dispatchEvents(room: Room, events: EngineEvent[]) {
 }
 
 async function tick(room: Room) {
+  // Pendant l'enregistrement des résultats, aucun autre tick ne doit rien diffuser.
+  if (room.persisting) return;
   const now = Date.now();
   if (room.phase === "countdown" && now >= room.startsAtMs) {
     room.phase = "racing";
@@ -191,9 +193,11 @@ async function tick(room: Room) {
   if (room.phase === "racing") {
     dispatchEvents(room, room.engine.tick(now));
     if (room.engine.isFinalized) {
+      // Les résultats sont écrits AVANT d'annoncer la fin : les clients redirigent vers la page des
+      // résultats dès qu'ils reçoivent « finished » et elle doit y trouver toutes les lignes (RES-02).
+      await persistResults(room, now).catch((e) => console.error("[realtime] résultats", e));
       room.phase = "finished";
       broadcast(room, stateMessage(room, now));
-      await persistResults(room, now).catch((e) => console.error("[realtime] résultats", e));
       stopRoom(room);
       return;
     }

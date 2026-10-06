@@ -6,6 +6,8 @@ export const DICTIONARY = {
   fr: {
     "meta.description": "Courses de frappe en temps réel pour la classe.",
     "a11y.skip": "Aller au contenu",
+    "a11y.profile_link": "Mon profil",
+    "a11y.login_link": "Connexion",
     "a11y.main_nav": "Navigation principale",
     "footer.text": "KeyMine · Courses de frappe en temps réel",
     "nav.jouer": "JOUER",
@@ -386,6 +388,8 @@ export const DICTIONARY = {
   en: {
     "meta.description": "Real-time typing races for the classroom.",
     "a11y.skip": "Skip to content",
+    "a11y.profile_link": "My profile",
+    "a11y.login_link": "Log in",
     "a11y.main_nav": "Main navigation",
     "footer.text": "KeyMine · Real-time typing races",
     "nav.jouer": "PLAY",

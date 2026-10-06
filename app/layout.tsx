@@ -4,6 +4,9 @@ import "./globals.css";
 import { Providers } from "@/components/Providers";
 import { getRequestLang } from "@/lib/i18n-server";
 import { translate } from "@/lib/i18n-dictionary";
+import { db } from "@/lib/db";
+import { peekIdentity } from "@/lib/auth/identity";
+import type { Viewer } from "@/lib/viewer";
 
 const pressStart = localFont({
   src: "./fonts/press-start-2p.woff2",
@@ -31,8 +34,17 @@ export async function generateMetadata(): Promise<Metadata> {
 // thème). Priorité : choix enregistré, sinon préférence système.
 const THEME_SCRIPT = `(function(){try{var s=localStorage.getItem("km_theme");var t=(s==="light"||s==="dark")?s:(window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme="dark";}})();`;
 
+// En-tête : pseudo et photo de la personne connectée (ou « Invité » si personne).
+async function loadViewer(): Promise<Viewer> {
+  const identity = await peekIdentity();
+  if (!identity) return null;
+  if (identity.kind === "guest") return { kind: "guest", name: identity.displayName };
+  const row = await db.selectFrom("users").select("avatar_url").where("id", "=", identity.userId).executeTakeFirst();
+  return { kind: "user", name: identity.displayName, avatarUrl: row?.avatar_url ?? null };
+}
+
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const lang = await getRequestLang();
+  const [lang, viewer] = await Promise.all([getRequestLang(), loadViewer()]);
   return (
     <html
       lang={lang}
@@ -43,7 +55,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body className="min-h-screen antialiased">
-        <Providers initialLang={lang}>{children}</Providers>
+        <Providers initialLang={lang} viewer={viewer}>{children}</Providers>
       </body>
     </html>
   );

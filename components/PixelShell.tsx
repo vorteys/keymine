@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { PixelAvatar } from "./ui";
 import { useLanguage, type SiteLang } from "@/lib/i18n";
+import { useViewer } from "@/lib/viewer";
 
 type NavKey = "jouer" | "lobbys" | "stats" | null;
 
@@ -37,6 +38,8 @@ export function PixelShell({
 }) {
   const { t, lang, setLang } = useLanguage();
   const { toggle: toggleTheme } = useTheme();
+  const viewer = useViewer();
+  const viewerName = viewer?.name ?? t("common.guest");
 
   return (
     <div className="pixel-night min-h-screen">
@@ -94,9 +97,18 @@ export function PixelShell({
         </button>
 
         {rightSlot ?? (
-          <Link href="/profil" className="flex shrink-0 items-center gap-2 text-xl text-white">
-            <PixelAvatar label="A" color="#3d6fc4" className="h-9 w-9 text-sm" />
-            <span className="hidden sm:inline">{t("common.guest")}</span>
+          <Link
+            href={viewer?.kind === "user" ? "/profil" : "/connexion"}
+            className="flex min-w-0 shrink-0 items-center gap-2 text-xl text-white"
+          >
+            <PixelAvatar
+              label={viewerName.slice(0, 1).toUpperCase()}
+              color="#3d6fc4"
+              className="h-9 w-9 text-sm"
+              src={viewer?.kind === "user" ? viewer.avatarUrl : null}
+            />
+            <span className="hidden max-w-40 truncate sm:inline">{viewerName}</span>
+            <span className="sr-only sm:hidden">{viewer?.kind === "user" ? t("a11y.profile_link") : t("a11y.login_link")}</span>
           </Link>
         )}
       </header>

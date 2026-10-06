@@ -10,9 +10,11 @@ test("créer un compte, se déconnecter, se reconnecter", async ({ page }) => {
   await page.getByLabel("MOT DE PASSE").fill(PASSWORD);
   await page.getByRole("button", { name: "CRÉER LE COMPTE" }).click();
   await expect(page).toHaveURL("/");
+  // L'en-tête affiche le pseudo de la personne connectée et mène à son profil.
+  await expect(page.getByRole("banner").getByRole("link", { name: username })).toHaveAttribute("href", "/profil");
 
   await page.goto("/profil");
-  await expect(page.getByText(username.toUpperCase())).toBeVisible();
+  await expect(page.getByRole("main").getByText(username.toUpperCase(), { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "DÉCONNEXION" }).click();
 
   await page.goto("/connexion");
@@ -21,7 +23,12 @@ test("créer un compte, se déconnecter, se reconnecter", async ({ page }) => {
   await page.getByRole("button", { name: "CONNEXION" }).last().click();
   await expect(page).toHaveURL("/");
   await page.goto("/profil");
-  await expect(page.getByText(username.toUpperCase())).toBeVisible();
+  await expect(page.getByRole("main").getByText(username.toUpperCase(), { exact: true })).toBeVisible();
+});
+
+test("sans connexion, l'en-tête propose la connexion (« Invité »)", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("banner").getByRole("link", { name: "Invité" })).toHaveAttribute("href", "/connexion");
 });
 
 test("un mauvais mot de passe affiche un message d'erreur traduit", async ({ page }) => {

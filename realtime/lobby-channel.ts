@@ -167,11 +167,18 @@ async function touchPresence(code: string) {
 }
 
 let listener: Client | null = null;
+let onRaceCreated: (raceId: string) => void = () => {};
+
+/** Appelé quand une course est créée (notification Postgres), même si personne n'est encore connecté. */
+export function setRaceCreatedHandler(handler: (raceId: string) => void) {
+  onRaceCreated = handler;
+}
 
 async function startListener() {
   const client = new Client({ connectionString: process.env.DATABASE_URL });
   client.on("notification", (msg) => {
     if (msg.channel === "lobby_changed" && msg.payload) scheduleRefresh(msg.payload);
+    if (msg.channel === "race_created" && msg.payload) onRaceCreated(msg.payload);
   });
   const reconnect = () => {
     if (listener !== client) return;
@@ -183,6 +190,7 @@ async function startListener() {
   client.on("end", reconnect);
   await client.connect();
   await client.query("listen lobby_changed");
+  await client.query("listen race_created");
   listener = client;
   for (const code of channels.keys()) scheduleRefresh(code); // rattrape ce qui a pu être manqué
 }

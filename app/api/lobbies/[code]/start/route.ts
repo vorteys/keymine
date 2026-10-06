@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getIdentity } from "@/lib/auth/identity";
 import { getLobbyByCode, isHost } from "@/lib/lobby";
+import { botDisplayName } from "@/lib/race/bots";
+import { assertTransition, canStartRace } from "@/lib/race/state";
 import { NoTextAvailableError } from "@/lib/text/generate";
 import { generateTextForRace } from "@/lib/text/service";
 
-const COUNTDOWN_MS = 5_000; // JEU-1
+const COUNTDOWN_MS = 3_000; // COURSE-03 : décompte 3, 2, 1
 
 // COUR-1/JEU-1: l'hôte démarre la course; le serveur génère le texte et fige
 // la liste des participants (bots inclus) pour tout le monde.
@@ -39,13 +41,20 @@ export async function POST(_request: Request, { params }: { params: Promise<{ co
       "users.display_name",
     ])
     .where("lobby_id", "=", lobby.id)
+    .where("lobby_players.active", "=", true)
     .execute();
 
-  const participants = players.filter((p) => p.role === "participant");
-  // COUR-6: minimum 2 participants, bots inclus.
-  if (participants.length < 2) {
+  // COURSE-02 : au moins 2 participants (bots inclus) dont au moins 1 humain.
+  const check = canStartRace(players.map((p) => ({ role: p.role, isBot: p.is_bot })));
+  if (!check.ok) {
     return NextResponse.json(
-      { error: "Il faut au moins 2 participants (les bots comptent) pour démarrer" },
+      {
+        error:
+          check.reason === "no_human"
+            ? "Il faut au moins un joueur humain pour démarrer"
+            : "Il faut au moins 2 participants (les bots comptent) pour démarrer",
+        code: check.reason,
+      },
       { status: 400 },
     );
   }
@@ -76,42 +85,68 @@ export async function POST(_request: Request, { params }: { params: Promise<{ co
 
   const startsAt = new Date(Date.now() + COUNTDOWN_MS);
 
-  const race = await db
-    .insertInto("races")
-    .values({
-      lobby_id: lobby.id,
-      text_content: textContent,
-      language: lobby.language,
-      settings: JSON.stringify({
-        errorMode: lobby.error_mode,
-        penaltySeconds: lobby.penalty_seconds,
-      }),
-      status: "countdown",
-      starts_at: startsAt.toISOString(),
-      duration_seconds: lobby.duration_seconds,
-    })
-    .returning(["id"])
-    .executeTakeFirstOrThrow();
+  // Course, participants et passage à DÉCOMPTE dans une seule transaction : la
+  // notification Postgres qui réveille le serveur temps réel n'est émise qu'au
+  // commit, quand tous les participants existent.
+  assertTransition(lobby.status, "countdown");
+  class AlreadyStarted extends Error {}
+  let race: { id: string };
+  try {
+    race = await db.transaction().execute(async (trx) => {
+    // Verrou logique : deux démarrages simultanés ne créent qu'une course.
+    const claimed = await trx
+      .updateTable("lobbies")
+      .set({ status: "countdown" })
+      .where("id", "=", lobby.id)
+      .where("status", "=", "lobby")
+      .executeTakeFirst();
+    if (Number(claimed.numUpdatedRows) === 0) throw new AlreadyStarted();
+    const created = await trx
+      .insertInto("races")
+      .values({
+        lobby_id: lobby.id,
+        text_content: textContent,
+        language: lobby.language,
+        settings: JSON.stringify({
+          errorMode: lobby.error_mode,
+          penaltySeconds: lobby.penalty_seconds,
+        }),
+        status: "countdown",
+        starts_at: startsAt.toISOString(),
+        duration_seconds: lobby.duration_seconds,
+        seed: Math.floor(Math.random() * 2_000_000_000),
+        comeback_bonus: lobby.comeback_bonus,
+      })
+      .returning(["id"])
+      .executeTakeFirstOrThrow();
 
-  await db
-    .insertInto("race_participants")
-    .values(
-      players.map((p) => ({
-        race_id: race.id,
-        lobby_player_id: p.id,
-        user_id: p.user_id,
-        guest_id: p.guest_id,
-        display_name: p.is_bot
-          ? `Bot ${p.bot_level}`
-          : (p.display_name ?? p.guest_name ?? "Joueur"),
-        is_bot: p.is_bot,
-        bot_level: p.bot_level,
-        role: p.role,
-      })),
-    )
-    .execute();
+    await trx
+      .insertInto("race_participants")
+      .values(
+        players.map((p) => ({
+          race_id: created.id,
+          lobby_player_id: p.id,
+          user_id: p.user_id,
+          guest_id: p.guest_id,
+          display_name:
+            p.is_bot && p.bot_level
+              ? botDisplayName(p.bot_level)
+              : (p.display_name ?? p.guest_name ?? "Joueur"),
+          is_bot: p.is_bot,
+          bot_level: p.bot_level,
+          role: p.role,
+        })),
+      )
+      .execute();
 
-  await db.updateTable("lobbies").set({ status: "countdown" }).where("id", "=", lobby.id).execute();
+    return created;
+    });
+  } catch (error) {
+    if (error instanceof AlreadyStarted) {
+      return NextResponse.json({ error: "La course est déjà lancée" }, { status: 409 });
+    }
+    throw error;
+  }
 
   return NextResponse.json({ raceId: race.id, startsAt: startsAt.toISOString() });
 }

@@ -53,6 +53,9 @@ export type RacerInit = {
   botLevel?: BotLevelName | null;
   userId?: string | null;
   guestId?: string | null;
+  /** Avancement déjà enregistré (reprise après redémarrage du serveur). */
+  progress?: number;
+  errors?: number;
 };
 
 export type Racer = {
@@ -163,8 +166,8 @@ export class RaceEngine {
         userId: init.userId ?? null,
         guestId: init.guestId ?? null,
         text: init.text,
-        progress: 0,
-        errors: 0,
+        progress: Math.min(init.progress ?? 0, init.text.length),
+        errors: init.errors ?? 0,
         status: "racing",
         endedAtMs: null,
         keyCorrect: {},

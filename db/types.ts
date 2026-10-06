@@ -9,9 +9,9 @@ export type TextType = "coherent" | "aleatoire";
 export type ErrorMode = "accumuler" | "bloquer";
 export type LobbyStatus = "lobby" | "countdown" | "racing" | "finished" | "closed";
 export type PlayerRole = "participant" | "spectator";
-export type BotLevel = "debutant" | "intermediaire" | "expert" | "impossible";
+export type BotLevel = "noob" | "debutant" | "intermediaire" | "expert" | "impossible";
 export type RaceStatus = "countdown" | "racing" | "finished";
-export type ParticipantStatus = "racing" | "finished" | "abandoned";
+export type ParticipantStatus = "racing" | "finished" | "timeout" | "abandoned";
 export type AvatarSource = "upload" | "discord" | "github";
 
 export interface UsersTable {
@@ -113,6 +113,8 @@ export interface RacesTable {
   text_content: string;
   language: Language;
   settings: Generated<unknown>;
+  seed: Generated<number>;
+  comeback_bonus: Generated<boolean>;
   status: Generated<RaceStatus>;
   starts_at: ColumnType<Date, string, never>;
   duration_seconds: number;
@@ -137,6 +139,11 @@ export interface RaceParticipantsTable {
   accuracy: number | null;
   finished_at: ColumnType<Date, Date | null, Date | null> | null;
   rank: number | null;
+  raw_wpm: number | null;
+  text_length: number | null;
+  finish_ms: number | null;
+  bonuses: Generated<unknown>;
+  wpm_series: Generated<unknown>;
   key_correct: Generated<unknown>;
   key_errors: Generated<unknown>;
   created_at: ColumnType<Date, string | undefined, never>;

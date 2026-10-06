@@ -7,6 +7,7 @@ import { PixelShell } from "@/components/PixelShell";
 import { PixelAvatar, PixelButton, PixelPanel, PixelSlot } from "@/components/ui";
 import { useLobbyLive } from "@/components/useLobbyLive";
 import { useRoomEntry } from "@/components/useRoomEntry";
+import { BOT_LEVELS, BOT_PROFILES } from "@/lib/race/bots";
 import type { BotLevel } from "@/db/types";
 
 const DURATION_LABEL = (s: number) =>
@@ -187,14 +188,14 @@ export default function LobbyPage() {
                 Transféré automatiquement si tu quittes la salle (30 s).
               </p>
               <div className="flex flex-wrap gap-2">
-                {(["debutant", "intermediaire", "expert", "impossible"] as const).map((lvl) => (
+                {BOT_LEVELS.map((lvl) => (
                   <button
                     key={lvl}
                     type="button"
                     onClick={() => addBot(lvl)}
                     className="pixel-chip text-lg"
                   >
-                    + {lvl.toUpperCase()}
+                    + {BOT_PROFILES[lvl].label.toUpperCase()}
                   </button>
                 ))}
               </div>

@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import type { BotLevel } from "@/db/types";
+import { botDisplayName } from "@/lib/race/bots";
 
 // État d'une salle tel que diffusé aux clients (SALLE-01, SALLE-02, CONF-12).
 // Partagé entre la route HTTP GET /api/lobbies/[code] et le serveur temps réel,
@@ -128,7 +129,7 @@ export async function loadLobbySnapshot(code: string): Promise<RawLobbySnapshot 
       id: p.id,
       userId: p.user_id,
       guestId: p.guest_id,
-      name: p.is_bot ? `Bot ${p.bot_level}` : (p.display_name ?? p.guest_name ?? "Joueur"),
+      name: p.is_bot && p.bot_level ? botDisplayName(p.bot_level) : (p.display_name ?? p.guest_name ?? "Joueur"),
       role: p.role,
       isBot: p.is_bot,
       botLevel: p.bot_level,

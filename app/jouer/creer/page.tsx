@@ -6,6 +6,7 @@ import { PixelShell } from "@/components/PixelShell";
 import { PixelButton, PixelLabel, PixelPanel, PixelSlot } from "@/components/ui";
 import { generateRaceText } from "@/lib/text/generate";
 import { BUNDLED_CORPUS } from "@/lib/text/corpus";
+import { BOT_LEVELS, BOT_PROFILES } from "@/lib/race/bots";
 import type { BotLevel, Difficulty, TextType } from "@/db/types";
 import { useLanguage } from "@/lib/i18n";
 
@@ -291,9 +292,9 @@ export default function CreerCoursePage() {
             <div>
               <PixelLabel>BOTS ({bots.size} ajoutés)</PixelLabel>
               <div className="flex flex-wrap gap-2">
-                {(["debutant", "intermediaire", "expert", "impossible"] as const).map((lvl) => (
+                {BOT_LEVELS.map((lvl) => (
                   <Chip key={lvl} on={bots.has(lvl)} onClick={() => setBots(toggle(bots, lvl))}>
-                    {lvl.toUpperCase()}
+                    {BOT_PROFILES[lvl].label.toUpperCase()}
                   </Chip>
                 ))}
               </div>

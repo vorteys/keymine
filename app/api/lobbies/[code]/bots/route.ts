@@ -5,7 +5,7 @@ import { getIdentity } from "@/lib/auth/identity";
 import { getLobbyByCode, isHost } from "@/lib/lobby";
 
 const schema = z.object({
-  level: z.enum(["debutant", "intermediaire", "expert", "impossible"]),
+  level: z.enum(["noob", "debutant", "intermediaire", "expert", "impossible"]),
 });
 
 // BOT-1: l'hôte ajoute des bots à une course.

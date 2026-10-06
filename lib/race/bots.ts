@@ -160,3 +160,8 @@ export class BotTimeline {
     this.extendTo(newText.length);
   }
 }
+
+/** Nom affiché d'un bot : « Bot Expert », clairement identifié comme tel (BOT-04). */
+export function botDisplayName(level: BotLevelName): string {
+  return `Bot ${BOT_PROFILES[level].label}`;
+}

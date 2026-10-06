@@ -53,26 +53,26 @@ Statuts : **complet** (fait et vérifié), **partiel** (existe mais incomplet ou
 | CONF-10 | partiel | `app/api/lobbies/[code]/bots/route.ts` | — | 4 niveaux au lieu de 5 ; retrait d'un bot absent. |
 | CONF-11 | partiel | `app/jouer/creer/page.tsx` | — | Visibilité et capacité réglables à la création. |
 | CONF-12 | non fait | `app/jouer/[code]/page.tsx` | — | Pas de modification de la configuration en salle d'attente, ni diffusion en direct. |
-| COURSE-01 | partiel | `db/migrations/0001_init.sql` | — | États `lobby/countdown/racing/finished/closed` : à aligner sur la machine du cahier. |
-| COURSE-02 | partiel | `app/api/lobbies/[code]/start/route.ts` | — | Minimum 2 participants bots inclus ; « au moins 1 humain » à vérifier. |
+| COURSE-01 | complet | lib/race/state.ts, app/api/lobbies/[code]/start/route.ts, realtime/race-room.ts | tests/unit/race-state.test.ts, tests/db/race.test.ts | Machine à états codée (table de transitions) ; diagramme dans ARCHITECTURE.md. Transitions appliquées au démarrage (verrou transactionnel) et en fin de course. |
+| COURSE-02 | complet | lib/race/state.ts, app/api/lobbies/[code]/start/route.ts | tests/unit/race-state.test.ts | ≥ 2 participants dont ≥ 1 humain, bots comptés, spectateurs non. |
 | COURSE-03 | partiel | `app/api/lobbies/[code]/start/route.ts` | — | Décompte de 5 s ; révélation du texte au début du décompte à vérifier. |
 | COURSE-04 | partiel | `app/course/[code]/page.tsx` | — | Retour visuel, MPM et précision en direct, collage désactivé. |
 | COURSE-05 | partiel | `app/course/[code]/page.tsx` | — | Classement en direct ; piste avec avatars et interpolation absente. |
-| COURSE-06 | partiel | `realtime/server.ts` | — | Serveur calcule MPM et classement ; rejet des sauts de progression à compléter. |
+| COURSE-06 | complet | lib/race/engine.ts, realtime/race-room.ts | tests/unit/race-engine.test.ts, tests/db/race.test.ts | Départ, fin, progression, classement et bonus décidés par le serveur ; sauts et vitesses irréalistes (> 250 MPM + marge) rejetés ; MPM jamais lu du client. |
 | COURSE-07 | partiel | `realtime/server.ts` | — | Abandon existe ; confirmation à vérifier. |
-| COURSE-08 | partiel | `realtime/server.ts` | — | Reconnexion possible ; délai de 30 s non implémenté. |
-| COURSE-09 | partiel | `realtime/server.ts` | — | Fin par temps ou participants terminés. |
-| COURSE-10 | partiel | `realtime/server.ts` | — | Classement terminé/non terminé ; abandons à revoir. |
+| COURSE-08 | partiel | lib/race/engine.ts, realtime/race-room.ts | tests/unit/race-engine.test.ts | Moteur : reprise sous 30 s, abandon au-delà (testé). Côté page de course : rechargement à vérifier manuellement. |
+| COURSE-09 | complet | lib/race/engine.ts | tests/unit/race-engine.test.ts, tests/db/race.test.ts | Fin quand tous ont terminé/abandonné ou temps écoulé. |
+| COURSE-10 | complet | lib/race/engine.ts | tests/unit/race-engine.test.ts | Arrivés par temps, puis temps écoulé par progression, puis abandons par progression. |
 | COURSE-11 | non fait | — | — | Relancer une course ou fermer la salle depuis les résultats absents. |
-| BOT-01 | partiel | `realtime/bots.ts` | — | 4 niveaux ; il faut Noob, Débutant, Intermédiaire, Expert, Impossible. |
-| BOT-02 | partiel | `realtime/bots.ts` | — | Variation de vitesse à renforcer. |
-| BOT-03 | partiel | `realtime/bots.ts` | — | Erreurs simulées ; respect du mode d'erreur à vérifier. |
-| BOT-04 | partiel | `realtime/server.ts` | — | Bots identifiés ; bonus/malus non applicables. |
-| BOT-05 | partiel | `realtime/bots.ts` | — | Graine passée aux fonctions ; non testé unitairement. |
-| BONUS-01 | non fait | — | — |  |
-| BONUS-02 | non fait | — | — |  |
-| BONUS-03 | non fait | — | — |  |
-| BONUS-04 | non fait | — | — |  |
+| BOT-01 | complet | lib/race/bots.ts | tests/unit/race-bots.test.ts | Noob, Débutant, Intermédiaire, Expert, Impossible ; plages et taux d'erreur documentés dans le code. |
+| BOT-02 | complet | lib/race/bots.ts | tests/unit/race-bots.test.ts | Accélérations, hésitations aux espaces, ralentissement sur mots longs/accentués. |
+| BOT-03 | complet | lib/race/bots.ts | tests/unit/race-bots.test.ts | Erreurs avec temps de correction ; correction obligatoire plus lente que le mode libre. |
+| BOT-04 | complet | lib/race/bots.ts, lib/race/engine.ts | tests/unit/race-engine.test.ts | Nommés « Bot … » et marqués isBot dans l'état ; soumis aux bonus. L'affichage dans l'interface de course reste à finaliser. |
+| BOT-05 | complet | lib/race/bots.ts, lib/text/rng.ts | tests/unit/race-bots.test.ts | Moteur déterministe à partir d'une graine ; l'arrivée est indépendante de la cadence du tick. |
+| BONUS-01 | complet | lib/race/bonus.ts, lib/race/engine.ts | tests/unit/race-bonus.test.ts, tests/unit/race-engine.test.ts | Règle documentée dans ARCHITECTURE.md §7 : points de contrôle à 25/50/75 % du meneur, retardataire = dernier ou > 25 points, 1 bonus par point, 3 max. |
+| BONUS-02 | complet | lib/race/bonus.ts | tests/unit/race-engine.test.ts | Trois types : -3 mots (retardataire), +3 mots (meneur), brouillard (meneur). |
+| BONUS-03 | partiel | lib/race/engine.ts, realtime/race-room.ts | — | Événement « bonus » diffusé à tous ; annonce visuelle sur la piste et chez le joueur ciblé à faire dans la page de course. |
+| BONUS-04 | complet | lib/race/engine.ts | tests/unit/race-engine.test.ts | Progression et MPM mesurés sur le texte courant du joueur ; bots re-simulés. |
 | RES-01 | partiel | `app/resultats/[code]/page.tsx` | — | Podium des 3 premiers. |
 | RES-02 | partiel | `app/resultats/[code]/page.tsx` | — | Tableau du classement ; MPM brut, temps, statut et bonus à compléter. |
 | RES-03 | partiel | `app/resultats/[code]/page.tsx`, `lib/heatmap.ts` | `tests/unit/heatmap.test.ts` | Carte de chaleur du clavier faite ; graphique de l'évolution du MPM absent. |

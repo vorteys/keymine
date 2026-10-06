@@ -1,78 +1,31 @@
-import { spawn, type ChildProcess } from "node:child_process";
-import { SignJWT } from "jose";
 import { Client } from "pg";
-import WebSocket from "ws";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { cookie, ORIGIN, open as openSocket, startServer, waitFor, type Message, type TestServer } from "./realtime-helpers";
 
 // Test d'intégration du serveur temps réel : vrai processus, vraie base,
 // vrais cookies signés (SALLE-01, SALLE-02, SALLE-08, JOIN-01, TECH-07).
 const databaseUrl = process.env.DATABASE_URL;
-const SECRET = "secret-de-test-realtime";
-const PORT = 4100 + Math.floor(Math.random() * 500);
-const ORIGIN = "http://localhost:3000";
 const client = new Client({ connectionString: databaseUrl });
-let server: ChildProcess;
+let server: TestServer;
 
-type LobbyMessage = {
-  type: string;
+type LobbyMessage = Message & {
   lobby?: { isHost: boolean };
   players?: { name: string; connected: boolean; isHost: boolean; isSelf: boolean }[];
 };
 
-async function cookie(name: "km_session" | "km_guest", sub: string, extra: Record<string, string>) {
-  const token = await new SignJWT(extra)
-    .setProtectedHeader({ alg: "HS256" })
-    .setSubject(sub)
-    .setExpirationTime("1h")
-    .sign(new TextEncoder().encode(SECRET));
-  return `${name}=${token}`;
-}
-
-function open(path: string, headers: Record<string, string>) {
-  const ws = new WebSocket(`ws://127.0.0.1:${PORT}${path}`, { headers });
-  const messages: LobbyMessage[] = [];
-  ws.on("message", (raw) => messages.push(JSON.parse(String(raw))));
-  const closed = new Promise<number>((resolve) => ws.on("close", (code) => resolve(code)));
-  return { ws, messages, closed };
-}
-
-async function waitFor<T>(check: () => T | undefined | false, ms = 4000): Promise<T> {
-  const start = Date.now();
-  for (;;) {
-    const value = check();
-    if (value) return value;
-    if (Date.now() - start > ms) throw new Error("délai dépassé");
-    await new Promise((r) => setTimeout(r, 25));
-  }
-}
-
-async function waitForListening() {
-  await waitFor(() => (logs.includes("serveur WebSocket") ? true : undefined), 15000);
-  await new Promise((r) => setTimeout(r, 300));
-}
-
-let logs = "";
+const open = (path: string, headers: Record<string, string>) => {
+  const conn = openSocket(server.port, path, headers);
+  return { ...conn, messages: conn.messages as LobbyMessage[] };
+};
 
 beforeAll(async () => {
   if (!databaseUrl) throw new Error("DATABASE_URL manquant pour les tests de base de données");
   await client.connect();
-  server = spawn("bun", ["run", "realtime/server.ts"], {
-    env: {
-      ...process.env,
-      REALTIME_PORT: String(PORT),
-      SESSION_SECRET: SECRET,
-      NEXT_PUBLIC_SITE_URL: ORIGIN,
-      NODE_ENV: "test",
-    },
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  server.stdout?.on("data", (d) => (logs += String(d)));
-  server.stderr?.on("data", (d) => (logs += String(d)));
-  await waitForListening();
-}, 30000);
+  server = await startServer();
+}, 30_000);
 
 afterAll(async () => {
-  server?.kill();
+  server?.stop();
   await client.end();
 });
 

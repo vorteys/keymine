@@ -37,7 +37,6 @@ export const lobbyConnectionQuery = z.object({
 
 export const raceConnectionQuery = z.object({
   race: z.string().uuid(),
-  participant: z.string().uuid().optional(),
 });
 
 /** Analyse un message brut : renvoie `null` si ce n'est pas du JSON valide du bon schéma. */

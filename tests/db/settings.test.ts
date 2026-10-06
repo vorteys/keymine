@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Client } from "pg";
+import { addBot, removeBot } from "@/lib/lobby-bots";
 import { applyLobbySettings } from "@/lib/lobby-settings";
 import { lobbyUpdateSchema } from "@/lib/lobby-schema";
 
@@ -91,5 +92,27 @@ describe("modification des réglages (CONF-12)", () => {
     expect(lobbyUpdateSchema.safeParse({ maxPlayers: 31 }).success).toBe(false);
     expect(lobbyUpdateSchema.safeParse({ includeChars: ["a"], excludeChars: ["a"] }).success).toBe(false);
     expect(lobbyUpdateSchema.safeParse({ hostRole: "spectator" }).success).toBe(true); // clé inconnue ignorée
+  });
+});
+
+describe("bots de la salle (CONF-10)", () => {
+  it("ajoute et retire un bot, refuse hors attente et au-delà de la capacité", async () => {
+    const l = await lobby();
+    const row = { id: l.id, status: l.status, max_players: 2 };
+    expect(await addBot(row, "expert")).toEqual({ ok: true });
+    // hôte + 1 bot = capacité atteinte
+    expect(await addBot(row, "noob")).toEqual({ ok: false, reason: "full" });
+
+    const bot = (await client.query(`select id from lobby_players where lobby_id = $1 and is_bot`, [l.id])).rows[0];
+    expect(await removeBot(row, bot.id)).toEqual({ ok: true });
+    expect(await removeBot(row, bot.id)).toEqual({ ok: false, reason: "not_found" });
+
+    expect(await addBot({ ...row, status: "racing" }, "noob")).toEqual({ ok: false, reason: "not_waiting" });
+  });
+
+  it("ne retire jamais un joueur humain", async () => {
+    const l = await lobby();
+    const human = (await client.query(`select id from lobby_players where lobby_id = $1 and not is_bot`, [l.id])).rows[0];
+    expect(await removeBot({ id: l.id, status: "lobby" }, human.id)).toEqual({ ok: false, reason: "not_found" });
   });
 });

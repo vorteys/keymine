@@ -69,6 +69,14 @@ export default function LobbyPage() {
     if (status === "closed" || status === "removed") router.push("/");
   }, [status, router]);
 
+  async function removeBot(playerId: string) {
+    await fetch(`/api/lobbies/${code}/bots`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ playerId }),
+    });
+  }
+
   async function addBot(level: BotLevel) {
     await fetch(`/api/lobbies/${code}/bots`, {
       method: "POST",
@@ -157,6 +165,16 @@ export default function LobbyPage() {
                               : "PRÊT"}
                     </div>
                   </div>
+                  {p.isBot && lobby?.isHost && (
+                    <button
+                      type="button"
+                      onClick={() => void removeBot(p.id)}
+                      aria-label={`Retirer ${p.name}`}
+                      className="pixel-chip h-8 w-8 flex-none text-xl leading-none"
+                    >
+                      ×
+                    </button>
+                  )}
                 </PixelSlot>
               ))}
             </div>

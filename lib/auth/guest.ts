@@ -1,42 +1,59 @@
 import "server-only";
+import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { randomUUID } from "node:crypto";
 
+// AUTH-02: un invité choisit un pseudonyme (3 à 20 caractères) avant de
+// rejoindre une salle. Sa session est conservée dans un cookie signé.
 const COOKIE_NAME = "km_guest";
-const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
+const SEVEN_DAYS_SECONDS = 60 * 60 * 24 * 7;
 
-/**
- * Identifiant d'invité (AUTH-7): pas de compte, juste un cookie pour
- * relier ses courses de la session. Contrairement à la session utilisateur,
- * celui-ci n'a pas besoin d'être signé: ce n'est pas un droit d'accès, juste
- * une étiquette pour retrouver "ses" lignes pendant la session.
- */
-export async function getOrCreateGuestId(): Promise<string> {
+function secretKey() {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) {
+    throw new Error("SESSION_SECRET manquant (voir .env.example).");
+  }
+  return new TextEncoder().encode(secret);
+}
+
+export type GuestSession = { guestId: string; name: string };
+
+/** Crée (ou renomme) la session d'invité et dépose le cookie signé. */
+export async function createGuestSession(pseudo: string): Promise<GuestSession> {
+  const existing = await readGuest();
+  const guestId = existing?.guestId ?? randomUUID();
+  const token = await new SignJWT({ name: pseudo })
+    .setProtectedHeader({ alg: "HS256" })
+    .setSubject(guestId)
+    .setIssuedAt()
+    .setExpirationTime(`${SEVEN_DAYS_SECONDS}s`)
+    .sign(secretKey());
+
   const store = await cookies();
-  const existing = store.get(COOKIE_NAME)?.value;
-  if (existing) return existing;
-
-  const guestId = randomUUID();
-  store.set(COOKIE_NAME, guestId, {
+  store.set(COOKIE_NAME, token, {
     httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: ONE_YEAR_SECONDS,
+    maxAge: SEVEN_DAYS_SECONDS,
   });
-  return guestId;
+  return { guestId, name: pseudo };
+}
+
+/** Lit la session d'invité si le cookie est présent et correctement signé. */
+export async function readGuest(): Promise<GuestSession | null> {
+  const store = await cookies();
+  const token = store.get(COOKIE_NAME)?.value;
+  if (!token) return null;
+  try {
+    const { payload } = await jwtVerify(token, secretKey());
+    if (typeof payload.sub !== "string" || typeof payload.name !== "string") return null;
+    return { guestId: payload.sub, name: payload.name };
+  } catch {
+    return null;
+  }
 }
 
 export async function readGuestId(): Promise<string | null> {
-  const store = await cookies();
-  return store.get(COOKIE_NAME)?.value ?? null;
-}
-
-export function guestDisplayName(guestId: string): string {
-  // 4 chiffres stables dérivés de l'id, juste pour avoir un nom lisible
-  // ("Invité 4821") plutôt que l'UUID complet.
-  let hash = 0;
-  for (let i = 0; i < guestId.length; i++) {
-    hash = (hash * 31 + guestId.charCodeAt(i)) >>> 0;
-  }
-  return `Invité ${1000 + (hash % 9000)}`;
+  return (await readGuest())?.guestId ?? null;
 }

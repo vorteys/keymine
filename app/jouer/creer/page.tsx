@@ -6,6 +6,7 @@ import { PixelShell } from "@/components/PixelShell";
 import { PixelButton, PixelLabel, PixelPanel, PixelSlot } from "@/components/ui";
 import { generateRaceText } from "@/lib/text/generate";
 import type { BotLevel } from "@/db/types";
+import { useLanguage } from "@/lib/i18n";
 
 type Access = "public" | "unlisted" | "private";
 type ErrorMode = "accumuler" | "bloquer";
@@ -43,6 +44,8 @@ function toggle<T>(set: Set<T>, value: T): Set<T> {
 
 export default function CreerCoursePage() {
   const router = useRouter();
+  const { t } = useLanguage();
+  const [accountRequired, setAccountRequired] = useState(false);
   const [access, setAccess] = useState<Access>("public");
   const [language, setLanguage] = useState<"fr" | "en">("fr");
   const [duration, setDuration] = useState(300);
@@ -103,7 +106,17 @@ export default function CreerCoursePage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Impossible de créer la salle");
+        // AUTH-03: un invité ne peut pas créer de salle.
+        setAccountRequired(data.code === "account_required");
+        if (data.code === "already_in_room") {
+          router.push(`/jouer/${data.currentCode}`);
+          return;
+        }
+        setError(
+          data.code === "account_required"
+            ? t("create.account_required")
+            : (data.error ?? "Impossible de créer la salle"),
+        );
         return;
       }
 
@@ -343,6 +356,11 @@ export default function CreerCoursePage() {
           {error ?? "Minimum 2 participants, bots inclus. Tu seras le Chef de la course."}
         </p>
         <div className="flex gap-3.5">
+          {accountRequired && (
+            <PixelButton href="/connexion" variant="gold" className="h-13 px-5 text-[13px]">
+              {t("create.login")}
+            </PixelButton>
+          )}
           <PixelButton href="/" variant="slate" className="h-13 px-5 text-[13px]">
             ANNULER
           </PixelButton>

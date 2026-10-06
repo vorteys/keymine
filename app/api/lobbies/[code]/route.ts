@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getOrCreateIdentity } from "@/lib/auth/identity";
+import { getIdentity } from "@/lib/auth/identity";
 import { getLobbyByCode, isHost, maybeTransferHost } from "@/lib/lobby";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {
@@ -29,7 +29,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     .orderBy("lobby_players.joined_at", "asc")
     .execute();
 
-  const identity = await getOrCreateIdentity();
+  const identity = await getIdentity();
 
   const activeRace = await db
     .selectFrom("races")
@@ -50,7 +50,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       textMode: fresh.text_mode,
       errorMode: fresh.error_mode,
       status: fresh.status,
-      isHost: isHost(identity, fresh),
+      isHost: identity ? isHost(identity, fresh) : false,
     },
     players: players.map((p) => ({
       id: p.id,
@@ -61,8 +61,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       isBot: p.is_bot,
       botLevel: p.bot_level,
       isSelf:
-        (identity.kind === "user" && p.user_id === identity.userId) ||
-        (identity.kind === "guest" && p.guest_id === identity.guestId),
+        (identity?.kind === "user" && p.user_id === identity.userId) ||
+        (identity?.kind === "guest" && p.guest_id === identity.guestId),
     })),
     activeRace: activeRace
       ? { id: activeRace.id, status: activeRace.status, startsAt: activeRace.starts_at }
@@ -76,8 +76,8 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   const lobby = await getLobbyByCode(code);
   if (!lobby) return NextResponse.json({ error: "Salle introuvable" }, { status: 404 });
 
-  const identity = await getOrCreateIdentity();
-  if (!isHost(identity, lobby)) {
+  const identity = await getIdentity();
+  if (!identity || !isHost(identity, lobby)) {
     return NextResponse.json({ error: "Seul l'hôte peut fermer la salle" }, { status: 403 });
   }
 

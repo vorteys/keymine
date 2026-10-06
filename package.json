@@ -16,7 +16,8 @@
     "dev:all": "bun run scripts/dev-all.ts",
     "db:dev": "bun run scripts/dev-db.ts",
     "db:migrate": "bun run db/migrate.ts",
-    "realtime": "bun run realtime/server.ts"
+    "realtime": "bun run realtime/server.ts",
+    "test:db": "vitest run --config vitest.db.config.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

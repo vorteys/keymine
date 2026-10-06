@@ -1,19 +1,27 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
-import { getOrCreateIdentity } from "@/lib/auth/identity";
-import { getLobbyByCode } from "@/lib/lobby";
+import { getIdentity } from "@/lib/auth/identity";
+import { getLobbyByCode, joinLobby } from "@/lib/lobby";
 
 const schema = z.object({ role: z.enum(["participant", "spectator"]).default("participant") });
 
-// COUR-2/COUR-8: rejoindre une salle avant le départ, comme participant ou spectateur.
+// SALLE-09 / SALLE-05 / SALLE-06: on ne rejoint une salle qu'en attente ou sur
+// l'écran des résultats, sans dépasser la capacité, et jamais depuis une autre salle.
 export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
   const lobby = await getLobbyByCode(code);
-  if (!lobby) return NextResponse.json({ error: "Salle introuvable" }, { status: 404 });
-  if (lobby.status !== "lobby") {
+  if (!lobby || lobby.status === "closed") {
+    return NextResponse.json({ error: "Salle introuvable" }, { status: 404 });
+  }
+
+  const identity = await getIdentity();
+  if (!identity) {
+    return NextResponse.json({ error: "Pseudo requis", code: "pseudo_required" }, { status: 401 });
+  }
+
+  if (lobby.status === "countdown" || lobby.status === "racing") {
     return NextResponse.json(
-      { error: "La course a déjà commencé, tu peux rejoindre en spectateur" },
+      { error: "La course est en cours", code: "race_in_progress" },
       { status: 409 },
     );
   }
@@ -21,51 +29,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   const body = schema.safeParse(await request.json().catch(() => ({})));
   const role = body.success ? body.data.role : "participant";
 
-  const identity = await getOrCreateIdentity();
-
-  const existing = await db
-    .selectFrom("lobby_players")
-    .select("id")
-    .where("lobby_id", "=", lobby.id)
-    .where((eb) =>
-      identity.kind === "user"
-        ? eb("user_id", "=", identity.userId)
-        : eb("guest_id", "=", identity.guestId),
-    )
-    .executeTakeFirst();
-
-  if (existing) {
-    await db
-      .updateTable("lobby_players")
-      .set({ role, last_seen_at: new Date() })
-      .where("id", "=", existing.id)
-      .execute();
-    return NextResponse.json({ ok: true });
-  }
-
-  if (role === "participant") {
-    // COUR-7: un lobby plein refuse les nouveaux joueurs.
-    const count = await db
-      .selectFrom("lobby_players")
-      .select((eb) => eb.fn.countAll<number>().as("n"))
-      .where("lobby_id", "=", lobby.id)
-      .where("role", "=", "participant")
-      .executeTakeFirst();
-    if (Number(count?.n ?? 0) >= lobby.max_players) {
-      return NextResponse.json({ error: "La salle est pleine" }, { status: 409 });
+  const result = await joinLobby(lobby, identity, role);
+  if (!result.ok) {
+    if (result.reason === "already_in_room") {
+      return NextResponse.json(
+        { error: "Tu es déjà dans une autre salle", code: "already_in_room", currentCode: result.currentCode },
+        { status: 409 },
+      );
     }
+    return NextResponse.json({ error: "La salle est pleine", code: "full" }, { status: 409 });
   }
-
-  await db
-    .insertInto("lobby_players")
-    .values({
-      lobby_id: lobby.id,
-      user_id: identity.kind === "user" ? identity.userId : null,
-      guest_id: identity.kind === "guest" ? identity.guestId : null,
-      guest_name: identity.kind === "guest" ? identity.displayName : null,
-      role,
-    })
-    .execute();
-
   return NextResponse.json({ ok: true });
 }

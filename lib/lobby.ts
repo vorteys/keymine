@@ -40,12 +40,10 @@ export async function maybeTransferHost(lobbyId: string) {
     .select(["user_id", "guest_id"])
     .where("lobby_id", "=", lobbyId)
     .where("is_bot", "=", false)
-    .where((eb) =>
-      eb.or([
-        eb("user_id", "is not", null).and("user_id", "!=", lobby.host_user_id ?? ""),
-        eb("guest_id", "is not", null).and("guest_id", "!=", lobby.host_guest_id ?? ""),
-      ]),
-    )
+    .where("active", "=", true)
+    // Seuls les comptes peuvent être hôtes (AUTH-03: un invité ne crée ni ne gère de salle).
+    .where("user_id", "is not", null)
+    .where("user_id", "!=", lobby.host_user_id ?? "")
     .orderBy("joined_at", "asc")
     .executeTakeFirst();
 
@@ -76,4 +74,89 @@ export async function getLobbyByCode(code: string) {
     .selectAll()
     .where("code", "=", code.toUpperCase())
     .executeTakeFirst();
+}
+
+type PlayerRole = "participant" | "spectator";
+
+export type JoinResult =
+  | { ok: true }
+  | { ok: false; reason: "full" }
+  | { ok: false; reason: "already_in_room"; currentCode: string };
+
+/** Salle active (non fermée) où cette personne se trouve déjà, s'il y en a une (SALLE-06). */
+export async function findActiveRoom(identity: Identity) {
+  return db
+    .selectFrom("lobby_players")
+    .innerJoin("lobbies", "lobbies.id", "lobby_players.lobby_id")
+    .select(["lobbies.id", "lobbies.code"])
+    .where("lobby_players.active", "=", true)
+    .where((eb) =>
+      identity.kind === "user"
+        ? eb("lobby_players.user_id", "=", identity.userId)
+        : eb("lobby_players.guest_id", "=", identity.guestId),
+    )
+    .executeTakeFirst();
+}
+
+/**
+ * Ajoute la personne à la salle (ou met à jour son rôle). Refuse si elle est
+ * déjà dans une autre salle (SALLE-06, aussi garanti par un index unique) ou
+ * si la salle est pleine (spectateurs exclus de la capacité, SALLE-05).
+ */
+export async function joinLobby(
+  lobby: { id: string; max_players: number },
+  identity: Identity,
+  role: PlayerRole,
+): Promise<JoinResult> {
+  const current = await findActiveRoom(identity);
+  if (current && current.id !== lobby.id) {
+    return { ok: false, reason: "already_in_room", currentCode: current.code };
+  }
+
+  if (current) {
+    await db
+      .updateTable("lobby_players")
+      .set({ role, last_seen_at: new Date() })
+      .where("lobby_id", "=", lobby.id)
+      .where((eb) =>
+        identity.kind === "user"
+          ? eb("user_id", "=", identity.userId)
+          : eb("guest_id", "=", identity.guestId),
+      )
+      .execute();
+    return { ok: true };
+  }
+
+  if (role === "participant") {
+    const count = await db
+      .selectFrom("lobby_players")
+      .select((eb) => eb.fn.countAll<number>().as("n"))
+      .where("lobby_id", "=", lobby.id)
+      .where("role", "=", "participant")
+      .where("active", "=", true)
+      .executeTakeFirst();
+    if (Number(count?.n ?? 0) >= lobby.max_players) return { ok: false, reason: "full" };
+  }
+
+  try {
+    await db
+      .insertInto("lobby_players")
+      .values({
+        lobby_id: lobby.id,
+        user_id: identity.kind === "user" ? identity.userId : null,
+        guest_id: identity.kind === "guest" ? identity.guestId : null,
+        guest_name: identity.kind === "guest" ? identity.displayName : null,
+        role,
+      })
+      .execute();
+  } catch (error) {
+    // Course entre deux onglets: l'index unique de SALLE-06 a refusé le doublon.
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "23505") {
+      const other = await findActiveRoom(identity);
+      if (other && other.id === lobby.id) return { ok: true };
+      if (other) return { ok: false, reason: "already_in_room", currentCode: other.code };
+    }
+    throw error;
+  }
+  return { ok: true };
 }

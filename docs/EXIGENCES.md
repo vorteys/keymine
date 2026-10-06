@@ -23,8 +23,8 @@ Statuts : **complet** (fait et vérifié), **partiel** (existe mais incomplet ou
 | DES-05 | partiel | `components/PixelShell.tsx`, `app/globals.css` | — | Sélecteur présent mais thème clair modeste, **flash au chargement** et préférence système non respectée. |
 | DES-06 | partiel | — | — | Mise en page adaptable non vérifiée à 360 px ; message « clavier physique » sur mobile absent. |
 | AUTH-01 | partiel | `app/api/auth/**`, `lib/auth/oauth.ts` | — | Discord, GitHub et mot de passe écrits ; OAuth jamais testé avec de vraies clés. |
-| AUTH-02 | non fait | `lib/auth/guest.ts` | — | Invité actuel : nom généré, cookie non signé, pas de choix de pseudo. |
-| AUTH-03 | non fait | `app/api/lobbies/route.ts` | — | Un invité peut aujourd'hui créer une salle : à interdire. |
+| AUTH-02 | partiel | `lib/auth/guest.ts`, `lib/auth/pseudo.ts`, `app/api/auth/guest/route.ts`, `components/useRoomEntry.tsx` | `tests/unit/guest-pseudo.test.ts` | Pseudo 3–20 caractères validé par Zod, cookie JWT signé (7 jours). Parcours navigateur non encore vérifié. |
+| AUTH-03 | partiel | `app/api/lobbies/route.ts`, `lib/lobby.ts` | — | Création refusée côté serveur aux invités (403) ; seuls les comptes peuvent être hôtes. Test automatisé à ajouter. Avatar généré pour invité à faire. |
 | AUTH-04 | non fait | — | — | Téléversement de photo non implémenté. |
 | AUTH-05 | non fait | — | — | Modification du pseudo non implémentée. |
 | AUTH-06 | partiel | `app/profil/page.tsx` | — | Stats et progression MPM présentes ; victoires et MPM moyen à vérifier. |
@@ -33,14 +33,14 @@ Statuts : **complet** (fait et vérifié), **partiel** (existe mais incomplet ou
 | SALLE-03 | partiel | `db/migrations/0001_init.sql` | — | Trois valeurs d'accès existent ; sémantique « privée = lien d'invitation » absente. |
 | SALLE-04 | non fait | — | — | Liens d'invitation à usage unique non implémentés. |
 | SALLE-05 | partiel | `lib/lobby-schema.ts` | — | Capacité maximale 30 gérée ; bornes 2–30 et exclusion des spectateurs à vérifier. |
-| SALLE-06 | non fait | — | — | Pas de contrainte en base empêchant d'être dans deux salles. |
+| SALLE-06 | complet | `db/migrations/0002_une_salle_et_corpus.sql`, `lib/lobby.ts` | `tests/db/rooms.test.ts` | Index uniques partiels + déclencheur de libération à la fermeture. Interface : message « déjà dans une salle » avec choix de quitter (`useRoomEntry`). |
 | SALLE-07 | non fait | — | — | Expulsion non implémentée. |
-| SALLE-08 | partiel | `lib/lobby.ts` | — | Transfert d'hôte sur inactivité 60 s ; règle « humain connecté présent depuis le plus longtemps » et fermeture si personne à revoir. |
-| SALLE-09 | partiel | `app/api/lobbies/[code]/join/route.ts` | — | Refus pendant la course ; accès pendant l'écran des résultats à revoir. |
+| SALLE-08 | partiel | `lib/lobby.ts` | — | Hôte = compte seulement (interprétation de « personne humaine connectée »). Transfert sur inactivité ; fermeture de la salle s il ne reste aucun compte : à faire. |
+| SALLE-09 | partiel | `app/api/lobbies/[code]/join/route.ts` | — | Refus pendant le décompte et la course ; accepté en attente et sur l écran des résultats. |
 | SALLE-10 | non fait | — | — | Limite de tentatives par IP absente. |
 | JOIN-01 | partiel | `components/HomeActions.tsx` | — | Champ de code présent sur l'accueil. |
 | JOIN-02 | partiel | `app/page.tsx` | — | Liste des salles publiques ; filtres et mise à jour sans rechargement absents. |
-| JOIN-03 | partiel | `app/api/play/quick/route.ts` | — | Rejoint une salle publique ; règle « plus proche de la capacité maximale » et cas invité à faire. |
+| JOIN-03 | partiel | `app/api/play/quick/route.ts` | — | Choisit la salle publique la plus proche de sa capacité maximale (égalité : la plus ancienne) ; état vide pour invité, création proposée aux comptes. |
 | CONF-01 | partiel | `app/jouer/creer/page.tsx` | — | Durées actuelles 5 min à 2 h ; demandé : aucune ou 30 s à 10 min. |
 | CONF-02 | complet | `lib/lobby-schema.ts` | `tests/unit/text-generate.test.ts` | Langue du texte indépendante de l'interface. |
 | CONF-03 | partiel | `lib/text/` | `tests/unit/text-generate.test.ts` | Cohérent/aléatoire en mémoire ; le corpus doit être stocké en base. |

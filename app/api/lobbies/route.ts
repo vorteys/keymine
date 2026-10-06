@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getOrCreateIdentity } from "@/lib/auth/identity";
-import { generateUniqueLobbyCode } from "@/lib/lobby";
+import { getIdentity } from "@/lib/auth/identity";
+import { findActiveRoom, generateUniqueLobbyCode } from "@/lib/lobby";
 import { lobbySettingsSchema } from "@/lib/lobby-schema";
 
 // COUR-16: liste des lobbys publics affichée à l'accueil.
@@ -47,7 +47,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Réglages invalides" }, { status: 400 });
   }
 
-  const identity = await getOrCreateIdentity();
+  const identity = await getIdentity();
+  if (!identity) {
+    return NextResponse.json({ error: "Connexion requise", code: "account_required" }, { status: 401 });
+  }
+  // AUTH-03: un invité ne peut pas créer de salle.
+  if (identity.kind !== "user") {
+    return NextResponse.json(
+      { error: "Crée un compte pour créer une salle", code: "account_required" },
+      { status: 403 },
+    );
+  }
+  // SALLE-06: on ne peut pas créer une salle si on est déjà dans une autre.
+  const current = await findActiveRoom(identity);
+  if (current) {
+    return NextResponse.json(
+      { error: "Tu es déjà dans une autre salle", code: "already_in_room", currentCode: current.code },
+      { status: 409 },
+    );
+  }
   const code = await generateUniqueLobbyCode();
   const s = body.data;
 
@@ -55,8 +73,8 @@ export async function POST(request: Request) {
     .insertInto("lobbies")
     .values({
       code,
-      host_user_id: identity.kind === "user" ? identity.userId : null,
-      host_guest_id: identity.kind === "guest" ? identity.guestId : null,
+      host_user_id: identity.userId,
+      host_guest_id: null,
       access: s.access,
       name: s.name,
       language: s.language,
@@ -80,9 +98,7 @@ export async function POST(request: Request) {
     .insertInto("lobby_players")
     .values({
       lobby_id: lobby.id,
-      user_id: identity.kind === "user" ? identity.userId : null,
-      guest_id: identity.kind === "guest" ? identity.guestId : null,
-      guest_name: identity.kind === "guest" ? identity.displayName : null,
+      user_id: identity.userId,
       role: "participant",
     })
     .execute();

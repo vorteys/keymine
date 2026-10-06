@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { getOrCreateIdentity } from "@/lib/auth/identity";
+import { getIdentity } from "@/lib/auth/identity";
 import { getLobbyByCode, isHost } from "@/lib/lobby";
 
 const schema = z.object({
@@ -14,7 +14,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   const lobby = await getLobbyByCode(code);
   if (!lobby) return NextResponse.json({ error: "Salle introuvable" }, { status: 404 });
 
-  const identity = await getOrCreateIdentity();
+  const identity = await getIdentity();
+  if (!identity) {
+    return NextResponse.json({ error: "Pseudo requis", code: "pseudo_required" }, { status: 401 });
+  }
   if (!isHost(identity, lobby)) {
     return NextResponse.json({ error: "Seul l'hôte peut ajouter des bots" }, { status: 403 });
   }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getOrCreateIdentity } from "@/lib/auth/identity";
+import { getIdentity } from "@/lib/auth/identity";
 import { getLobbyByCode } from "@/lib/lobby";
 
 // Donne au client tout ce qu'il faut pour afficher /course/[code]: le texte
@@ -19,7 +19,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     .executeTakeFirst();
   if (!race) return NextResponse.json({ error: "Aucune course pour cette salle" }, { status: 404 });
 
-  const identity = await getOrCreateIdentity();
+  const identity = await getIdentity();
+  if (!identity) {
+    return NextResponse.json({ error: "Pseudo requis", code: "pseudo_required" }, { status: 401 });
+  }
   const me = await db
     .selectFrom("race_participants")
     .select(["id", "role", "status"])

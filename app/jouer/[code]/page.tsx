@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { PixelShell } from "@/components/PixelShell";
 import { PixelAvatar, PixelButton, PixelPanel, PixelSlot } from "@/components/ui";
+import { useRoomEntry } from "@/components/useRoomEntry";
 import type { BotLevel } from "@/db/types";
 
 type Player = {
@@ -49,20 +50,26 @@ export default function LobbyPage() {
   const [lobby, setLobby] = useState<LobbyData | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [entered, setEntered] = useState(false);
   const joined = useRef(false);
+  const { run, panel } = useRoomEntry(() => setEntered(true));
 
+  // Entrée dans la salle (pseudo d'invité, déjà dans une autre salle… gérés par le hook).
   useEffect(() => {
-    let cancelled = false;
-
-    async function ensureJoined() {
-      if (joined.current) return;
-      joined.current = true;
-      await fetch(`/api/lobbies/${code}/join`, {
+    if (joined.current) return;
+    joined.current = true;
+    void run(() =>
+      fetch(`/api/lobbies/${code}/join`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role: "participant" }),
-      }).catch(() => {});
-    }
+      }),
+    );
+  }, [code, run]);
+
+  useEffect(() => {
+    if (!entered) return;
+    let cancelled = false;
 
     async function poll() {
       const res = await fetch(`/api/lobbies/${code}`);
@@ -83,7 +90,7 @@ export default function LobbyPage() {
       await fetch(`/api/lobbies/${code}/heartbeat`, { method: "POST" }).catch(() => {});
     }
 
-    ensureJoined().then(poll);
+    void poll();
     const pollId = setInterval(poll, 1500);
     const hbId = setInterval(heartbeat, 15_000);
     return () => {
@@ -91,7 +98,7 @@ export default function LobbyPage() {
       clearInterval(pollId);
       clearInterval(hbId);
     };
-  }, [code, router]);
+  }, [code, router, entered]);
 
   async function addBot(level: BotLevel) {
     await fetch(`/api/lobbies/${code}/bots`, {
@@ -121,6 +128,7 @@ export default function LobbyPage() {
 
   return (
     <PixelShell active="jouer">
+      {panel && <div className="mb-6">{panel}</div>}
       <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
         <div className="flex-grow">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-4">

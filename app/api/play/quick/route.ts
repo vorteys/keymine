@@ -1,72 +1,52 @@
 import { NextResponse } from "next/server";
+import { sql } from "kysely";
 import { db } from "@/lib/db";
-import { getOrCreateIdentity } from "@/lib/auth/identity";
-import { generateUniqueLobbyCode } from "@/lib/lobby";
+import { getIdentity } from "@/lib/auth/identity";
+import { joinLobby } from "@/lib/lobby";
 
-// COUR-16/H16: "Partie rapide" — rejoint un lobby public en attente s'il y en
-// a un, sinon en crée un (publique, mode Texte, langue du site, 5 min) et le
-// joueur devient le Chef.
+// JOIN-03: « Faire une course ». Parmi les salles publiques joignables et non
+// pleines, on choisit celle qui est la plus proche de sa capacité maximale
+// (le moins de places libres); à égalité, la plus ancienne l'emporte.
+// S'il n'y en a aucune, on le dit : un compte se voit proposer de créer une
+// salle publique par défaut, un invité voit simplement un état vide.
 export async function POST() {
-  const identity = await getOrCreateIdentity();
+  const identity = await getIdentity();
+  if (!identity) {
+    return NextResponse.json({ error: "Pseudo requis", code: "pseudo_required" }, { status: 401 });
+  }
 
-  const open = await db
+  const candidates = await db
     .selectFrom("lobbies")
-    .select(["id", "code", "max_players"])
-    .where("status", "=", "lobby")
-    .where("access", "=", "public")
-    .where("is_quick", "=", true)
-    .orderBy("created_at", "desc")
+    .select([
+      "lobbies.id",
+      "lobbies.code",
+      "lobbies.max_players",
+      sql<number>`(select count(*) from lobby_players lp
+                   where lp.lobby_id = lobbies.id and lp.role = 'participant' and lp.active)`.as(
+        "participants",
+      ),
+    ])
+    .where("lobbies.status", "=", "lobby")
+    .where("lobbies.access", "=", "public")
+    .orderBy(sql`lobbies.max_players - (select count(*) from lobby_players lp
+                   where lp.lobby_id = lobbies.id and lp.role = 'participant' and lp.active)`)
+    .orderBy("lobbies.created_at", "asc")
     .execute();
 
-  for (const lobby of open) {
-    const count = await db
-      .selectFrom("lobby_players")
-      .select((eb) => eb.fn.countAll<number>().as("n"))
-      .where("lobby_id", "=", lobby.id)
-      .where("role", "=", "participant")
-      .executeTakeFirst();
-    if (Number(count?.n ?? 0) < lobby.max_players) {
-      await db
-        .insertInto("lobby_players")
-        .values({
-          lobby_id: lobby.id,
-          user_id: identity.kind === "user" ? identity.userId : null,
-          guest_id: identity.kind === "guest" ? identity.guestId : null,
-          guest_name: identity.kind === "guest" ? identity.displayName : null,
-          role: "participant",
-        })
-        .onConflict((oc) => oc.doNothing())
-        .execute();
-      return NextResponse.json({ code: lobby.code });
+  for (const lobby of candidates) {
+    if (Number(lobby.participants) >= lobby.max_players) continue;
+    const result = await joinLobby(lobby, identity, "participant");
+    if (result.ok) return NextResponse.json({ code: lobby.code });
+    if (result.reason === "already_in_room") {
+      return NextResponse.json(
+        { error: "Tu es déjà dans une autre salle", code: "already_in_room", currentCode: result.currentCode },
+        { status: 409 },
+      );
     }
   }
 
-  const code = await generateUniqueLobbyCode();
-  const created = await db
-    .insertInto("lobbies")
-    .values({
-      code,
-      host_user_id: identity.kind === "user" ? identity.userId : null,
-      host_guest_id: identity.kind === "guest" ? identity.guestId : null,
-      access: "public",
-      name: "Partie rapide",
-      language: "fr",
-      text_mode: "texte",
-      is_quick: true,
-    })
-    .returning(["id", "code"])
-    .executeTakeFirstOrThrow();
-
-  await db
-    .insertInto("lobby_players")
-    .values({
-      lobby_id: created.id,
-      user_id: identity.kind === "user" ? identity.userId : null,
-      guest_id: identity.kind === "guest" ? identity.guestId : null,
-      guest_name: identity.kind === "guest" ? identity.displayName : null,
-      role: "participant",
-    })
-    .execute();
-
-  return NextResponse.json({ code: created.code });
+  return NextResponse.json(
+    { error: "Aucune salle disponible", code: "none_available", canCreate: identity.kind === "user" },
+    { status: 404 },
+  );
 }

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { PixelButton, PixelPanel } from "@/components/ui";
+import { useLanguage } from "@/lib/i18n";
 import type { InviteView } from "@/lib/invites";
 
 type ApiInvite = Omit<InviteView, "createdAt"> & { createdAt: string };
@@ -10,6 +11,7 @@ type ApiInvite = Omit<InviteView, "createdAt"> & { createdAt: string };
 // (non utilisé, utilisé par qui, révoqué). `refreshKey` change à chaque mise à jour
 // en direct de la salle, ce qui recharge la liste.
 export function InvitePanel({ code, refreshKey }: { code: string; refreshKey: unknown }) {
+  const { t } = useLanguage();
   const [invites, setInvites] = useState<ApiInvite[]>([]);
   const [label, setLabel] = useState("");
   const [copied, setCopied] = useState<string | null>(null);
@@ -34,7 +36,7 @@ export function InvitePanel({ code, refreshKey }: { code: string; refreshKey: un
     });
     if (!res.ok) {
       const data = (await res.json().catch(() => null)) as { error?: string } | null;
-      setError(data?.error ?? "Impossible de créer le lien.");
+      setError(data?.error ?? t("err.generic"));
       return;
     }
     setLabel("");
@@ -57,18 +59,18 @@ export function InvitePanel({ code, refreshKey }: { code: string; refreshKey: un
       setCopied(token);
       setTimeout(() => setCopied((current) => (current === token ? null : current)), 2000);
     } catch {
-      window.prompt("Copie ce lien :", url);
+      window.prompt(t("invite.copy_prompt"), url);
     }
   }
 
   const statusText = (i: ApiInvite) =>
-    i.status === "used" ? `Utilisé par ${i.usedBy ?? "?"}` : i.status === "revoked" ? "Révoqué" : "Non utilisé";
+    i.status === "used" ? t("invite.used_by", { name: i.usedBy ?? "?" }) : i.status === "revoked" ? t("invite.revoked") : t("invite.unused");
 
   return (
     <PixelPanel className="flex flex-col gap-3 p-5">
-      <h2 className="font-pixel text-sm text-[#2b2b2b]">LIENS D&rsquo;INVITATION</h2>
+      <h2 className="font-pixel text-sm text-[#2b2b2b]">{t("invite.title")}</h2>
       <p className="text-xl text-[#3a3a3a]">
-        Un lien par invité, à usage unique. Une salle privée ne s&rsquo;ouvre qu&rsquo;avec un lien.
+        {t("invite.note")}
       </p>
       <form
         className="flex gap-2"
@@ -81,12 +83,12 @@ export function InvitePanel({ code, refreshKey }: { code: string; refreshKey: un
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           maxLength={40}
-          aria-label="Nom de l’invité (facultatif)"
-          placeholder="Pour qui ? (facultatif)"
+          aria-label={t("invite.label_aria")}
+          placeholder={t("invite.label_placeholder")}
           className="pixel-slot min-w-0 flex-grow px-2.5 text-xl text-white"
         />
         <PixelButton type="submit" variant="gold" className="h-10 px-3 text-[10px]">
-          GÉNÉRER
+          {t("invite.generate")}
         </PixelButton>
       </form>
       {error && (
@@ -98,27 +100,27 @@ export function InvitePanel({ code, refreshKey }: { code: string; refreshKey: un
         {invites.map((i) => (
           <li key={i.id} className="flex flex-wrap items-center gap-2 border-b-2 border-dotted border-[#8b8b8b] pb-2">
             <div className="min-w-0 flex-grow leading-tight">
-              <div className="truncate text-xl">{i.label ?? "Invité"}</div>
+              <div className="truncate text-xl">{i.label ?? t("invite.guest")}</div>
               <div className="text-lg text-[#3a3a3a]">{statusText(i)}</div>
             </div>
             {i.status !== "revoked" && (
               <>
                 <button type="button" onClick={() => void copy(i.token)} className="pixel-chip text-lg">
-                  {copied === i.token ? "Copié !" : "Copier"}
+                  {copied === i.token ? t("invite.copied") : t("invite.copy")}
                 </button>
                 <button
                   type="button"
                   onClick={() => void revoke(i.id)}
-                  aria-label={`Révoquer le lien ${i.label ?? ""}`}
+                  aria-label={t("invite.revoke_aria", { name: i.label ?? "" })}
                   className="pixel-chip text-lg"
                 >
-                  Révoquer
+                  {t("invite.revoke")}
                 </button>
               </>
             )}
           </li>
         ))}
-        {invites.length === 0 && <li className="text-xl text-[#3a3a3a]">Aucun lien pour l&rsquo;instant.</li>}
+        {invites.length === 0 && <li className="text-xl text-[#3a3a3a]">{t("invite.none")}</li>}
       </ul>
     </PixelPanel>
   );

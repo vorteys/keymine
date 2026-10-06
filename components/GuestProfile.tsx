@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { PixelButton, PixelPanel, PixelSlot } from "@/components/ui";
+import { useLanguage } from "@/lib/i18n";
 
 type GuestRace = { code: string; wpm: number; accuracy: number; errors: number; at: string };
 
 // STAT-8: en invité, les stats ne vivent que le temps de l'onglet (AUTH-8).
 export function GuestProfile() {
+  const { t } = useLanguage();
   const [history, setHistory] = useState<GuestRace[]>([]);
 
   useEffect(() => {
@@ -28,37 +30,36 @@ export function GuestProfile() {
     <div className="flex flex-col gap-6">
       <PixelPanel className="p-6 text-center">
         <p className="text-2xl leading-tight text-[#3a3a3a]">
-          Tu joues en invité: ces stats restent dans cet onglet et disparaîtront si tu le fermes.
-          Connecte-toi pour les garder pour de bon.
+          {t("guest.note")}
         </p>
         <PixelButton href="/connexion" variant="green" className="mx-auto mt-4 h-14 px-8 text-sm">
-          CRÉER UN COMPTE
+          {t("guest.create_account")}
         </PixelButton>
       </PixelPanel>
 
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
         <PixelSlot className="p-2.5 leading-none">
-          <b className="font-pixel mb-1 block text-[9px] text-[#ffefb3]">MEILLEUR</b>
-          <span className="text-3xl text-white">{best} MPM</span>
+          <b className="font-pixel mb-1 block text-[9px] text-[#ffefb3]">{t("profile.best")}</b>
+          <span className="text-3xl text-white">{best} {t("race.wpm")}</span>
         </PixelSlot>
         <PixelSlot className="p-2.5 leading-none">
-          <b className="font-pixel mb-1 block text-[9px] text-[#ffefb3]">COURSES (SESSION)</b>
+          <b className="font-pixel mb-1 block text-[9px] text-[#ffefb3]">{t("guest.session_races")}</b>
           <span className="text-3xl text-white">{history.length}</span>
         </PixelSlot>
       </div>
 
       <PixelPanel className="p-5">
-        <div className="font-pixel mb-2.5 text-sm">COURSES DE CETTE SESSION</div>
+        <div className="font-pixel mb-2.5 text-sm">{t("guest.session_list")}</div>
         {history.length === 0 && (
-          <p className="text-xl text-[#3a3a3a]">Aucune course terminée pour l’instant.</p>
+          <p className="text-xl text-[#3a3a3a]">{t("profile.history_empty")}</p>
         )}
         {history.map((h, i) => (
           <div
             key={i}
             className="flex items-center justify-between border-b-2 border-dotted border-[#8b8b8b] py-1 text-xl"
           >
-            <span>Salle {h.code}</span>
-            <span className="text-[#3a3a3a]">{Math.round(h.wpm)} MPM</span>
+            <span>{t("guest.room", { code: h.code })}</span>
+            <span className="text-[#3a3a3a]">{Math.round(h.wpm)} {t("race.wpm")}</span>
             <span className="text-[#3a3a3a]">{Math.round(h.accuracy)} %</span>
           </div>
         ))}

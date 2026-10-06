@@ -5,6 +5,7 @@ import { verifyPassword } from "@/lib/auth/password";
 import { createSession } from "@/lib/auth/session";
 import { mergeGuestHistory } from "@/lib/stats";
 import { readGuestId } from "@/lib/auth/guest";
+import { msg } from "@/lib/api-messages";
 
 const schema = z.object({
   username: z.string().trim().min(1).max(20),
@@ -19,7 +20,7 @@ const LOCK_MINUTES = 15;
 export async function POST(request: Request) {
   const body = schema.safeParse(await request.json().catch(() => null));
   if (!body.success) {
-    return NextResponse.json({ error: "Requête invalide" }, { status: 400 });
+    return NextResponse.json({ error: await msg("bad_request") }, { status: 400 });
   }
   const { username, password, rememberMe } = body.data;
 
@@ -37,14 +38,14 @@ export async function POST(request: Request) {
     .executeTakeFirst();
 
   // Message générique volontairement identique (pas d'énumération de comptes).
-  const invalid = () =>
-    NextResponse.json({ error: "Nom d'utilisateur ou mot de passe incorrect" }, { status: 401 });
+  const invalid = async () =>
+    NextResponse.json({ error: await msg("bad_credentials") }, { status: 401 });
 
   if (!user) return invalid();
 
   if (user.locked_until && new Date(user.locked_until) > new Date()) {
     return NextResponse.json(
-      { error: "Trop de tentatives. Réessaie dans quelques minutes." },
+      { error: await msg("login_locked") },
       { status: 429 },
     );
   }

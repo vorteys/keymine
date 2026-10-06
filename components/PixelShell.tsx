@@ -40,6 +40,9 @@ export function PixelShell({
 
   return (
     <div className="pixel-night min-h-screen">
+      <a href="#contenu" className="skip-link font-pixel text-[11px]">
+        {t("a11y.skip")}
+      </a>
       <div className="pixel-grass h-5 border-b-4 border-[#2f5d1c]" />
 
       <header className="flex h-16 items-center gap-6 border-b-4 border-black bg-[#241a10] px-4 sm:px-8">
@@ -52,7 +55,7 @@ export function PixelShell({
           </span>
         </Link>
 
-        <nav className="hidden flex-grow gap-1.5 sm:flex">
+        <nav aria-label={t("a11y.main_nav")} className="hidden flex-grow gap-1.5 sm:flex">
           <Link href="/jouer/creer" data-active={active === "jouer"} className="pixel-nav-link">
             {t("nav.jouer")}
           </Link>
@@ -98,9 +101,25 @@ export function PixelShell({
         )}
       </header>
 
-      <main className="px-4 py-6 sm:px-8 sm:py-7">
+      <nav aria-label={t("a11y.main_nav")} className="flex gap-1.5 border-b-4 border-black bg-[#241a10] px-4 pb-3 sm:hidden">
+        <Link href="/jouer/creer" data-active={active === "jouer"} className="pixel-nav-link">
+          {t("nav.jouer")}
+        </Link>
+        <Link href="/" data-active={active === "lobbys"} className="pixel-nav-link">
+          {t("nav.lobbys")}
+        </Link>
+        <Link href="/profil" data-active={active === "stats"} className="pixel-nav-link">
+          {t("nav.stats")}
+        </Link>
+      </nav>
+
+      <main id="contenu" tabIndex={-1} className="px-4 py-6 sm:px-8 sm:py-7">
         <div className="mx-auto w-full max-w-[1400px]">{children}</div>
       </main>
+
+      <footer className="border-t-4 border-black bg-[#241a10] px-4 py-4 text-center text-xl text-[#f1e6c9] sm:px-8">
+        {t("footer.text")}
+      </footer>
     </div>
   );
 }

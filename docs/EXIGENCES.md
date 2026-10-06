@@ -80,19 +80,19 @@ Statuts : **complet** (fait et vérifié), **partiel** (existe mais incomplet ou
 | RES-05 | complet | realtime/race-room.ts, lib/results.ts | tests/db/race.test.ts, tests/db/history.test.ts | Résultats et série temporelle du MPM (wpm_series) persistés ; les graphiques se réaffichent depuis la base. |
 | HIST-01 | complet | app/historique/page.tsx, lib/history.ts | tests/db/history.test.ts | Historique paginé (10 par page) du compte connecté, plus récent d'abord. |
 | HIST-02 | complet | app/historique/page.tsx, app/resultats/[code]/page.tsx | tests/db/history.test.ts | Chaque ligne ouvre /resultats/CODE?course=ID ; accès limité aux participants de la course. |
-| I18N-01 | partiel | `lib/i18n.tsx` | — | Dictionnaire FR/EN avec interpolation ; migrés : course, résultats, historique, explorateur de salles, entrée dans une salle. Restent en français codé en dur : création de salle, salle d'attente, profil, connexion, accueil, messages d'erreur de l'API. |
+| I18N-01 | partiel | lib/i18n-dictionary.ts, lib/api-messages.ts, lib/i18n-server.ts, app/**/layout.tsx | tests/unit/i18n-dictionary.test.ts, tests/unit/i18n-usage.test.ts | Toutes les pages et composants utilisent le dictionnaire FR/EN ; messages d'erreur de l'API traduits côté serveur selon la langue de la requête ; titres de pages traduits ; tests : mêmes clés FR/EN et clés utilisées existantes. Reste : libellés du moteur de course affichés tels quels (noms « Bot X » enregistrés en base) et textes du corpus (langue de la course, pas de l'interface). |
 | I18N-02 | partiel | `lib/i18n.tsx`, `lib/i18n-dictionary.ts`, `lib/i18n-server.ts`, `app/layout.tsx` | — | Langue choisie côté serveur (cookie km_lang, sinon Accept-Language) : aucun flash. Sélecteur dans l en-tête de chaque page. Couverture des textes encore partielle (voir I18N-01). |
-| I18N-03 | partiel | lib/format.ts, app/resultats/[code]/page.tsx, app/historique/page.tsx | — | Dates, nombres, pourcentages et durées formatés selon la langue sur les résultats et l'historique ; autres pages à migrer. |
+| I18N-03 | partiel | lib/format.ts | tests/unit/format.test.ts | Dates, nombres, pourcentages, durées de course et durée maximale formatés selon la langue (Intl) sur résultats, historique, profil, accueil, salle d'attente. |
 | TEST-01 | partiel | `tests/unit/` | 9 tests | Texte, carte de chaleur, composants UI ; logique de course et bots à couvrir. |
 | TEST-02 | partiel | `tests/e2e/home.spec.ts` | 2 parcours | Non exécuté dans cet environnement. |
 | TEST-03 | partiel | `tests/e2e/` | — | Connexion par mot de passe seulement : aucun test d'authentification encore. |
 | PERF-01 | non fait | — | — | Lighthouse non mesuré. |
-| PERF-02 | partiel | realtime/protocol.ts, realtime/race-room.ts | tests/unit/realtime-protocol.test.ts | Limiteur côté serveur (25 msg/s en course). Le client envoie encore une progression par frappe : à regrouper. |
+| PERF-02 | complet | app/course/[code]/page.tsx, realtime/protocol.ts, realtime/race-room.ts | tests/unit/realtime-protocol.test.ts, tests/unit/race-engine.test.ts | Le client regroupe l'avancement (au plus 10 messages/s, envoi immédiat à la fin) ; le serveur limite à 25 msg/s et n'écrit en base que toutes les 2 s (points de contrôle) et à la fin. |
 | PERF-03 | non fait | — | — | Non testé avec 30 participants. |
 | A11Y-01 | partiel | — | — | Contrastes non vérifiés en WCAG AA. |
-| A11Y-02 | partiel | — | — | Balises sémantiques partielles ; tableau des résultats à vérifier. |
+| A11Y-02 | partiel | components/PixelShell.tsx, app/resultats/[code]/page.tsx, app/historique/page.tsx | — | header/nav/main/footer dans la structure commune, vrais tableaux (th scope, caption) pour résultats et historique, boutons pour les actions et liens pour la navigation ; ordre des titres h1→h2 ; à auditer avec un outil (axe/Lighthouse). |
 | A11Y-03 | partiel | — | — | Textes alternatifs et libellés à auditer. |
-| A11Y-04 | partiel | — | — | Parcours clavier et focus visible à auditer. |
+| A11Y-04 | partiel | app/globals.css, components/PixelShell.tsx | — | Lien d'évitement « Aller au contenu », indicateur de focus à double contour, navigation mobile ; parcours clavier complet à vérifier à la main. |
 | SEC-01 | partiel | `lib/lobby.ts`, `app/api/lobbies/[code]/**` | — | Démarrer, bots, fermer vérifiés côté serveur ; liens et expulsion à venir. |
 | SEC-02 | partiel | lib/avatar.ts, app/api/profile/avatar/route.ts | tests/unit/avatar.test.ts | Type réel (signature) et taille validés côté serveur, image ré-encodée (un fichier déguisé est rejeté) ; seul téléversement de l'application. |
 | SEC-03 | complet | `lib/auth/password.ts` | — | bcrypt (12 tours), jamais journalisé. |

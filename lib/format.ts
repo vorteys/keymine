@@ -37,3 +37,10 @@ export function formatRaceTime(lang: SiteLang, ms: number): string {
   }).format(seconds);
   return `${minutes}:${secondsText}`;
 }
+
+/** Durée maximale d'une course : « 15 secondes », « 5 minutes », « 1 heure » (unité la plus grande qui tombe juste). */
+export function formatDuration(lang: SiteLang, seconds: number): string {
+  const [unit, value] =
+    seconds % 3600 === 0 ? (["hour", seconds / 3600] as const) : seconds % 60 === 0 ? (["minute", seconds / 60] as const) : (["second", seconds] as const);
+  return new Intl.NumberFormat(localeOf(lang), { style: "unit", unit, unitDisplay: "long" }).format(value);
+}

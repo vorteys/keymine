@@ -5,6 +5,9 @@ import { listPublicLobbies } from "@/lib/public-lobbies";
 import { JoinByCodeForm, QuickPlayButton } from "@/components/HomeActions";
 import { db } from "@/lib/db";
 import { peekIdentity } from "@/lib/auth/identity";
+import { formatNumber, formatPercent } from "@/lib/format";
+import { getRequestLang } from "@/lib/i18n-server";
+import { translate, type DictKey } from "@/lib/i18n-dictionary";
 
 export const dynamic = "force-dynamic";
 
@@ -34,38 +37,32 @@ async function getMiniStats() {
 }
 
 export default async function Home() {
-  const [lobbies, stats] = await Promise.all([listPublicLobbies(), getMiniStats()]);
+  const [lobbies, stats, lang] = await Promise.all([listPublicLobbies(), getMiniStats(), getRequestLang()]);
+  const t = (key: DictKey, params?: Record<string, string | number>) => translate(lang, key, params);
 
   return (
     <PixelShell active="lobbys">
       <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:gap-16">
         <div className="flex w-full flex-col gap-5 lg:w-[30rem] lg:flex-none">
           <h1 className="font-pixel text-3xl leading-relaxed text-white [text-shadow:4px_4px_0_#000]">
-            TAPE PLUS VITE QUE TA CLASSE.
+            {t("home.title")}
           </h1>
-          <p className="text-2xl leading-tight text-[#f1e6c9]">
-            Des courses de frappe en direct. Tout le monde tape le même texte, le plus rapide
-            monte sur le podium.
-          </p>
+          <p className="text-2xl leading-tight text-[#f1e6c9]">{t("home.subtitle")}</p>
 
           <QuickPlayButton className="h-24 text-3xl" />
-          <p className="-mt-2 text-xl text-[#f1e6c9]">
-            Partie rapide: on te place dans un lobby, ou on en crée un et tu deviens le Chef.
-          </p>
+          <p className="-mt-2 text-xl text-[#f1e6c9]">{t("home.quickplay_hint")}</p>
 
           <JoinByCodeForm />
 
           <div className="flex gap-3">
             <PixelButton href="/jouer/creer" variant="gold" className="flex-grow text-sm">
-              CRÉER UNE COURSE
+              {t("home.create")}
             </PixelButton>
             <PixelButton href="/connexion" variant="slate" className="flex-grow text-sm">
-              COMPTE
+              {t("home.account")}
             </PixelButton>
           </div>
-          <p className="text-xl text-[#c9bb98]">
-            Sans compte, tu joues en invité: ton historique s’efface à la fermeture de la page.
-          </p>
+          <p className="text-xl text-[#c9bb98]">{t("home.guest_note")}</p>
         </div>
 
         <div className="flex w-full flex-grow flex-col gap-3">
@@ -73,17 +70,17 @@ export default async function Home() {
 
           <div className="mt-3 grid grid-cols-3 gap-2.5">
             <PixelSlot className="px-3 py-2">
-              <div className="font-pixel text-[9px] text-[#ffe08a]">MEILLEUR</div>
-              <div className="text-3xl text-white">{stats ? `${stats.bestWpm} MPM` : "—"}</div>
+              <div className="font-pixel text-[9px] text-[#ffe08a]">{t("home.stat_best")}</div>
+              <div className="text-3xl text-white">{stats ? t("home.wpm_value", { value: formatNumber(lang, stats.bestWpm) }) : "—"}</div>
             </PixelSlot>
             <PixelSlot className="px-3 py-2">
-              <div className="font-pixel text-[9px] text-[#ffe08a]">COURSES</div>
+              <div className="font-pixel text-[9px] text-[#ffe08a]">{t("home.stat_races")}</div>
               <div className="text-3xl text-white">{stats ? stats.totalRaces : "—"}</div>
             </PixelSlot>
             <PixelSlot className="px-3 py-2">
-              <div className="font-pixel text-[9px] text-[#ffe08a]">PRÉCISION</div>
+              <div className="font-pixel text-[9px] text-[#ffe08a]">{t("home.stat_accuracy")}</div>
               <div className="text-3xl text-white">
-                {stats?.accuracy != null ? `${stats.accuracy} %` : "—"}
+                {stats?.accuracy != null ? formatPercent(lang, stats.accuracy) : "—"}
               </div>
             </PixelSlot>
           </div>

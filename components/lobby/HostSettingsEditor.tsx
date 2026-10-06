@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { PixelButton, PixelPanel } from "@/components/ui";
 import type { LobbyView } from "@/lib/lobby-snapshot";
+import { useLanguage } from "@/lib/i18n";
 import { SettingsForm } from "./SettingsForm";
 import { settingsFromLobby, settingsToPayload, type SettingsState } from "./settings";
 
@@ -17,6 +18,7 @@ export function HostSettingsEditor({
   lobby: LobbyView["lobby"];
   onClose: () => void;
 }) {
+  const { t } = useLanguage();
   const [value, setValue] = useState<SettingsState>(() => settingsFromLobby(lobby));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,17 +33,13 @@ export function HostSettingsEditor({
         body: JSON.stringify(settingsToPayload(value)),
       });
       if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as { error?: string; code?: string } | null;
-        setError(
-          data?.code === "capacity_too_low"
-            ? "La capacité ne peut pas être inférieure au nombre de participants."
-            : (data?.error ?? "Impossible d’enregistrer les réglages."),
-        );
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        setError(data?.error ?? t("err.generic"));
         return;
       }
       onClose();
     } catch {
-      setError("Impossible de contacter le serveur.");
+      setError(t("err.network"));
     } finally {
       setSaving(false);
     }
@@ -50,7 +48,7 @@ export function HostSettingsEditor({
   return (
     <PixelPanel className="mb-6 p-5">
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="font-pixel text-sm text-[#2b2b2b]">MODIFIER LES RÉGLAGES</h2>
+        <h2 className="font-pixel text-sm text-[#2b2b2b]">{t("set.edit_title")}</h2>
       </div>
       <SettingsForm value={value} onChange={(patch) => setValue((prev) => ({ ...prev, ...patch }))} />
       {error && (
@@ -60,10 +58,10 @@ export function HostSettingsEditor({
       )}
       <div className="mt-5 flex flex-wrap justify-end gap-3">
         <PixelButton variant="slate" onClick={onClose} className="h-12 px-5 text-[11px]">
-          ANNULER
+          {t("set.cancel")}
         </PixelButton>
         <PixelButton variant="green" onClick={() => void save()} className="h-12 px-6 text-[11px]">
-          {saving ? "..." : "ENREGISTRER"}
+          {saving ? "..." : t("set.save")}
         </PixelButton>
       </div>
     </PixelPanel>

@@ -8,16 +8,17 @@ import { revokeAllInvites } from "@/lib/invites";
 import { applyLobbySettings } from "@/lib/lobby-settings";
 import { assertTransition } from "@/lib/race/state";
 import { loadLobbySnapshot, viewLobby, type Viewer } from "@/lib/lobby-snapshot";
+import { msg } from "@/lib/api-messages";
 
 // Lecture HTTP de l'état d'une salle (repli si le WebSocket est indisponible).
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
   const lobby = await getLobbyByCode(code);
-  if (!lobby) return NextResponse.json({ error: "Salle introuvable" }, { status: 404 });
+  if (!lobby) return NextResponse.json({ error: await msg("lobby_not_found") }, { status: 404 });
 
   await sweepLobbies();
   const raw = await loadLobbySnapshot(code);
-  if (!raw) return NextResponse.json({ error: "Salle introuvable" }, { status: 404 });
+  if (!raw) return NextResponse.json({ error: await msg("lobby_not_found") }, { status: 404 });
 
   const identity = await getIdentity();
   const viewer: Viewer | null = identity
@@ -33,11 +34,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
 export async function DELETE(_request: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
   const lobby = await getLobbyByCode(code);
-  if (!lobby) return NextResponse.json({ error: "Salle introuvable" }, { status: 404 });
+  if (!lobby) return NextResponse.json({ error: await msg("lobby_not_found") }, { status: 404 });
 
   const identity = await getIdentity();
   if (!identity || !isHost(identity, lobby)) {
-    return NextResponse.json({ error: "Seul l'hôte peut fermer la salle" }, { status: 403 });
+    return NextResponse.json({ error: await msg("host_only_close") }, { status: 403 });
   }
 
   if (lobby.status !== "closed") {
@@ -58,29 +59,29 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 export async function PATCH(request: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
   const lobby = await getLobbyByCode(code);
-  if (!lobby) return NextResponse.json({ error: "Salle introuvable" }, { status: 404 });
+  if (!lobby) return NextResponse.json({ error: await msg("lobby_not_found") }, { status: 404 });
 
   const identity = await getIdentity();
   if (!identity || !isHost(identity, lobby)) {
-    return NextResponse.json({ error: "Seul l'hôte peut modifier les réglages" }, { status: 403 });
+    return NextResponse.json({ error: await msg("host_only_settings") }, { status: 403 });
   }
   const body = lobbyUpdateSchema.safeParse(await request.json().catch(() => null));
-  if (!body.success) return NextResponse.json({ error: "Réglages invalides" }, { status: 400 });
+  if (!body.success) return NextResponse.json({ error: await msg("bad_settings") }, { status: 400 });
 
   const result = await applyLobbySettings(lobby, body.data);
   if (result.ok) return NextResponse.json({ ok: true });
   switch (result.reason) {
     case "not_waiting":
       return NextResponse.json(
-        { error: "Les réglages ne se modifient qu'en salle d'attente", code: "not_waiting" },
+        { error: await msg("not_waiting"), code: "not_waiting" },
         { status: 409 },
       );
     case "capacity_too_low":
       return NextResponse.json(
-        { error: "Capacité inférieure au nombre de participants", code: "capacity_too_low" },
+        { error: await msg("capacity_too_low"), code: "capacity_too_low" },
         { status: 409 },
       );
     case "include_exclude_conflict":
-      return NextResponse.json({ error: "Un caractère ne peut pas être à la fois inclus et exclu" }, { status: 400 });
+      return NextResponse.json({ error: await msg("include_exclude") }, { status: 400 });
   }
 }

@@ -352,7 +352,7 @@ export default function CoursePage() {
               <PixelPanel className="p-4">
                 <div
                   className="border-4 border-black bg-[#1b1b1b] p-6 text-3xl leading-relaxed break-words sm:text-4xl"
-                  aria-label="Texte à taper"
+                  aria-label={t("race.text_aria")}
                 >
                   {raceText.split("").map((c, i) => {
                     const cls =

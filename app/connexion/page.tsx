@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { PixelShell } from "@/components/PixelShell";
 import { PixelButton, PixelPanel } from "@/components/ui";
+import { useLanguage } from "@/lib/i18n";
 
 type Mode = "login" | "register";
 
@@ -19,6 +20,7 @@ export default function ConnexionPage() {
 
 function ConnexionForm() {
   const router = useRouter();
+  const { t } = useLanguage();
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<Mode>("login");
   const [username, setUsername] = useState("");
@@ -45,13 +47,13 @@ function ConnexionForm() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Une erreur est survenue");
+        setError(data.error ?? t("err.generic"));
         return;
       }
       router.push("/");
       router.refresh();
     } catch {
-      setError("Impossible de contacter le serveur");
+      setError(t("err.network"));
     } finally {
       setPending(false);
     }
@@ -61,13 +63,13 @@ function ConnexionForm() {
     <PixelShell
       rightSlot={
         <PixelButton href="/" variant="slate" className="h-10 px-4 text-[11px]">
-          INVITÉ
+          {t("auth.guest")}
         </PixelButton>
       }
     >
       <div className="flex flex-col items-center gap-7 pt-6">
         <h1 className="font-pixel text-2xl text-white [text-shadow:4px_4px_0_#000]">
-          DESCENDS DANS LA MINE
+          {t("auth.title")}
         </h1>
 
         <PixelPanel className="w-full max-w-xl p-7">
@@ -79,7 +81,7 @@ function ConnexionForm() {
                 className="flex-grow text-[13px]"
                 onClick={() => setMode("login")}
               >
-                CONNEXION
+                {t("auth.tab_login")}
               </PixelButton>
               <PixelButton
                 type="button"
@@ -87,17 +89,17 @@ function ConnexionForm() {
                 className="flex-grow text-[13px]"
                 onClick={() => setMode("register")}
               >
-                CRÉER UN COMPTE
+                {t("auth.tab_register")}
               </PixelButton>
             </div>
 
             <label className="block">
               <span className="font-pixel mb-2 block text-[11px] text-[#3a3a3a]">
-                NOM D&rsquo;UTILISATEUR
+                {t("auth.username")}
               </span>
               <input
                 className="pixel-slot h-13 w-full px-3.5 text-3xl text-white"
-                placeholder="ton pseudo"
+                placeholder={t("auth.username_placeholder")}
                 name="username"
                 autoComplete="username"
                 value={username}
@@ -109,7 +111,7 @@ function ConnexionForm() {
             </label>
 
             <label className="block">
-              <span className="font-pixel mb-2 block text-[11px] text-[#3a3a3a]">MOT DE PASSE</span>
+              <span className="font-pixel mb-2 block text-[11px] text-[#3a3a3a]">{t("auth.password")}</span>
               <input
                 type="password"
                 className="pixel-slot h-13 w-full px-3.5 text-3xl text-white"
@@ -130,7 +132,7 @@ function ConnexionForm() {
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
               />
-              Se souvenir de moi
+              {t("auth.remember")}
             </label>
 
             {error && (
@@ -140,12 +142,12 @@ function ConnexionForm() {
             )}
 
             <PixelButton type="submit" variant="green" className="h-16 text-lg">
-              {pending ? "..." : mode === "login" ? "CONNEXION" : "CRÉER LE COMPTE"}
+              {pending ? "..." : mode === "login" ? t("auth.submit_login") : t("auth.submit_register")}
             </PixelButton>
 
             <div className="flex items-center gap-3.5 text-[#3a3a3a]">
               <div className="h-1 flex-grow bg-[#8b8b8b]" />
-              <span className="font-pixel text-[11px]">OU</span>
+              <span className="font-pixel text-[11px]">{t("auth.or")}</span>
               <div className="h-1 flex-grow bg-[#8b8b8b]" />
             </div>
 
@@ -167,20 +169,17 @@ function ConnexionForm() {
             </div>
 
             <p className="text-2xl leading-tight text-[#3a3a3a]">
-              Ta photo Discord ou GitHub sert de photo de profil. Tu pourras la changer ou en
-              téléverser une autre.
+              {t("auth.photo_note")}
             </p>
           </form>
         </PixelPanel>
 
         <div className="flex w-full max-w-xl flex-col gap-3.5 sm:flex-row">
           <div className="flex-1 border-4 border-black bg-[#fff8dc] p-3.5 text-2xl leading-tight text-black">
-            Aucun courriel demandé. Mot de passe oublié? Pas de récupération: tu crées un nouveau
-            compte.
+            {t("auth.no_email")}
           </div>
           <div className="flex-1 border-4 border-black bg-[#e6f3d8] p-3.5 text-2xl leading-tight text-black">
-            Tu as joué en invité? Tes courses de la session s’ajoutent à ton compte quand tu te
-            connectes.
+            {t("auth.guest_merge")}
           </div>
         </div>
       </div>

@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getIdentity } from "@/lib/auth/identity";
 import { findActiveRoom, generateUniqueLobbyCode } from "@/lib/lobby";
 import { lobbySettingsSchema } from "@/lib/lobby-schema";
+import { msg } from "@/lib/api-messages";
 
 // COUR-16: liste des lobbys publics affichée à l'accueil.
 export async function GET() {
@@ -46,17 +47,17 @@ export async function GET() {
 export async function POST(request: Request) {
   const body = lobbySettingsSchema.safeParse(await request.json().catch(() => ({})));
   if (!body.success) {
-    return NextResponse.json({ error: "Réglages invalides" }, { status: 400 });
+    return NextResponse.json({ error: await msg("bad_settings") }, { status: 400 });
   }
 
   const identity = await getIdentity();
   if (!identity) {
-    return NextResponse.json({ error: "Connexion requise", code: "account_required" }, { status: 401 });
+    return NextResponse.json({ error: await msg("login_required"), code: "account_required" }, { status: 401 });
   }
   // AUTH-03: un invité ne peut pas créer de salle.
   if (identity.kind !== "user") {
     return NextResponse.json(
-      { error: "Crée un compte pour créer une salle", code: "account_required" },
+      { error: await msg("account_required"), code: "account_required" },
       { status: 403 },
     );
   }
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
   const current = await findActiveRoom(identity);
   if (current) {
     return NextResponse.json(
-      { error: "Tu es déjà dans une autre salle", code: "already_in_room", currentCode: current.code },
+      { error: await msg("already_in_room"), code: "already_in_room", currentCode: current.code },
       { status: 409 },
     );
   }

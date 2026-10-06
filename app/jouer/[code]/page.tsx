@@ -8,27 +8,23 @@ import { PixelShell } from "@/components/PixelShell";
 import { PixelAvatar, PixelButton, PixelPanel, PixelSlot } from "@/components/ui";
 import { useLobbyLive } from "@/components/useLobbyLive";
 import { useRoomEntry } from "@/components/useRoomEntry";
-import { BOT_LEVELS, BOT_PROFILES } from "@/lib/race/bots";
+import { BOT_LEVELS } from "@/lib/race/bots";
 import type { BotLevel } from "@/db/types";
+import { formatDuration } from "@/lib/format";
+import { useLanguage } from "@/lib/i18n";
+import type { DictKey } from "@/lib/i18n-dictionary";
 
-const DURATION_LABEL = (s: number) =>
-  s >= 3600 ? `${Math.round(s / 3600)} h` : `${Math.round(s / 60)} min`;
-
-const TEXT_TYPE_LABEL: Record<string, string> = {
-  coherent: "Cohérent",
-  aleatoire: "Aléatoire",
-};
-
-const COMPLEXITY_LABEL: Record<string, string> = {
-  easy: "Facile",
-  medium: "Moyen",
-  hard: "Difficile",
+const COMPLEXITY_KEY: Record<string, DictKey> = {
+  easy: "lobbies.easy",
+  medium: "lobbies.medium",
+  hard: "lobbies.hard",
 };
 
 const AVATAR_COLORS = ["#3d6fc4", "#b03a7a", "#a85512", "#17706f", "#7a45b0", "#3f7d24", "#b63a32"];
 
 export default function LobbyPage() {
   const router = useRouter();
+  const { t, lang } = useLanguage();
   const params = useParams<{ code: string }>();
   const code = params.code.toUpperCase();
 
@@ -53,7 +49,7 @@ export default function LobbyPage() {
 
   // Présence en direct (WebSocket, repli HTTP) — SALLE-01, SALLE-02, JOIN-01.
   const { view, status } = useLobbyLive(code, entered);
-  const error = status === "missing" ? "Salle introuvable" : startError;
+  const error = status === "missing" ? t("lobby.not_found") : startError;
   const lobby = view?.lobby ?? null;
   const players = view?.players ?? [];
 
@@ -98,7 +94,7 @@ export default function LobbyPage() {
     const res = await fetch(`/api/lobbies/${code}/start`, { method: "POST" });
     const data = await res.json();
     if (!res.ok) {
-      setError(data.error ?? "Impossible de démarrer");
+      setError(data.error ?? t("lobby.start_failed"));
       return;
     }
     router.push(`/course/${code}`);
@@ -120,8 +116,10 @@ export default function LobbyPage() {
           <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
             <div>
               <div className="font-pixel mb-2.5 text-[10px] text-[#ffd84a]">
-                SALLE D&rsquo;ATTENTE · {(lobby?.access ?? "public").toUpperCase()} ·{" "}
-                {(lobby?.language ?? "fr").toUpperCase()}
+                {t("lobby.header", {
+                  access: (lobby?.access ?? "public").toUpperCase(),
+                  language: (lobby?.language ?? "fr").toUpperCase(),
+                })}
               </div>
               <h1 className="font-pixel text-xl text-white [text-shadow:4px_4px_0_#000]">
                 {lobby?.name.toUpperCase() ?? "…"}
@@ -146,9 +144,9 @@ export default function LobbyPage() {
           <PixelPanel className="p-5">
             <div className="mb-3.5 flex items-center justify-between">
               <span className="font-pixel text-sm text-[#2b2b2b]">
-                JOUEURS {participants.length} / {lobby?.maxPlayers ?? "…"}
+                {t("lobby.players", { count: participants.length, max: lobby?.maxPlayers ?? "…" })}
               </span>
-              <span className="text-2xl text-[#3a3a3a]">{spectators.length} spectateurs</span>
+              <span className="text-2xl text-[#3a3a3a]">{t("lobby.spectators", { count: spectators.length })}</span>
             </div>
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
               {participants.map((p, i) => (
@@ -162,24 +160,24 @@ export default function LobbyPage() {
                     <div className="truncate text-2xl text-white">{p.name}</div>
                     <div className="font-pixel mt-1 text-[8px] text-[#ffe08a]">
                       {p.isBot
-                        ? "BOT"
+                        ? t("lobby.tag_bot")
                         : !p.connected
-                          ? "HORS LIGNE"
+                          ? t("lobby.tag_offline")
                           : p.isHost
                             ? p.isSelf
-                              ? "HÔTE · TOI"
-                              : "HÔTE"
+                              ? t("lobby.tag_host_you")
+                              : t("lobby.tag_host")
                             : p.isSelf
-                              ? "TOI"
-                              : "PRÊT"}
+                              ? t("lobby.tag_you")
+                              : t("lobby.tag_ready")}
                     </div>
                   </div>
                   {lobby?.isHost && !p.isHost && (
                     <button
                       type="button"
                       onClick={() => void (p.isBot ? removeBot(p.id) : kick(p.id))}
-                      aria-label={p.isBot ? `Retirer ${p.name}` : `Expulser ${p.name}`}
-                      title={p.isBot ? "Retirer le bot" : "Expulser"}
+                      aria-label={p.isBot ? t("lobby.remove_bot", { name: p.name }) : t("lobby.kick", { name: p.name })}
+                      title={p.isBot ? t("lobby.remove_bot_title") : t("lobby.kick_title")}
                       className="pixel-chip h-8 w-8 flex-none text-xl leading-none"
                     >
                       ×
@@ -189,7 +187,7 @@ export default function LobbyPage() {
               ))}
             </div>
             {spectators.length > 0 && (
-              <ul aria-label="Spectateurs" className="mt-4 flex flex-wrap gap-2">
+              <ul aria-label={t("lobby.spectators_list")} className="mt-4 flex flex-wrap gap-2">
                 {spectators.map((p) => (
                   <li key={p.id} className="pixel-chip flex items-center gap-2 text-xl">
                     <span>{p.name}</span>
@@ -197,8 +195,8 @@ export default function LobbyPage() {
                       <button
                         type="button"
                         onClick={() => void kick(p.id)}
-                        aria-label={`Expulser ${p.name}`}
-                        title="Expulser"
+                        aria-label={t("lobby.kick", { name: p.name })}
+                        title={t("lobby.kick_title")}
                         className="leading-none"
                       >
                         ×
@@ -214,7 +212,7 @@ export default function LobbyPage() {
         <div className="flex w-full flex-col gap-5 lg:w-96 lg:flex-none">
           <PixelPanel className="p-5">
             <div className="mb-2 flex items-center justify-between">
-              <span className="font-pixel text-sm text-[#2b2b2b]">RÉGLAGES</span>
+              <span className="font-pixel text-sm text-[#2b2b2b]">{t("lobby.settings")}</span>
               {lobby?.isHost && (
                 <button
                   type="button"
@@ -222,17 +220,17 @@ export default function LobbyPage() {
                   aria-expanded={editing}
                   className="text-2xl text-[#2b2b2b] underline"
                 >
-                  Modifier
+                  {t("lobby.edit")}
                 </button>
               )}
             </div>
             {[
-              ["Langue", (lobby?.language ?? "fr").toUpperCase()],
-              ["Texte", TEXT_TYPE_LABEL[lobby?.textType ?? "coherent"]],
-              ["Complexité", COMPLEXITY_LABEL[lobby?.complexity ?? "easy"]],
-              ["Longueur", `${lobby?.textLength ?? 40} mots`],
-              ["Durée max", DURATION_LABEL(lobby?.durationSeconds ?? 300)],
-              ["Erreurs", lobby?.errorMode === "bloquer" ? "Bloquer" : "Accumuler"],
+              [t("lobby.s_language"), (lobby?.language ?? "fr").toUpperCase()],
+              [t("lobby.s_text"), lobby?.textType === "aleatoire" ? t("lobby.text_random") : t("lobby.text_coherent")],
+              [t("lobby.s_complexity"), t(COMPLEXITY_KEY[lobby?.complexity ?? "easy"] ?? "lobbies.easy")],
+              [t("lobby.s_length"), t("lobby.words", { count: lobby?.textLength ?? 40 })],
+              [t("lobby.s_duration"), formatDuration(lang, lobby?.durationSeconds ?? 300)],
+              [t("lobby.s_errors"), lobby?.errorMode === "bloquer" ? t("lobby.errors_block") : t("lobby.errors_accumulate")],
             ].map(([k, v]) => (
               <div
                 key={k}
@@ -246,9 +244,9 @@ export default function LobbyPage() {
 
           {lobby?.isHost && (
             <PixelPanel className="flex flex-col gap-3 p-5">
-              <span className="font-pixel text-sm text-[#2b2b2b]">HÔTE DE LA COURSE</span>
+              <span className="font-pixel text-sm text-[#2b2b2b]">{t("lobby.host_box")}</span>
               <p className="text-xl text-[#3a3a3a]">
-                Transféré automatiquement si tu quittes la salle (30 s).
+                {t("lobby.host_note")}
               </p>
               <div className="flex flex-wrap gap-2">
                 {BOT_LEVELS.map((lvl) => (
@@ -258,12 +256,12 @@ export default function LobbyPage() {
                     onClick={() => addBot(lvl)}
                     className="pixel-chip text-lg"
                   >
-                    + {BOT_PROFILES[lvl].label.toUpperCase()}
+                    + {t(`bot.${lvl}`).toUpperCase()}
                   </button>
                 ))}
               </div>
               <PixelButton type="button" onClick={closeLobby} variant="red" className="h-12 text-[11px]">
-                FERMER LA SALLE
+                {t("lobby.close")}
               </PixelButton>
             </PixelPanel>
           )}
@@ -278,15 +276,15 @@ export default function LobbyPage() {
 
           {lobby?.isHost ? (
             <PixelButton type="button" onClick={start} variant="green" className="h-24 text-2xl">
-              DÉMARRER
+              {t("lobby.start")}
             </PixelButton>
           ) : (
             <div className="border-4 border-black bg-[#fff8dc] px-3.5 py-2.5 text-center text-2xl text-black">
-              En attente que l&rsquo;hôte démarre la course…
+              {t("lobby.waiting_host")}
             </div>
           )}
           <p className="-mt-3 text-center text-xl text-[#f1e6c9]">
-            {participants.length} prêts · minimum 2 participants
+            {t("lobby.ready_count", { count: participants.length })}
           </p>
         </div>
       </div>

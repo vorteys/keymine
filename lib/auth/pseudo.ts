@@ -5,6 +5,6 @@ import { z } from "zod";
 export const guestPseudoSchema = z
   .string()
   .trim()
-  .min(3, "3 caractères minimum")
-  .max(20, "20 caractères maximum")
-  .regex(/^[\p{L}\p{N}_ .-]+$/u, "Lettres, chiffres, espaces, _ . - seulement");
+  .min(3, "pseudo_min")
+  .max(20, "pseudo_max")
+  .regex(/^[\p{L}\p{N}_ .-]+$/u, "pseudo_chars");

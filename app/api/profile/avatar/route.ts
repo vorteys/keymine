@@ -2,38 +2,39 @@ import { NextResponse } from "next/server";
 import { getIdentity } from "@/lib/auth/identity";
 import { checkAvatarUpload, processAvatar } from "@/lib/avatar";
 import { db } from "@/lib/db";
+import { msg } from "@/lib/api-messages";
 
 const REFUSALS = {
-  too_large: ["La photo dépasse 2 Mo.", 413],
-  empty: ["Aucun fichier reçu.", 400],
-  bad_type: ["Format non accepté : JPEG, PNG ou WebP seulement.", 415],
+  too_large: ["too_large", 413],
+  empty: ["empty_file", 400],
+  bad_type: ["bad_type", 415],
 } as const;
 
 // AUTH-04 : téléversement de la photo de profil (comptes seulement, AUTH-03).
 export async function POST(request: Request) {
   const identity = await getIdentity();
   if (!identity || identity.kind !== "user") {
-    return NextResponse.json({ error: "Connexion requise", code: "account_required" }, { status: 401 });
+    return NextResponse.json({ error: await msg("login_required"), code: "account_required" }, { status: 401 });
   }
 
   const form = await request.formData().catch(() => null);
   const file = form?.get("file");
-  if (!(file instanceof File)) return NextResponse.json({ error: REFUSALS.empty[0] }, { status: 400 });
+  if (!(file instanceof File)) return NextResponse.json({ error: await msg("empty_file"), code: "empty" }, { status: 400 });
   // Refus avant même de lire le corps si la taille annoncée est déjà trop grande.
-  if (file.size > 2 * 1024 * 1024) return NextResponse.json({ error: REFUSALS.too_large[0], code: "too_large" }, { status: 413 });
+  if (file.size > 2 * 1024 * 1024) return NextResponse.json({ error: await msg("too_large"), code: "too_large" }, { status: 413 });
 
   const bytes = new Uint8Array(await file.arrayBuffer());
   const check = checkAvatarUpload(bytes);
   if (!check.ok) {
-    const [error, status] = REFUSALS[check.reason];
-    return NextResponse.json({ error, code: check.reason }, { status });
+    const [key, status] = REFUSALS[check.reason];
+    return NextResponse.json({ error: await msg(key), code: check.reason }, { status });
   }
 
   let image: Buffer;
   try {
     image = await processAvatar(bytes);
   } catch {
-    return NextResponse.json({ error: "Image illisible ou corrompue.", code: "bad_image" }, { status: 422 });
+    return NextResponse.json({ error: await msg("bad_image"), code: "bad_image" }, { status: 422 });
   }
 
   const now = new Date();
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
 export async function DELETE() {
   const identity = await getIdentity();
   if (!identity || identity.kind !== "user") {
-    return NextResponse.json({ error: "Connexion requise", code: "account_required" }, { status: 401 });
+    return NextResponse.json({ error: await msg("login_required"), code: "account_required" }, { status: 401 });
   }
   await db
     .updateTable("users")

@@ -21,7 +21,10 @@ const vt323 = localFont({
 
 export async function generateMetadata(): Promise<Metadata> {
   const lang = await getRequestLang();
-  return { title: "KeyMine", description: translate(lang, "meta.description") };
+  return {
+    title: { default: "KeyMine", template: "%s · KeyMine" },
+    description: translate(lang, "meta.description"),
+  };
 }
 
 // DES-05: le thème est posé avant le premier rendu (pas de flash du mauvais

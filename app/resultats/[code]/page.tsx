@@ -1,4 +1,3 @@
-import { Fragment } from "react";
 import { PixelShell } from "@/components/PixelShell";
 import { PixelAvatar, PixelKeyboard, PixelPanel } from "@/components/ui";
 import { ResultsActions } from "@/components/results/ResultsActions";
@@ -6,13 +5,14 @@ import { WpmChart } from "@/components/results/WpmChart";
 import { peekIdentity } from "@/lib/auth/identity";
 import { formatNumber, formatPercent, formatRaceTime } from "@/lib/format";
 import { heatmapRowsFromCounts } from "@/lib/heatmap";
-import { getRequestLang } from "@/lib/i18n-server";
+import { getRequestLang, pageMetadata } from "@/lib/i18n-server";
 import { translate, type DictKey, type SiteLang } from "@/lib/i18n-dictionary";
 import { db } from "@/lib/db";
 import { getLobbyByCode, isHost } from "@/lib/lobby";
 import { isPersonalRecord, latestFinishedRaceId, loadRaceResults, type ResultRow } from "@/lib/results";
 
 export const dynamic = "force-dynamic";
+export const generateMetadata = pageMetadata("title.results");
 
 const PODIUM_STYLE = [
   { height: "h-44", bg: "bg-[#f0b429]", text: "text-[#1b1e13]", size: "text-4xl", avatar: "h-14 w-14 text-2xl", label: "1" },
@@ -188,40 +188,49 @@ export default async function ResultatsPage({
           <PixelPanel className="p-5">
             <h2 className="font-pixel mb-2.5 text-sm text-[#2b2b2b]">{t("res.ranking")}</h2>
             <div className="overflow-x-auto">
-              <div className="grid min-w-[40rem] grid-cols-[36px_minmax(0,1.4fr)_64px_72px_84px_60px_72px_100px_minmax(0,1fr)] items-baseline gap-x-2.5 gap-y-1 text-xl leading-tight">
-                {(
-                  [
-                    "res.col_rank",
-                    "res.col_player",
-                    "res.col_wpm",
-                    "res.col_raw",
-                    "res.col_accuracy",
-                    "res.col_errors",
-                    "res.col_time",
-                    "res.col_status",
-                    "res.col_bonus",
-                  ] as const
-                ).map((key) => (
-                  <span key={key} className="font-pixel text-[8px] text-[#3a3a3a]">
-                    {t(key)}
-                  </span>
-                ))}
-                {rows.map((p) => (
-                  <Fragment key={p.id}>
-                    <span className="font-pixel pt-1 text-[11px]">{p.rank}</span>
-                    <span className={`truncate ${p.ownerKey && p.ownerKey === myKey ? "font-bold" : ""}`}>
-                      {p.name}
-                    </span>
-                    <span>{formatNumber(lang, p.wpm)}</span>
-                    <span>{formatNumber(lang, p.rawWpm)}</span>
-                    <span>{formatPercent(lang, p.accuracy)}</span>
-                    <span>{p.errors}</span>
-                    <span>{p.status === "finished" ? formatRaceTime(lang, p.timeMs) : "—"}</span>
-                    <span>{t(STATUS_KEY[p.status] ?? "res.status_other")}</span>
-                    <span className="truncate">{bonusSummary(lang, p)}</span>
-                  </Fragment>
-                ))}
-              </div>
+              <table className="w-full min-w-[40rem] border-collapse text-left text-xl leading-tight">
+                <caption className="sr-only">{t("res.ranking")}</caption>
+                <thead>
+                  <tr>
+                    {(
+                      [
+                        "res.col_rank",
+                        "res.col_player",
+                        "res.col_wpm",
+                        "res.col_raw",
+                        "res.col_accuracy",
+                        "res.col_errors",
+                        "res.col_time",
+                        "res.col_status",
+                        "res.col_bonus",
+                      ] as const
+                    ).map((key) => (
+                      <th key={key} scope="col" className="font-pixel pb-2 pr-2.5 text-[8px] font-normal text-[#3a3a3a]">
+                        {t(key)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((p) => (
+                    <tr key={p.id} className="border-t-2 border-dotted border-[#8b8b8b]">
+                      <th scope="row" className="font-pixel py-1 pr-2.5 text-[11px] font-normal">
+                        {p.rank}
+                      </th>
+                      <td className={`max-w-40 truncate pr-2.5 ${p.ownerKey && p.ownerKey === myKey ? "font-bold" : ""}`}>
+                        {p.name}
+                      </td>
+                      <td className="pr-2.5">{formatNumber(lang, p.wpm)}</td>
+                      <td className="pr-2.5">{formatNumber(lang, p.rawWpm)}</td>
+                      <td className="pr-2.5">{formatPercent(lang, p.accuracy)}</td>
+                      <td className="pr-2.5">{p.errors}</td>
+                      <td className="pr-2.5">{p.status === "finished" ? formatRaceTime(lang, p.timeMs) : "—"}</td>
+                      <td className="pr-2.5">{t(STATUS_KEY[p.status] ?? "res.status_other")}</td>
+                      <td>{bonusSummary(lang, p)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </PixelPanel>
 

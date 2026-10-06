@@ -6,7 +6,7 @@ import { PixelShell } from "@/components/PixelShell";
 import { PixelButton, PixelLabel } from "@/components/ui";
 import { Chip, SettingsForm } from "@/components/lobby/SettingsForm";
 import { DEFAULT_SETTINGS, settingsToPayload, toggled, type SettingsState } from "@/components/lobby/settings";
-import { BOT_LEVELS, BOT_PROFILES } from "@/lib/race/bots";
+import { BOT_LEVELS } from "@/lib/race/bots";
 import type { BotLevel } from "@/db/types";
 import { useLanguage } from "@/lib/i18n";
 
@@ -40,7 +40,7 @@ export default function CreerCoursePage() {
         setError(
           data.code === "account_required"
             ? t("create.account_required")
-            : (data.error ?? "Impossible de créer la salle"),
+            : (data.error ?? t("err.generic")),
         );
         return;
       }
@@ -55,7 +55,7 @@ export default function CreerCoursePage() {
 
       router.push(`/jouer/${data.code}`);
     } catch {
-      setError("Impossible de contacter le serveur");
+      setError(t("err.network"));
     } finally {
       setPending(false);
     }
@@ -64,7 +64,7 @@ export default function CreerCoursePage() {
   return (
     <PixelShell active="jouer">
       <h1 className="font-pixel mb-6 text-xl text-white [text-shadow:4px_4px_0_#000]">
-        CRÉER UNE COURSE
+        {t("create.title")}
       </h1>
 
       <SettingsForm
@@ -73,12 +73,12 @@ export default function CreerCoursePage() {
         leftExtra={
           <>
             <div>
-              <PixelLabel>TON RÔLE</PixelLabel>
+              <PixelLabel>{t("create.role")}</PixelLabel>
               <div className="grid grid-cols-2 gap-2">
                 {(
                   [
-                    ["participant", "PARTICIPANT", "Tu cours avec les autres."],
-                    ["spectator", "SPECTATEUR", "Tu organises et tu regardes."],
+                    ["participant", t("create.role_participant"), t("create.role_participant_sub")],
+                    ["spectator", t("create.role_spectator"), t("create.role_spectator_sub")],
                   ] as const
                 ).map(([key, title, sub]) => (
                   <button
@@ -96,11 +96,11 @@ export default function CreerCoursePage() {
               </div>
             </div>
             <div>
-              <PixelLabel>BOTS ({bots.length} ajoutés)</PixelLabel>
+              <PixelLabel>{t("create.bots", { count: bots.length })}</PixelLabel>
               <div className="flex flex-wrap gap-2">
                 {BOT_LEVELS.map((lvl) => (
                   <Chip key={lvl} on={bots.includes(lvl)} onClick={() => setBots(toggled(bots, lvl))}>
-                    {BOT_PROFILES[lvl].label.toUpperCase()}
+                    {t(`bot.${lvl}`).toUpperCase()}
                   </Chip>
                 ))}
               </div>
@@ -111,7 +111,7 @@ export default function CreerCoursePage() {
 
       <div className="mt-8 flex flex-col items-center gap-4 border-t-4 border-black bg-[#241a10] px-4 py-5 sm:flex-row sm:justify-between">
         <p className="text-2xl text-[#f1e6c9]">
-          {error ?? "Minimum 2 participants, bots inclus. Tu seras le Chef de la course."}
+          {error ?? t("create.hint")}
         </p>
         <div className="flex gap-3.5">
           {accountRequired && (
@@ -120,7 +120,7 @@ export default function CreerCoursePage() {
             </PixelButton>
           )}
           <PixelButton href="/" variant="slate" className="h-13 px-5 text-[13px]">
-            ANNULER
+            {t("create.cancel")}
           </PixelButton>
           <PixelButton
             type="button"
@@ -128,7 +128,7 @@ export default function CreerCoursePage() {
             variant="green"
             className="h-13 px-7 text-[15px]"
           >
-            {pending ? "..." : "CRÉER LA SALLE"}
+            {pending ? "..." : t("create.submit")}
           </PixelButton>
         </div>
       </div>

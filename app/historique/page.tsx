@@ -1,14 +1,14 @@
 import Link from "next/link";
-import { Fragment } from "react";
 import { PixelShell } from "@/components/PixelShell";
 import { PixelButton, PixelPanel } from "@/components/ui";
 import { peekIdentity } from "@/lib/auth/identity";
 import { formatDate, formatNumber, formatPercent } from "@/lib/format";
 import { loadHistory, parsePage } from "@/lib/history";
-import { getRequestLang } from "@/lib/i18n-server";
+import { getRequestLang, pageMetadata } from "@/lib/i18n-server";
 import { translate, type DictKey } from "@/lib/i18n-dictionary";
 
 export const dynamic = "force-dynamic";
+export const generateMetadata = pageMetadata("title.history");
 
 const STATUS_KEY: Record<string, DictKey> = {
   finished: "res.status_finished",
@@ -46,31 +46,44 @@ export default async function HistoriquePage({ searchParams }: PageProps<"/histo
           <p className="text-2xl">{t("hist.empty")}</p>
         ) : (
           <div className="overflow-x-auto">
-            <div className="grid min-w-[34rem] grid-cols-[minmax(0,1.6fr)_90px_80px_100px_120px_100px] items-baseline gap-x-3 gap-y-2 text-xl leading-tight">
-              {(
-                ["hist.col_date", "hist.col_rank", "hist.col_wpm", "hist.col_accuracy", "hist.col_status"] as const
-              ).map((key) => (
-                <span key={key} className="font-pixel text-[8px] text-[#3a3a3a]">
-                  {t(key)}
-                </span>
-              ))}
-              <span />
-              {history.rows.map((r) => (
-                <Fragment key={r.raceId}>
-                  <span>{formatDate(lang, r.playedAt, true)}</span>
-                  <span>{r.rank ? t("hist.of", { rank: r.rank, count: r.participantCount }) : "—"}</span>
-                  <span>{formatNumber(lang, r.wpm)}</span>
-                  <span>{formatPercent(lang, r.accuracy)}</span>
-                  <span>{t(STATUS_KEY[r.status] ?? "res.status_other")}</span>
-                  <Link
-                    href={`/resultats/${r.lobbyCode}?course=${r.raceId}`}
-                    className="font-pixel text-[9px] text-[#1c4ea3] underline"
-                  >
+            <table className="w-full min-w-[34rem] border-collapse text-left text-xl leading-tight">
+              <caption className="sr-only">{t("hist.title")}</caption>
+              <thead>
+                <tr>
+                  {(
+                    ["hist.col_date", "hist.col_rank", "hist.col_wpm", "hist.col_accuracy", "hist.col_status"] as const
+                  ).map((key) => (
+                    <th key={key} scope="col" className="font-pixel pb-2 pr-3 text-[8px] font-normal text-[#3a3a3a]">
+                      {t(key)}
+                    </th>
+                  ))}
+                  <th scope="col" className="sr-only">
                     {t("hist.details")}
-                  </Link>
-                </Fragment>
-              ))}
-            </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.rows.map((r) => (
+                  <tr key={r.raceId} className="border-t-2 border-dotted border-[#8b8b8b]">
+                    <th scope="row" className="py-2 pr-3 font-normal">
+                      {formatDate(lang, r.playedAt, true)}
+                    </th>
+                    <td className="pr-3">{r.rank ? t("hist.of", { rank: r.rank, count: r.participantCount }) : "—"}</td>
+                    <td className="pr-3">{formatNumber(lang, r.wpm)}</td>
+                    <td className="pr-3">{formatPercent(lang, r.accuracy)}</td>
+                    <td className="pr-3">{t(STATUS_KEY[r.status] ?? "res.status_other")}</td>
+                    <td>
+                      <Link
+                        href={`/resultats/${r.lobbyCode}?course=${r.raceId}`}
+                        className="font-pixel text-[9px] text-[#1c4ea3] underline"
+                      >
+                        {t("hist.details")}
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
 

@@ -6,6 +6,7 @@ import { botDisplayName } from "@/lib/race/bots";
 import { assertTransition, canStartRace } from "@/lib/race/state";
 import { NoTextAvailableError } from "@/lib/text/generate";
 import { generateTextForRace } from "@/lib/text/service";
+import { msg } from "@/lib/api-messages";
 
 const COUNTDOWN_MS = 3_000; // COURSE-03 : décompte 3, 2, 1
 
@@ -14,17 +15,17 @@ const COUNTDOWN_MS = 3_000; // COURSE-03 : décompte 3, 2, 1
 export async function POST(_request: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
   const lobby = await getLobbyByCode(code);
-  if (!lobby) return NextResponse.json({ error: "Salle introuvable" }, { status: 404 });
+  if (!lobby) return NextResponse.json({ error: await msg("lobby_not_found") }, { status: 404 });
 
   const identity = await getIdentity();
   if (!identity) {
-    return NextResponse.json({ error: "Pseudo requis", code: "pseudo_required" }, { status: 401 });
+    return NextResponse.json({ error: await msg("pseudo_required"), code: "pseudo_required" }, { status: 401 });
   }
   if (!isHost(identity, lobby)) {
-    return NextResponse.json({ error: "Seul l'hôte peut démarrer la course" }, { status: 403 });
+    return NextResponse.json({ error: await msg("host_only_start") }, { status: 403 });
   }
   if (lobby.status !== "lobby") {
-    return NextResponse.json({ error: "La course est déjà lancée" }, { status: 409 });
+    return NextResponse.json({ error: await msg("already_started") }, { status: 409 });
   }
 
   const players = await db
@@ -49,10 +50,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ co
   if (!check.ok) {
     return NextResponse.json(
       {
-        error:
-          check.reason === "no_human"
-            ? "Il faut au moins un joueur humain pour démarrer"
-            : "Il faut au moins 2 participants (les bots comptent) pour démarrer",
+        error: await msg(check.reason === "no_human" ? "no_human" : "not_enough"),
         code: check.reason,
       },
       { status: 400 },
@@ -76,7 +74,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ co
   } catch (error) {
     if (error instanceof NoTextAvailableError) {
       return NextResponse.json(
-        { error: "Aucun texte ne correspond à ces réglages", code: "no_text" },
+        { error: await msg("no_text"), code: "no_text" },
         { status: 422 },
       );
     }
@@ -143,7 +141,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ co
     });
   } catch (error) {
     if (error instanceof AlreadyStarted) {
-      return NextResponse.json({ error: "La course est déjà lancée" }, { status: 409 });
+      return NextResponse.json({ error: await msg("already_started") }, { status: 409 });
     }
     throw error;
   }

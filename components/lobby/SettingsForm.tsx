@@ -2,29 +2,21 @@
 
 import { useMemo, type ReactNode } from "react";
 import { PixelLabel, PixelPanel, PixelSlot } from "@/components/ui";
+import { formatDuration } from "@/lib/format";
+import { useLanguage } from "@/lib/i18n";
 import { BUNDLED_CORPUS } from "@/lib/text/corpus";
 import { generateRaceText } from "@/lib/text/generate";
 import type { Difficulty } from "@/db/types";
 import { toggled, type Access, type ErrorMode, type SettingsState, type TextOption } from "./settings";
 
 // CONF-01 : de 15 secondes à 2 heures.
-export const DURATIONS = [
-  ["15 secondes", 15],
-  ["30 secondes", 30],
-  ["1 minute", 60],
-  ["2 minutes", 120],
-  ["5 minutes", 300],
-  ["10 minutes", 600],
-  ["30 minutes", 1800],
-  ["1 heure", 3600],
-  ["2 heures", 7200],
-] as const;
+export const DURATIONS = [15, 30, 60, 120, 300, 600, 1800, 3600, 7200] as const;
 
-const COMPLEXITY_LABELS: Record<Difficulty, [string, string]> = {
-  easy: ["FACILE", "Mots de 2 à 5 lettres, sans accent."],
-  medium: ["MOYEN", "Mots de 4 à 8 lettres."],
-  hard: ["DIFFICILE", "Mots de 7 lettres ou plus, accents compris."],
-};
+const COMPLEXITY_KEYS = {
+  easy: ["set.easy", "set.easy_sub"],
+  medium: ["set.medium", "set.medium_sub"],
+  hard: ["set.hard", "set.hard_sub"],
+} as const;
 
 const TEXT_OPTIONS: TextOption[] = ["Majuscules", "Ponctuation", "Nombres", "Accents"];
 
@@ -88,6 +80,7 @@ export function SettingsForm({
   /** Éléments propres à la création (rôle de l'hôte, bots) insérés dans le panneau de gauche. */
   leftExtra?: ReactNode;
 }) {
+  const { t, lang } = useLanguage();
   const v = value;
   const random = v.textType === "aleatoire";
 
@@ -116,13 +109,13 @@ export function SettingsForm({
   const general = (
     <div className="flex flex-col gap-4">
       <div>
-        <PixelLabel>ACCÈS</PixelLabel>
+        <PixelLabel>{t("set.access")}</PixelLabel>
         <div className="grid grid-cols-3 gap-2">
           {(
             [
-              ["public", "PUBLIQUE", "Listée à l’accueil"],
-              ["unlisted", "PAR CODE", "Cachée, on entre avec un code"],
-              ["private", "PRIVÉE", "Accessible par le code seulement"],
+              ["public", t("set.access_public"), t("set.access_public_sub")],
+              ["unlisted", t("set.access_unlisted"), t("set.access_unlisted_sub")],
+              ["private", t("set.access_private"), t("set.access_private_sub")],
             ] as [Access, string, string][]
           ).map(([key, title, sub]) => (
             <Choice key={key} on={v.access === key} onClick={() => onChange({ access: key })} title={title} sub={sub} />
@@ -132,7 +125,7 @@ export function SettingsForm({
 
       <div className="flex gap-6">
         <div>
-          <PixelLabel>LANGUE DE LA COURSE</PixelLabel>
+          <PixelLabel>{t("set.language")}</PixelLabel>
           <div className="flex gap-2">
             {(["fr", "en"] as const).map((lang) => (
               <Chip key={lang} on={v.language === lang} onClick={() => onChange({ language: lang })}>
@@ -142,16 +135,16 @@ export function SettingsForm({
           </div>
         </div>
         <div className="flex-grow">
-          <PixelLabel>DURÉE MAX</PixelLabel>
+          <PixelLabel>{t("set.duration")}</PixelLabel>
           <select
-            aria-label="Durée maximale"
+            aria-label={t("set.duration_aria")}
             className="pixel-slot h-10 w-full px-2.5 text-2xl text-white"
             value={v.duration}
             onChange={(e) => onChange({ duration: Number(e.target.value) })}
           >
-            {DURATIONS.map(([label, seconds]) => (
+            {DURATIONS.map((seconds) => (
               <option key={seconds} value={seconds}>
-                {label}
+                {formatDuration(lang, seconds)}
               </option>
             ))}
           </select>
@@ -159,14 +152,14 @@ export function SettingsForm({
       </div>
 
       <div>
-        <PixelLabel>TAILLE MAX DU LOBBY: {v.lobbySize} JOUEURS</PixelLabel>
+        <PixelLabel>{t("set.size", { count: v.lobbySize })}</PixelLabel>
         <input
           type="range"
           min={2}
           max={30}
           value={v.lobbySize}
           onChange={(e) => onChange({ lobbySize: Number(e.target.value) })}
-          aria-label="Taille maximale du lobby"
+          aria-label={t("set.size_aria")}
           className="w-full accent-[#3f7d24]"
         />
       </div>
@@ -174,12 +167,12 @@ export function SettingsForm({
       {leftExtra}
 
       <div>
-        <PixelLabel>ERREURS</PixelLabel>
+        <PixelLabel>{t("set.errors")}</PixelLabel>
         <div className="grid grid-cols-2 gap-2">
           {(
             [
-              ["accumuler", "ACCUMULER", "On continue. Erreurs en rouge, affichées à la fin."],
-              ["bloquer", "BLOQUER", "Bloqué jusqu’à la bonne touche."],
+              ["accumuler", t("set.errors_accumulate"), t("set.errors_accumulate_sub")],
+              ["bloquer", t("set.errors_block"), t("set.errors_block_sub")],
             ] as [ErrorMode, string, string][]
           ).map(([key, title, sub]) => (
             <Choice key={key} on={v.errorMode === key} onClick={() => onChange({ errorMode: key })} title={title} sub={sub} />
@@ -192,7 +185,7 @@ export function SettingsForm({
             onChange={(e) => onChange({ penalty: e.target.checked })}
             className="h-5 w-5 accent-[#3f7d24]"
           />
-          Pénalité: +1 s par erreur non corrigée
+          {t("set.penalty")}
         </label>
       </div>
 
@@ -203,7 +196,7 @@ export function SettingsForm({
           onChange={(e) => onChange({ comebackBonus: e.target.checked })}
           className="h-5 w-5 accent-[#3f7d24]"
         />
-        Bonus de remontée activés
+        {t("set.bonus")}
       </label>
     </div>
   );
@@ -211,67 +204,65 @@ export function SettingsForm({
   const text = (
     <div className="flex flex-col gap-4">
       <div>
-        <PixelLabel>TYPE DE TEXTE</PixelLabel>
+        <PixelLabel>{t("set.text_type")}</PixelLabel>
         <div className="grid grid-cols-2 gap-2">
           <Choice
             on={v.textType === "coherent"}
             onClick={() => onChange({ textType: "coherent" })}
-            title="COHÉRENT"
-            sub="Vrais passages d’œuvres du domaine public."
+            title={t("set.text_coherent")}
+            sub={t("set.text_coherent_sub")}
           />
           <Choice
             on={v.textType === "aleatoire"}
             onClick={() => onChange({ textType: "aleatoire" })}
-            title="ALÉATOIRE"
-            sub="Mots tirés d’un dictionnaire."
+            title={t("set.text_random")}
+            sub={t("set.text_random_sub")}
           />
         </div>
       </div>
 
       <div>
-        <PixelLabel>COMPLEXITÉ</PixelLabel>
+        <PixelLabel>{t("set.complexity")}</PixelLabel>
         <div className="grid grid-cols-3 gap-2">
-          {(Object.keys(COMPLEXITY_LABELS) as Difficulty[]).map((level) => (
+          {(Object.keys(COMPLEXITY_KEYS) as Difficulty[]).map((level) => (
             <Choice
               key={level}
               on={v.complexity === level}
               onClick={() => onChange({ complexity: level })}
-              title={COMPLEXITY_LABELS[level][0]}
-              sub={COMPLEXITY_LABELS[level][1]}
+              title={t(COMPLEXITY_KEYS[level][0])}
+              sub={t(COMPLEXITY_KEYS[level][1])}
             />
           ))}
         </div>
       </div>
 
       <div>
-        <PixelLabel>LONGUEUR: {v.length} MOTS</PixelLabel>
+        <PixelLabel>{t("set.length", { count: v.length })}</PixelLabel>
         <input
           type="range"
           min={10}
           max={400}
           value={v.length}
           onChange={(e) => onChange({ length: Number(e.target.value) })}
-          aria-label="Longueur du texte en mots"
+          aria-label={t("set.length_aria")}
           className="w-full accent-[#3f7d24]"
         />
       </div>
 
       <div>
-        <PixelLabel>OPTIONS DU TEXTE</PixelLabel>
+        <PixelLabel>{t("set.options")}</PixelLabel>
         <div className="flex flex-wrap gap-2">
           {TEXT_OPTIONS.map((o) => (
             <Chip key={o} on={v.options.includes(o)} onClick={() => onChange({ options: toggled(v.options, o) })}>
-              {o}
+              {t(`set.opt_${o}` as const)}
             </Chip>
           ))}
         </div>
-        <p className="mt-1.5 text-lg text-[#3a3a3a]">
-          En mode cohérent, les passages sont adaptés (accents et ponctuation retirés si désactivés).
-        </p>
+        <p className="mt-1.5 text-lg text-[#3a3a3a]">{t("set.options_note")}</p>
       </div>
 
       <div aria-disabled={!random} className={!random ? "opacity-40" : ""}>
-        <PixelLabel>CARACTÈRES À INCLURE</PixelLabel>
+        <PixelLabel>{t("set.include")}</PixelLabel>
         <div className="flex flex-wrap gap-2">
           {["z", "q", "x", "w", "j", "k", "é", "ç"].map((c) => (
             <Chip
@@ -286,7 +277,7 @@ export function SettingsForm({
             </Chip>
           ))}
         </div>
-        <PixelLabel>CARACTÈRES À EXCLURE</PixelLabel>
+        <PixelLabel>{t("set.exclude")}</PixelLabel>
         <div className="flex flex-wrap gap-2">
           {["e", "a", "s", "t", "n", "r", "u", "l"].map((c) => (
             <Chip
@@ -302,14 +293,12 @@ export function SettingsForm({
           ))}
         </div>
         {!random && (
-          <p className="mt-1.5 text-lg text-[#3a3a3a]">
-            Réglage désactivé en mode cohérent : réservé au texte aléatoire.
-          </p>
+          <p className="mt-1.5 text-lg text-[#3a3a3a]">{t("set.chars_disabled")}</p>
         )}
       </div>
 
       <div>
-        <PixelLabel>APERÇU</PixelLabel>
+        <PixelLabel>{t("set.preview")}</PixelLabel>
         <PixelSlot className="px-3.5 py-3 text-3xl leading-snug text-white">{preview || "…"}</PixelSlot>
       </div>
     </div>

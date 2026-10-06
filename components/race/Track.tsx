@@ -1,6 +1,7 @@
 "use client";
 
 import { PixelAvatar } from "@/components/ui";
+import { useLanguage } from "@/lib/i18n";
 import type { RaceParticipantView } from "./types";
 
 // COURSE-05 : piste de progression. Chaque participant (humain ou bot) a son
@@ -19,9 +20,10 @@ export function Track({
   meId: string | null;
   showBotLabel: string;
 }) {
+  const { t } = useLanguage();
   const ordered = [...participants].sort((a, b) => a.rank - b.rank);
   return (
-    <ol className="flex flex-col gap-2" aria-label="Piste de progression">
+    <ol className="flex flex-col gap-2" aria-label={t("race.track_aria")}>
       {ordered.map((p, index) => {
         const isMe = p.id === meId;
         const left = `${Math.min(100, Math.max(0, p.fraction * 100))}%`;
@@ -37,7 +39,7 @@ export function Track({
                 <span className="font-pixel w-6 text-[11px] text-[#ffe08a]">{p.rank}</span>
                 <span className="truncate">
                   {p.name}
-                  {isMe && <b className="font-pixel ml-2 text-[9px] text-[#ffd84a]">TOI</b>}
+                  {isMe && <b className="font-pixel ml-2 text-[9px] text-[#ffd84a]">{t("race.you")}</b>}
                   {p.isBot && (
                     <b className="font-pixel ml-2 border-2 border-[#8b8b8b] px-1 text-[8px] text-[#cfcfcf]">
                       {showBotLabel}
@@ -46,7 +48,7 @@ export function Track({
                 </span>
               </span>
               <span className="text-xl whitespace-nowrap text-white">
-                {Math.round(p.wpm)} MPM
+                {Math.round(p.wpm)} {t("race.wpm")}
                 {p.status === "abandoned" && <span className="ml-2 text-[#ff8f80]">⨯</span>}
                 {p.status === "finished" && <span className="ml-2 text-[#7fd36a]">✓</span>}
               </span>

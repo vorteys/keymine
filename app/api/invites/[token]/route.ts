@@ -6,12 +6,13 @@ import { redeemInvite } from "@/lib/invites";
 import { isJoinRateLimited, recordFailedJoin } from "@/lib/join-limit";
 import { joinLobby } from "@/lib/lobby";
 import { db } from "@/lib/db";
+import { msg } from "@/lib/api-messages";
 
 const REFUSALS = {
-  invalid: ["Ce lien d'invitation n'existe pas.", 404],
-  revoked: ["Ce lien d'invitation a été révoqué.", 410],
-  closed: ["Cette salle est fermée.", 410],
-  wrong_ip: ["Ce lien a déjà été utilisé par une autre personne.", 403],
+  invalid: ["invite_invalid", 404],
+  revoked: ["invite_revoked", 410],
+  closed: ["lobby_closed", 410],
+  wrong_ip: ["invite_wrong_ip", 403],
 } as const;
 
 // SALLE-04 : utilisation d'un lien d'invitation (usage unique, lié à l'IP).
@@ -21,14 +22,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
 
   if (await isJoinRateLimited(ip)) {
     return NextResponse.json(
-      { error: "Trop de tentatives, réessaie dans une minute.", code: "rate_limited" },
+      { error: await msg("rate_limited"), code: "rate_limited" },
       { status: 429, headers: { "Retry-After": "60" } },
     );
   }
 
   const identity = await getIdentity();
   if (!identity) {
-    return NextResponse.json({ error: "Pseudo requis", code: "pseudo_required" }, { status: 401 });
+    return NextResponse.json({ error: await msg("pseudo_required"), code: "pseudo_required" }, { status: 401 });
   }
 
   const invite = await db
@@ -37,32 +38,32 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
     .where("token", "=", token)
     .executeTakeFirst();
   if (invite && (await isBanned(invite.lobby_id, identity))) {
-    return NextResponse.json({ error: "Tu as été expulsé de cette salle.", code: "banned" }, { status: 403 });
+    return NextResponse.json({ error: await msg("banned"), code: "banned" }, { status: 403 });
   }
 
   const redeemed = await redeemInvite(token, identity, ip);
   if (!redeemed.ok) {
     await recordFailedJoin(ip);
-    const [error, status] = REFUSALS[redeemed.reason];
-    return NextResponse.json({ error, code: redeemed.reason }, { status });
+    const [key, status] = REFUSALS[redeemed.reason];
+    return NextResponse.json({ error: await msg(key), code: redeemed.reason }, { status });
   }
 
   const lobby = await db.selectFrom("lobbies").selectAll().where("id", "=", redeemed.lobbyId).executeTakeFirstOrThrow();
   if (lobby.status === "countdown" || lobby.status === "racing") {
-    return NextResponse.json({ error: "La course est en cours", code: "race_in_progress" }, { status: 409 });
+    return NextResponse.json({ error: await msg("race_in_progress"), code: "race_in_progress" }, { status: 409 });
   }
   const result = await joinLobby(lobby, identity);
   if (!result.ok) {
     if (result.reason === "already_in_room") {
       return NextResponse.json(
-        { error: "Tu es déjà dans une autre salle", code: "already_in_room", currentCode: result.currentCode },
+        { error: await msg("already_in_room"), code: "already_in_room", currentCode: result.currentCode },
         { status: 409 },
       );
     }
     if (result.reason === "banned") {
-      return NextResponse.json({ error: "Tu as été expulsé de cette salle.", code: "banned" }, { status: 403 });
+      return NextResponse.json({ error: await msg("banned"), code: "banned" }, { status: 403 });
     }
-    return NextResponse.json({ error: "La salle est pleine", code: "full" }, { status: 409 });
+    return NextResponse.json({ error: await msg("full"), code: "full" }, { status: 409 });
   }
   return NextResponse.json({ ok: true, code: redeemed.lobbyCode });
 }

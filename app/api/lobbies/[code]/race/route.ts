@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getIdentity } from "@/lib/auth/identity";
 import { getLobbyByCode } from "@/lib/lobby";
+import { msg } from "@/lib/api-messages";
 
 // Donne au client tout ce qu'il faut pour afficher /course/[code]: le texte
 // de la course (même texte pour tous, TXT-8), et lequel des participants
@@ -9,7 +10,7 @@ import { getLobbyByCode } from "@/lib/lobby";
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
   const lobby = await getLobbyByCode(code);
-  if (!lobby) return NextResponse.json({ error: "Salle introuvable" }, { status: 404 });
+  if (!lobby) return NextResponse.json({ error: await msg("lobby_not_found") }, { status: 404 });
 
   const race = await db
     .selectFrom("races")
@@ -17,11 +18,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     .where("lobby_id", "=", lobby.id)
     .orderBy("created_at", "desc")
     .executeTakeFirst();
-  if (!race) return NextResponse.json({ error: "Aucune course pour cette salle" }, { status: 404 });
+  if (!race) return NextResponse.json({ error: await msg("no_race") }, { status: 404 });
 
   const identity = await getIdentity();
   if (!identity) {
-    return NextResponse.json({ error: "Pseudo requis", code: "pseudo_required" }, { status: 401 });
+    return NextResponse.json({ error: await msg("pseudo_required"), code: "pseudo_required" }, { status: 401 });
   }
   const me = await db
     .selectFrom("race_participants")

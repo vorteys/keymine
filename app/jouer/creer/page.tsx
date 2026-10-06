@@ -109,7 +109,7 @@ export default function CreerCoursePage() {
         }
       />
 
-      <div className="mt-8 flex flex-col items-center gap-4 border-t-4 border-black bg-[#241a10] px-4 py-5 sm:flex-row sm:justify-between">
+      <div className="pixel-dark mt-8 flex flex-col items-center gap-4 border-t-4 border-black bg-[#241a10] px-4 py-5 sm:flex-row sm:justify-between">
         <p className="text-2xl text-[#f1e6c9]">
           {error ?? t("create.hint")}
         </p>

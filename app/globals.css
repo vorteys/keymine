@@ -40,7 +40,7 @@
 
 body {
   background: var(--color-ink);
-  color: var(--color-ink);
+  color: #2b1e13; /* texte courant : sombre dans les deux thèmes (le fond change, pas le texte) */
   font-family: var(--font-body), monospace;
 }
 
@@ -88,6 +88,15 @@ body {
     font-family: var(--font-pixel), monospace;
     font-size: 10px;
     color: #2b2b2b;
+  }
+
+  /* Écrans étroits (DES-06) : l'en-tête doit tenir à 360 px sans défilement. */
+  @media (max-width: 639px) {
+    .pixel-key {
+      width: 22px;
+      height: 22px;
+      font-size: 9px;
+    }
   }
 
   .pixel-chip {
@@ -174,7 +183,7 @@ body {
 
   .pixel-btn[data-variant="gold"] {
     background: var(--color-gold);
-    color: var(--color-ink);
+    color: #1b1b1b; /* fixe : --color-ink devient clair en thème clair (A11Y-01) */
     border-color: var(--color-gold-light) var(--color-gold-dark) var(--color-gold-dark)
       var(--color-gold-light);
     text-shadow: none;
@@ -216,7 +225,6 @@ body {
   --color-ink: #cdbf9c;
   --color-ink-dark: #a8966e;
   --color-panel: #e9e4d6;
-  --color-panel-dark: #b9b19a;
 }
 
 [data-theme="light"] .pixel-night {
@@ -234,6 +242,14 @@ body {
 
 [data-theme="light"] .pixel-key {
   color: #2b2b2b;
+}
+
+/* Thème clair, A11Y-01 : les textes posés directement sur le fond de page (hors
+   panneaux, champs et barres sombres) passent en brun foncé ; à l'intérieur des
+   panneaux et des champs ils gardent leurs couleurs d'origine. */
+[data-theme="light"] .pixel-night main :is(h1, .page-text, .text-\[\#f1e6c9\], .text-\[\#c9bb98\], .text-\[\#ffd84a\]):not(.pixel-panel *, .pixel-slot *, .pixel-btn *, .pixel-dark *) {
+  color: #2b1e13;
+  text-shadow: none;
 }
 
 

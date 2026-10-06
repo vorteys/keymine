@@ -38,9 +38,21 @@ export function formatRaceTime(lang: SiteLang, ms: number): string {
   return `${minutes}:${secondsText}`;
 }
 
-/** Durée maximale d'une course : « 15 secondes », « 5 minutes », « 1 heure » (unité la plus grande qui tombe juste). */
+const DURATION_UNITS: Record<SiteLang, Record<"second" | "minute" | "hour", [string, string]>> = {
+  fr: { second: ["seconde", "secondes"], minute: ["minute", "minutes"], hour: ["heure", "heures"] },
+  en: { second: ["second", "seconds"], minute: ["minute", "minutes"], hour: ["hour", "hours"] },
+};
+
+/**
+ * Durée maximale d'une course : « 15 secondes », « 5 minutes », « 1 heure » (unité la plus grande
+ * qui tombe juste). Écrit à la main plutôt qu'avec `Intl` (style « unit ») : Node et le navigateur
+ * n'utilisent pas la même espace insécable, ce qui provoquait une erreur d'hydratation React.
+ */
 export function formatDuration(lang: SiteLang, seconds: number): string {
   const [unit, value] =
     seconds % 3600 === 0 ? (["hour", seconds / 3600] as const) : seconds % 60 === 0 ? (["minute", seconds / 60] as const) : (["second", seconds] as const);
-  return new Intl.NumberFormat(localeOf(lang), { style: "unit", unit, unitDisplay: "long" }).format(value);
+  const [one, many] = DURATION_UNITS[lang][unit];
+  // Le français met le pluriel à partir de 2, l'anglais dès que la valeur n'est pas 1.
+  const plural = lang === "fr" ? value >= 2 : value !== 1;
+  return `${formatNumber(lang, value)} ${plural ? many : one}`;
 }

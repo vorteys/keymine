@@ -50,7 +50,7 @@ export function ResultsActions({
   const busyClass = busy ? "pointer-events-none opacity-50" : "";
 
   return (
-    <div className="mt-8 border-t-4 border-black bg-[#241a10] px-4 py-5">
+    <div className="pixel-dark mt-8 border-t-4 border-black bg-[#241a10] px-4 py-5">
       {error && (
         <p role="alert" className="mb-3 text-right text-xl text-[#ff9a8a]">
           {t("res.action_error")}

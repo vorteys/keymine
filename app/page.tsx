@@ -70,15 +70,15 @@ export default async function Home() {
 
           <div className="mt-3 grid grid-cols-3 gap-2.5">
             <PixelSlot className="px-3 py-2">
-              <div className="font-pixel text-[9px] text-[#ffe08a]">{t("home.stat_best")}</div>
+              <div className="font-pixel text-[9px] text-[#fff6d6]">{t("home.stat_best")}</div>
               <div className="text-3xl text-white">{stats ? t("home.wpm_value", { value: formatNumber(lang, stats.bestWpm) }) : "—"}</div>
             </PixelSlot>
             <PixelSlot className="px-3 py-2">
-              <div className="font-pixel text-[9px] text-[#ffe08a]">{t("home.stat_races")}</div>
+              <div className="font-pixel text-[9px] text-[#fff6d6]">{t("home.stat_races")}</div>
               <div className="text-3xl text-white">{stats ? stats.totalRaces : "—"}</div>
             </PixelSlot>
             <PixelSlot className="px-3 py-2">
-              <div className="font-pixel text-[9px] text-[#ffe08a]">{t("home.stat_accuracy")}</div>
+              <div className="font-pixel text-[9px] text-[#fff6d6]">{t("home.stat_accuracy")}</div>
               <div className="text-3xl text-white">
                 {stats?.accuracy != null ? formatPercent(lang, stats.accuracy) : "—"}
               </div>

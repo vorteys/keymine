@@ -61,9 +61,9 @@ export function JoinByCodeForm() {
           value={code}
           onChange={(e) => setCode(e.target.value)}
           maxLength={8}
-          className="pixel-slot font-pixel flex-grow px-4 text-lg tracking-[4px] text-white placeholder:text-white/60"
+          className="pixel-slot font-pixel min-w-0 flex-grow px-4 text-lg tracking-[4px] text-white placeholder:text-white/60"
         />
-        <PixelButton variant="slate" type="submit" className="w-52 text-sm">
+        <PixelButton variant="slate" type="submit" className="w-32 shrink-0 text-sm sm:w-52">
           {pending ? "..." : t("entry.join")}
         </PixelButton>
       </form>

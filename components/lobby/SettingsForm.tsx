@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useSyncExternalStore, type ReactNode } from "react";
 import { PixelLabel, PixelPanel, PixelSlot } from "@/components/ui";
 import { formatDuration } from "@/lib/format";
 import { useLanguage } from "@/lib/i18n";
@@ -84,7 +84,16 @@ export function SettingsForm({
   const v = value;
   const random = v.textType === "aleatoire";
 
+  // L'aperçu est tiré au hasard : on ne le calcule qu'après l'hydratation, sinon le texte
+  // du serveur et celui du navigateur diffèrent (erreur d'hydratation React).
+  const hydrated = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+
   const preview = useMemo(() => {
+    if (!hydrated) return "";
     try {
       return generateRaceText(
         {
@@ -104,7 +113,7 @@ export function SettingsForm({
     } catch {
       return "";
     }
-  }, [v.textType, v.language, v.complexity, v.options, v.includeChars, v.excludeChars]);
+  }, [hydrated, v.textType, v.language, v.complexity, v.options, v.includeChars, v.excludeChars]);
 
   const general = (
     <div className="flex flex-col gap-4">

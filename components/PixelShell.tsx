@@ -45,12 +45,12 @@ export function PixelShell({
       </a>
       <div className="pixel-grass h-5 border-b-4 border-[#2f5d1c]" />
 
-      <header className="flex h-16 items-center gap-6 border-b-4 border-black bg-[#241a10] px-4 sm:px-8">
-        <Link href="/" className="flex items-center gap-1.5">
+      <header className="flex h-16 items-center gap-2 border-b-4 border-black bg-[#241a10] px-3 sm:gap-6 sm:px-8">
+        <Link href="/" className="flex shrink-0 items-center gap-1">
           <span className="pixel-key">K</span>
           <span className="pixel-key bg-[#7fc45a]">E</span>
           <span className="pixel-key">Y</span>
-          <span className="font-pixel ml-2 text-lg text-white [text-shadow:3px_3px_0_#000]">
+          <span className="font-pixel ml-1 text-xs text-white sm:ml-2 sm:text-lg [text-shadow:3px_3px_0_#000]">
             MINE
           </span>
         </Link>
@@ -71,7 +71,7 @@ export function PixelShell({
 
         <select
           aria-label={t("lang.select")}
-          className="font-pixel h-10 border-3 border-white bg-[#c6c6c6] px-2 text-[11px]"
+          className="font-pixel h-10 shrink-0 border-3 border-white bg-[#c6c6c6] px-1 text-[11px] sm:px-2"
           style={{ borderColor: "#fff #555 #555 #fff" }}
           value={lang}
           onChange={(e) => setLang(e.target.value as SiteLang)}
@@ -84,7 +84,7 @@ export function PixelShell({
           type="button"
           onClick={toggleTheme}
           aria-label={t("theme.toggle")}
-          className="flex h-10 w-10 items-center justify-center border-3 border-white bg-[#c6c6c6]"
+          className="flex h-10 w-10 shrink-0 items-center justify-center border-3 border-white bg-[#c6c6c6]"
           style={{ borderColor: "#fff #555 #555 #fff" }}
         >
           <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
@@ -94,7 +94,7 @@ export function PixelShell({
         </button>
 
         {rightSlot ?? (
-          <Link href="/profil" className="flex items-center gap-2 text-xl text-white">
+          <Link href="/profil" className="flex shrink-0 items-center gap-2 text-xl text-white">
             <PixelAvatar label="A" color="#3d6fc4" className="h-9 w-9 text-sm" />
             <span className="hidden sm:inline">{t("common.guest")}</span>
           </Link>

@@ -99,17 +99,17 @@ export default async function ProfilPage() {
             </div>
             <div className="mt-1.5 flex gap-2">
               <PixelSlot className="flex h-16 flex-1 flex-col items-center justify-center gap-1 leading-none">
-                <span className="font-pixel text-xs text-[#f0b429]">
+                <span className="font-pixel text-xs text-[#fff6d6]">
                   {Math.round(user.best_wpm)}
                 </span>
                 <span className="text-lg text-white">{t("race.wpm")}</span>
               </PixelSlot>
               <PixelSlot className="flex h-16 flex-1 flex-col items-center justify-center gap-1 leading-none">
-                <span className="font-pixel text-xs text-[#f0b429]">{user.total_races}</span>
+                <span className="font-pixel text-xs text-[#fff6d6]">{user.total_races}</span>
                 <span className="text-lg text-white">{t("profile.races")}</span>
               </PixelSlot>
               <PixelSlot className="flex h-16 flex-1 flex-col items-center justify-center gap-1 leading-none">
-                <span className="font-pixel text-xs text-[#f0b429]">
+                <span className="font-pixel text-xs text-[#fff6d6]">
                   {user.current_streak_days}j
                 </span>
                 <span className="text-lg text-white">{t("profile.streak")}</span>

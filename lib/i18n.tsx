@@ -5,6 +5,7 @@
 // clignotement; le choix est ensuite conservé dans le cookie `km_lang`.
 // La langue de l'interface est indépendante de la langue du texte d'une course.
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { translate, type DictKey, type SiteLang } from "./i18n-dictionary";
 
 export type { DictKey, SiteLang };
@@ -27,6 +28,7 @@ export function LanguageProvider({
   children: ReactNode;
 }) {
   const [lang, setLangState] = useState<SiteLang>(initialLang);
+  const router = useRouter();
 
   const value = useMemo<Ctx>(
     () => ({
@@ -35,10 +37,13 @@ export function LanguageProvider({
         setLangState(l);
         document.documentElement.lang = l;
         document.cookie = `km_lang=${l}; path=/; max-age=${ONE_YEAR_SECONDS}; samesite=lax`;
+        // Les pages rendues côté serveur (accueil, historique, titre de l'onglet)
+        // doivent être recalculées dans la nouvelle langue.
+        router.refresh();
       },
       t: (key, params) => translate(lang, key, params),
     }),
-    [lang],
+    [lang, router],
   );
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;

@@ -34,4 +34,12 @@ describe("formatage localisé (I18N-03)", () => {
     expect(plain(formatDuration("en", 7200))).toBe("2 hours");
     expect(plain(formatDuration("en", 90))).toBe("90 seconds");
   });
+
+  it("n'utilise que des espaces ordinaires pour la durée (sinon le serveur et le navigateur divergent à l'hydratation)", () => {
+    for (const lang of ["fr", "en"] as const) {
+      for (const seconds of [15, 30, 60, 120, 300, 3600]) {
+        expect(formatDuration(lang, seconds)).toMatch(/^\d+ [a-z]+$/);
+      }
+    }
+  });
 });

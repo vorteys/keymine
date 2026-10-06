@@ -62,7 +62,7 @@ function ConnexionForm() {
   return (
     <PixelShell
       rightSlot={
-        <PixelButton href="/" variant="slate" className="h-10 px-4 text-[11px]">
+        <PixelButton href="/" variant="slate" className="h-10 shrink-0 px-2 text-[10px] sm:px-4 sm:text-[11px]">
           {t("auth.guest")}
         </PixelButton>
       }

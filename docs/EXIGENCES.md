@@ -10,11 +10,11 @@ Statuts : **complet** (fait et vérifié), **partiel** (existe mais incomplet ou
 | TECH-02 | partiel | `tsconfig.json`, `eslint.config.mjs` | `bun run lint`, `bun run typecheck` (CI) | `strict: true`, aucun `any` explicite, aucun `@ts-ignore`. Restent des fichiers `.mjs` (`scripts/*.mjs`, configs) à porter en TypeScript. |
 | TECH-03 | complet | `app/globals.css`, composants | — | Tailwind v4. |
 | TECH-04 | complet | db/migrations/, db/migrate.ts, db/seed.ts, db/types.ts | tests/db/seed.test.ts | PostgreSQL + Kysely (query builder, pas un ORM : choix à défendre dans l'ADR). Migrations SQL versionnées ; seed idempotent (corpus, dictionnaires, 5 comptes de démo + historique), lancé par bun run db:seed. |
-| TECH-05 | non fait | — | — | Déploiement VPS + HTTPS à faire par l'étudiant ; fichiers de déploiement (Docker, Caddy) à préparer. |
+| TECH-05 | partiel | Dockerfile, deploy/, docs/DEPLOIEMENT.md | — | Fichiers de déploiement prêts (Docker, Caddy HTTPS, guide) mais NON testés ici (pas de Docker dans l'environnement) et pas encore déployés : à faire par l'équipe. |
 | TECH-06 | partiel | realtime/server.ts, realtime/lobby-channel.ts, components/useLobbyLive.ts | tests/db/realtime.test.ts | WebSocket (ws) authentifié par cookie signé + contrôle d'origine ; salle d'attente en direct via LISTEN/NOTIFY avec repli HTTP. Course : protocole validé, mais la fréquence d'envoi côté client n'est pas encore réduite. |
 | TECH-07 | partiel | realtime/protocol.ts, lib/lobby-schema.ts, app/api/** | tests/unit/realtime-protocol.test.ts | Messages WebSocket validés par Zod (course et salle). Couverture Zod des routes API restant à auditer route par route. |
 | TECH-08 | complet | — | — | Aucun service payant ; Postgres embarqué en dev seulement. |
-| TECH-09 | partiel | `.github/workflows/ci.yml` | — | Lint, `tsc`, tests unitaires, build, e2e. Première exécution sur GitHub à confirmer. |
+| TECH-09 | partiel | .github/workflows/ci.yml | tests/unit, tests/db | CI : lint, typecheck, tests unitaires, migrations, tests base, build, e2e. Non encore vérifiée sur GitHub (premier push à faire). |
 | TECH-10 | complet | `.env.example` | — | Toutes les variables documentées ; `.env` ignoré par git. |
 | DES-01 | non fait | `docs/DEMARCHE-CREATIVE.md` | — | À faire par l'étudiant, sans IA. |
 | DES-02 | non fait | — | — | À faire par l'étudiant, sans IA. Favicon à intégrer ensuite. |

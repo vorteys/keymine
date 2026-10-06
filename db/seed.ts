@@ -179,9 +179,12 @@ async function main() {
   await client.connect();
   try {
     await seedCorpus(client);
-    const ids = await seedUsers(client);
-    for (const [index, u] of DEMO_USERS.entries()) {
-      await seedHistory(client, ids[u.username]!, u.displayName, u.skill, 1000 + index);
+    // SEED_DEMO_USERS=false : en production, ne crée pas les comptes publics de démonstration.
+    if (process.env.SEED_DEMO_USERS !== "false") {
+      const ids = await seedUsers(client);
+      for (const [index, u] of DEMO_USERS.entries()) {
+        await seedHistory(client, ids[u.username]!, u.displayName, u.skill, 1000 + index);
+      }
     }
     const counts = await client.query(
       `select (select count(*) from corpus_texts) as textes, (select count(*) from corpus_words) as mots,

@@ -1,0 +1,19 @@
+# HTTPS automatique (Let's Encrypt) pour le domaine DOMAIN.
+{$DOMAIN} {
+	encode zstd gzip
+
+	# WebSocket du temps réel : /rt/lobby, /rt/?race=… → serveur temps réel
+	handle_path /rt/* {
+		reverse_proxy realtime:4001
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}

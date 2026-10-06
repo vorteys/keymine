@@ -1,0 +1,79 @@
+# Production sur un VPS : Caddy (HTTPS automatique) + site + temps réel + Postgres.
+#   cp deploy/.env.prod.example deploy/.env.prod   # puis remplir les valeurs
+#   docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env.prod up -d --build
+services:
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: keymine
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?mot de passe Postgres requis}
+      POSTGRES_DB: keymine
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keymine"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build: &app-build
+      context: ..
+      args:
+        NEXT_PUBLIC_SITE_URL: https://${DOMAIN:?nom de domaine requis}
+        NEXT_PUBLIC_REALTIME_URL: wss://${DOMAIN}/rt
+    environment: &app-env
+      DATABASE_URL: postgresql://keymine:${POSTGRES_PASSWORD}@postgres:5432/keymine
+      SESSION_SECRET: ${SESSION_SECRET:?secret de session requis}
+      NEXT_PUBLIC_SITE_URL: https://${DOMAIN}
+      REALTIME_PORT: 4001
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET:-}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      SEED_DEMO_USERS: ${SEED_DEMO_USERS:-true}
+    command: ["sh", "-c", "bun run db:migrate && bun run db:seed"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  web:
+    build: *app-build
+    restart: unless-stopped
+    environment: *app-env
+    command: ["bun", "run", "start"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  realtime:
+    build: *app-build
+    restart: unless-stopped
+    environment: *app-env
+    command: ["bun", "run", "realtime"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - realtime
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

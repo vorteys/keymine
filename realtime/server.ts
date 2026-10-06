@@ -7,6 +7,15 @@ import { WebSocketServer, type WebSocket } from "ws";
 import { db } from "@/lib/db";
 import { mergeKeyStats, recomputeUserStats } from "@/lib/stats";
 import { botCharsAt, botShouldError } from "./bots";
+import { allowedOrigins, identityFromCookies, isAllowedOrigin, type RealtimeIdentity } from "./auth";
+import { attachLobbySocket, startLobbyChannel } from "./lobby-channel";
+import {
+  createRateLimiter,
+  lobbyConnectionQuery,
+  parseMessage,
+  raceClientMessage,
+  raceConnectionQuery,
+} from "./protocol";
 import type { BotLevel, ParticipantStatus } from "@/db/types";
 
 const PORT = Number(process.env.REALTIME_PORT ?? 4001);
@@ -20,6 +29,7 @@ type ParticipantState = {
   isBot: boolean;
   botLevel: BotLevel | null;
   userId: string | null;
+  guestId: string | null;
   role: "participant" | "spectator";
   progressChars: number;
   errorCount: number;
@@ -253,6 +263,7 @@ async function loadRoom(raceId: string): Promise<RaceRoom | null> {
       isBot: p.is_bot,
       botLevel: p.bot_level,
       userId: p.user_id,
+      guestId: p.guest_id,
       role: p.role,
       progressChars: p.progress_chars,
       errorCount: p.error_count,
@@ -286,87 +297,147 @@ async function loadRoom(raceId: string): Promise<RaceRoom | null> {
   return room;
 }
 
-const wss = new WebSocketServer({ port: PORT });
+const SESSION_SECRET = process.env.SESSION_SECRET;
+if (!SESSION_SECRET) throw new Error("SESSION_SECRET manquant (voir .env.example).");
+const ORIGINS = allowedOrigins();
+
+const wss = new WebSocketServer({ port: PORT, maxPayload: 16 * 1024 });
 console.log(`[realtime] serveur WebSocket KeyMine sur le port ${PORT}`);
 
-wss.on("connection", (socket, request) => {
-  const url = new URL(request.url ?? "/", "http://localhost");
-  const raceId = url.searchParams.get("race");
-  const participantId = url.searchParams.get("participant");
+// Détection des connexions mortes : un client qui ne répond pas au ping est coupé.
+const alive = new WeakMap<WebSocket, boolean>();
+setInterval(() => {
+  for (const client of wss.clients) {
+    if (alive.get(client) === false) {
+      client.terminate();
+      continue;
+    }
+    alive.set(client, false);
+    client.ping();
+  }
+}, 20_000);
 
-  if (!raceId) {
-    socket.close(1008, "race manquant");
+function ownsParticipant(identity: RealtimeIdentity, p: ParticipantState): boolean {
+  if (p.isBot) return false;
+  return identity.kind === "user" ? p.userId === identity.userId : p.guestId === identity.guestId;
+}
+
+async function attachRaceSocket(
+  socket: WebSocket,
+  identity: RealtimeIdentity,
+  query: URLSearchParams,
+) {
+  const parsed = raceConnectionQuery.safeParse({
+    race: query.get("race") ?? undefined,
+    participant: query.get("participant") ?? undefined,
+  });
+  if (!parsed.success) {
+    socket.close(1008, "paramètres invalides");
+    return;
+  }
+  const { race: raceId, participant: participantId } = parsed.data;
+
+  const room = await loadRoom(raceId);
+  if (!room) {
+    socket.close(1008, "course introuvable");
+    return;
+  }
+
+  let me: ParticipantState | null = null;
+  if (participantId) {
+    const candidate = room.participants.get(participantId) ?? null;
+    // On ne peut jouer que sous sa propre identité (TECH-07, COURSE-06).
+    if (!candidate || !ownsParticipant(identity, candidate)) {
+      socket.close(4403, "participant non autorisé");
+      return;
+    }
+    me = candidate;
+    me.socket = socket;
+  } else {
+    room.spectators.add(socket);
+  }
+
+  socket.send(JSON.stringify(snapshot(room)));
+
+  const limiter = createRateLimiter(120, 1_000); // PERF-02
+  socket.on("message", (raw) => {
+    if (!me || me.status !== "racing" || me.isBot) return;
+    if (!limiter.allow()) return;
+    const m = parseMessage(raceClientMessage, raw);
+    if (!m) return;
+
+    if (m.type === "progress") {
+      const progressChars = clamp(m.progressChars, 0, room.textLength);
+      if (progressChars < me.progressChars) return; // pas de retour en arrière
+      me.progressChars = progressChars;
+      me.errorCount = m.errorCount;
+      me.keyCorrect = m.keyCorrect;
+      me.keyErrors = m.keyErrors;
+      const elapsed = Date.now() - room.startsAtMs;
+      // COURSE-06: le serveur recalcule le MPM lui-même, le client ne fait
+      // qu'indiquer son avancement — jamais de MPM fourni par le client.
+      me.wpm = clamp(computeWpm(me.progressChars, elapsed), 0, MAX_WPM);
+      me.accuracy = clamp(
+        100 * (1 - me.errorCount / Math.max(1, me.progressChars + me.errorCount)),
+        0,
+        100,
+      );
+      if (me.progressChars >= room.textLength) finishParticipant(room, me);
+      broadcast(room);
+    } else {
+      // COUR-14: gros bouton Abandonner — classé dernier (H6).
+      me.status = "abandoned";
+      me.finishedAtMs = Date.now();
+      const everyoneDone = [...room.participants.values()]
+        .filter((x) => x.role === "participant")
+        .every((x) => x.status !== "racing");
+      if (everyoneDone) void finalizeRace(room);
+      else broadcast(room);
+    }
+  });
+
+  socket.on("close", () => {
+    // COUR-15: on ne retire pas le participant, juste le socket — il peut
+    // revenir (reconnexion) et retrouver sa progression enregistrée.
+    if (me) {
+      if (me.socket === socket) me.socket = null;
+    } else {
+      room.spectators.delete(socket);
+    }
+  });
+}
+
+wss.on("connection", (socket, request) => {
+  alive.set(socket, true);
+  socket.on("pong", () => alive.set(socket, true));
+  socket.on("error", () => socket.terminate());
+
+  if (!isAllowedOrigin(request.headers.origin, ORIGINS)) {
+    socket.close(4403, "origine refusée");
     return;
   }
 
   void (async () => {
-    const room = await loadRoom(raceId);
-    if (!room) {
-      socket.close(1008, "course introuvable");
+    const identity = await identityFromCookies(request.headers.cookie, SESSION_SECRET);
+    if (!identity) {
+      socket.close(4401, "non authentifié");
       return;
     }
-
-    let me: ParticipantState | null = null;
-    if (participantId) {
-      me = room.participants.get(participantId) ?? null;
-      if (me) me.socket = socket;
-      else room.spectators.add(socket);
-    } else {
-      room.spectators.add(socket);
-    }
-
-    socket.send(JSON.stringify(snapshot(room)));
-
-    socket.on("message", (raw) => {
-      if (!me || me.status !== "racing" || me.isBot) return;
-      let msg: unknown;
-      try {
-        msg = JSON.parse(String(raw));
-      } catch {
+    const url = new URL(request.url ?? "/", "http://localhost");
+    if (url.pathname === "/lobby") {
+      const q = lobbyConnectionQuery.safeParse({ code: url.searchParams.get("code") ?? "" });
+      if (!q.success) {
+        socket.close(1008, "code invalide");
         return;
       }
-      if (typeof msg !== "object" || msg === null) return;
-      const m = msg as Record<string, unknown>;
-
-      if (m.type === "progress") {
-        const progressChars = clamp(Number(m.progressChars ?? 0), 0, room.textLength);
-        const errorCount = clamp(Number(m.errorCount ?? 0), 0, 100_000);
-        const keyCorrect = (m.keyCorrect as Record<string, number> | undefined) ?? {};
-        const keyErrors = (m.keyErrors as Record<string, number> | undefined) ?? {};
-        if (progressChars < me.progressChars) return; // pas de retour en arrière
-        me.progressChars = progressChars;
-        me.errorCount = errorCount;
-        me.keyCorrect = keyCorrect;
-        me.keyErrors = keyErrors;
-        const elapsed = Date.now() - room.startsAtMs;
-        // JEU-9: le serveur recalcule le MPM lui-même, le client ne fait
-        // qu'indiquer son avancement — on ne fait jamais confiance à un MPM
-        // envoyé par le client.
-        me.wpm = clamp(computeWpm(me.progressChars, elapsed), 0, MAX_WPM);
-        me.accuracy = clamp(
-          100 * (1 - me.errorCount / Math.max(1, me.progressChars + me.errorCount)),
-          0,
-          100,
-        );
-        if (me.progressChars >= room.textLength) finishParticipant(room, me);
-        broadcast(room);
-      } else if (m.type === "abandon") {
-        // COUR-14: gros bouton Abandonner — classé dernier (H6).
-        me.status = "abandoned";
-        me.finishedAtMs = Date.now();
-        const everyoneDone = [...room.participants.values()]
-          .filter((x) => x.role === "participant")
-          .every((x) => x.status !== "racing");
-        if (everyoneDone) void finalizeRace(room);
-        else broadcast(room);
-      }
-    });
-
-    socket.on("close", () => {
-      // COUR-15: on ne retire pas le participant, juste le socket — il peut
-      // revenir (reconnexion) et retrouver sa progression enregistrée.
-      if (me) me.socket = null;
-      else room.spectators.delete(socket);
-    });
-  })();
+      await attachLobbySocket(socket, identity, q.data.code);
+    } else {
+      await attachRaceSocket(socket, identity, url.searchParams);
+    }
+  })().catch((error) => {
+    console.error("[realtime] connexion", error);
+    socket.close(1011, "erreur interne");
+  });
 });
+
+void startLobbyChannel();

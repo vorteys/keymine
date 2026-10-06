@@ -20,45 +20,6 @@ export async function generateUniqueLobbyCode(): Promise<string> {
   throw new Error("Impossible de générer un code de salle unique");
 }
 
-export const HOST_INACTIVITY_MS = 60_000; // H16
-
-/** COUR-13: si l'hôte est inactif, le rôle passe au joueur présent depuis le plus longtemps. */
-export async function maybeTransferHost(lobbyId: string) {
-  const lobby = await db
-    .selectFrom("lobbies")
-    .select(["id", "host_user_id", "host_guest_id", "last_host_seen_at"])
-    .where("id", "=", lobbyId)
-    .executeTakeFirst();
-  if (!lobby) return;
-
-  const inactiveFor = Date.now() - new Date(lobby.last_host_seen_at).getTime();
-  if (inactiveFor < HOST_INACTIVITY_MS) return;
-
-  const nextHost = await db
-    .selectFrom("lobby_players")
-    .select(["user_id", "guest_id"])
-    .where("lobby_id", "=", lobbyId)
-    .where("is_bot", "=", false)
-    .where("active", "=", true)
-    // Seuls les comptes peuvent être hôtes (AUTH-03: un invité ne crée ni ne gère de salle).
-    .where("user_id", "is not", null)
-    .where("user_id", "!=", lobby.host_user_id ?? "")
-    .orderBy("joined_at", "asc")
-    .executeTakeFirst();
-
-  if (!nextHost) return;
-
-  await db
-    .updateTable("lobbies")
-    .set({
-      host_user_id: nextHost.user_id,
-      host_guest_id: nextHost.guest_id,
-      last_host_seen_at: new Date(),
-    })
-    .where("id", "=", lobbyId)
-    .execute();
-}
-
 export function isHost(
   identity: Identity,
   lobby: { host_user_id: string | null; host_guest_id: string | null },

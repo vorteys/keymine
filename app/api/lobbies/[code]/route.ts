@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getIdentity } from "@/lib/auth/identity";
-import { getLobbyByCode, isHost, maybeTransferHost } from "@/lib/lobby";
+import { getLobbyByCode, isHost } from "@/lib/lobby";
+import { sweepLobbies } from "@/lib/lobby-sweep";
 import { loadLobbySnapshot, viewLobby, type Viewer } from "@/lib/lobby-snapshot";
 
 // Lecture HTTP de l'état d'une salle (repli si le WebSocket est indisponible).
@@ -10,7 +11,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
   const lobby = await getLobbyByCode(code);
   if (!lobby) return NextResponse.json({ error: "Salle introuvable" }, { status: 404 });
 
-  await maybeTransferHost(lobby.id);
+  await sweepLobbies();
   const raw = await loadLobbySnapshot(code);
   if (!raw) return NextResponse.json({ error: "Salle introuvable" }, { status: 404 });
 

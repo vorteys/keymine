@@ -28,11 +28,11 @@ Statuts : **complet** (fait et vérifié), **partiel** (existe mais incomplet ou
 | AUTH-04 | non fait | — | — | Téléversement de photo non implémenté. |
 | AUTH-05 | non fait | — | — | Modification du pseudo non implémentée. |
 | AUTH-06 | partiel | `app/profil/page.tsx` | — | Stats et progression MPM présentes ; victoires et MPM moyen à vérifier. |
-| SALLE-01 | partiel | `app/api/lobbies/route.ts` | — | Création OK ; hôte non limité aux utilisateurs connectés ; choix participant/spectateur absent. |
+| SALLE-01 | partiel | app/api/lobbies/route.ts, app/jouer/creer/page.tsx, lib/lobby.ts | tests/db/join.test.ts | Création réservée aux comptes ; l'hôte choisit participant ou spectateur (conservé au retour dans la salle). À valider par e2e. |
 | SALLE-02 | complet | lib/lobby.ts, lib/lobby-snapshot.ts | tests/db/realtime.test.ts | Code 6 caractères sans 0/O/1/I/L, unicité vérifiée, affiché et diffusé en direct. |
 | SALLE-03 | partiel | `db/migrations/0001_init.sql` | — | Trois valeurs d'accès existent ; sémantique « privée = lien d'invitation » absente. |
 | SALLE-04 | non fait | — | — | Liens d'invitation à usage unique non implémentés. |
-| SALLE-05 | partiel | `lib/lobby-schema.ts` | — | Capacité maximale 30 gérée ; bornes 2–30 et exclusion des spectateurs à vérifier. |
+| SALLE-05 | partiel | lib/lobby-schema.ts, lib/lobby.ts | tests/db/join.test.ts | Capacité 2–30 (curseur corrigé), spectateurs hors capacité. Réglage éditable en salle d'attente : à faire. |
 | SALLE-06 | complet | `db/migrations/0002_une_salle_et_corpus.sql`, `lib/lobby.ts` | `tests/db/rooms.test.ts` | Index uniques partiels + déclencheur de libération à la fermeture. Interface : message « déjà dans une salle » avec choix de quitter (`useRoomEntry`). |
 | SALLE-07 | non fait | — | — | Expulsion non implémentée. |
 | SALLE-08 | partiel | lib/lobby-sweep.ts, realtime/lobby-channel.ts | tests/db/sweep.test.ts | Hôte absent 30 s : transfert au compte connecté présent depuis le plus longtemps, sinon fermeture. Invités exclus du rôle d'hôte (interprétation). Pas encore géré pendant une course. |

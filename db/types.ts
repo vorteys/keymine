@@ -78,7 +78,7 @@ export interface LobbyPlayersTable {
   is_bot: Generated<boolean>;
   bot_level: BotLevel | null;
   active: Generated<boolean>;
-  joined_at: ColumnType<Date, string | undefined, never>;
+  joined_at: ColumnType<Date, string | undefined, Date | string>;
   last_seen_at: ColumnType<Date, string | undefined, Date | string>;
 }
 

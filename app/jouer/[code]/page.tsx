@@ -39,7 +39,7 @@ export default function LobbyPage() {
       fetch(`/api/lobbies/${code}/join`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: "participant" }),
+        body: JSON.stringify({}),
       }),
     );
   }, [code, run]);

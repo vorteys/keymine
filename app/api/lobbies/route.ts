@@ -99,7 +99,7 @@ export async function POST(request: Request) {
     .values({
       lobby_id: lobby.id,
       user_id: identity.userId,
-      role: "participant",
+      role: s.hostRole,
     })
     .execute();
 

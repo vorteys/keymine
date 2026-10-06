@@ -58,63 +58,83 @@ export async function findActiveRoom(identity: Identity) {
     .executeTakeFirst();
 }
 
+async function participantCount(lobbyId: string): Promise<number> {
+  const count = await db
+    .selectFrom("lobby_players")
+    .select((eb) => eb.fn.countAll<number>().as("n"))
+    .where("lobby_id", "=", lobbyId)
+    .where("role", "=", "participant")
+    .where("active", "=", true)
+    .executeTakeFirst();
+  return Number(count?.n ?? 0);
+}
+
 /**
  * Ajoute la personne à la salle (ou met à jour son rôle). Refuse si elle est
  * déjà dans une autre salle (SALLE-06, aussi garanti par un index unique) ou
  * si la salle est pleine (spectateurs exclus de la capacité, SALLE-05).
+ * Sans `role`, un membre existant garde le sien et un nouveau est participant.
+ * Une personne libérée de cette salle (absence) y est réactivée.
  */
 export async function joinLobby(
   lobby: { id: string; max_players: number },
   identity: Identity,
-  role: PlayerRole,
+  role?: PlayerRole,
 ): Promise<JoinResult> {
-  const current = await findActiveRoom(identity);
-  if (current && current.id !== lobby.id) {
-    return { ok: false, reason: "already_in_room", currentCode: current.code };
-  }
+  const existing = await db
+    .selectFrom("lobby_players")
+    .select(["id", "active", "role"])
+    .where("lobby_id", "=", lobby.id)
+    .where((eb) =>
+      identity.kind === "user"
+        ? eb("user_id", "=", identity.userId)
+        : eb("guest_id", "=", identity.guestId),
+    )
+    .executeTakeFirst();
 
-  if (current) {
+  const wanted: PlayerRole = role ?? existing?.role ?? "participant";
+  const needsSeat = wanted === "participant" && !(existing?.active && existing.role === "participant");
+  const full = needsSeat && (await participantCount(lobby.id)) >= lobby.max_players;
+
+  if (existing?.active) {
+    if (full) return { ok: false, reason: "full" };
     await db
       .updateTable("lobby_players")
-      .set({ role, last_seen_at: new Date() })
-      .where("lobby_id", "=", lobby.id)
-      .where((eb) =>
-        identity.kind === "user"
-          ? eb("user_id", "=", identity.userId)
-          : eb("guest_id", "=", identity.guestId),
-      )
+      .set({ role: wanted, last_seen_at: new Date() })
+      .where("id", "=", existing.id)
       .execute();
     return { ok: true };
   }
 
-  if (role === "participant") {
-    const count = await db
-      .selectFrom("lobby_players")
-      .select((eb) => eb.fn.countAll<number>().as("n"))
-      .where("lobby_id", "=", lobby.id)
-      .where("role", "=", "participant")
-      .where("active", "=", true)
-      .executeTakeFirst();
-    if (Number(count?.n ?? 0) >= lobby.max_players) return { ok: false, reason: "full" };
-  }
+  const other = await findActiveRoom(identity);
+  if (other) return { ok: false, reason: "already_in_room", currentCode: other.code };
+  if (full) return { ok: false, reason: "full" };
 
   try {
-    await db
-      .insertInto("lobby_players")
-      .values({
-        lobby_id: lobby.id,
-        user_id: identity.kind === "user" ? identity.userId : null,
-        guest_id: identity.kind === "guest" ? identity.guestId : null,
-        guest_name: identity.kind === "guest" ? identity.displayName : null,
-        role,
-      })
-      .execute();
+    if (existing) {
+      await db
+        .updateTable("lobby_players")
+        .set({ active: true, role: wanted, last_seen_at: new Date(), joined_at: new Date() })
+        .where("id", "=", existing.id)
+        .execute();
+    } else {
+      await db
+        .insertInto("lobby_players")
+        .values({
+          lobby_id: lobby.id,
+          user_id: identity.kind === "user" ? identity.userId : null,
+          guest_id: identity.kind === "guest" ? identity.guestId : null,
+          guest_name: identity.kind === "guest" ? identity.displayName : null,
+          role: wanted,
+        })
+        .execute();
+    }
   } catch (error) {
     // Course entre deux onglets: l'index unique de SALLE-06 a refusé le doublon.
     if (typeof error === "object" && error !== null && "code" in error && error.code === "23505") {
-      const other = await findActiveRoom(identity);
-      if (other && other.id === lobby.id) return { ok: true };
-      if (other) return { ok: false, reason: "already_in_room", currentCode: other.code };
+      const concurrent = await findActiveRoom(identity);
+      if (concurrent && concurrent.id === lobby.id) return { ok: true };
+      if (concurrent) return { ok: false, reason: "already_in_room", currentCode: concurrent.code };
     }
     throw error;
   }

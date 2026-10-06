@@ -4,6 +4,7 @@ export const lobbySettingsSchema = z.object({
   name: z.string().trim().min(1).max(60).default("Partie sans nom"),
   access: z.enum(["public", "unlisted", "private"]).default("public"),
   language: z.enum(["fr", "en"]).default("fr"),
+  hostRole: z.enum(["participant", "spectator"]).default("participant"),
   maxPlayers: z.number().int().min(2).max(30).default(30),
   durationSeconds: z.number().int().min(15).max(7200).default(300),
   textMode: z.enum(["texte", "desordre", "accents", "cible"]).default("texte"),

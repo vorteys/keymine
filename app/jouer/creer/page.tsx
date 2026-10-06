@@ -58,6 +58,7 @@ export default function CreerCoursePage() {
   const [accents, setAccents] = useState<Set<string>>(new Set(["é", "è", "ç"]));
   const [targets, setTargets] = useState<Set<string>>(new Set(["z"]));
   const [options, setOptions] = useState<Set<string>>(new Set(["Majuscules", "Ponctuation"]));
+  const [hostRole, setHostRole] = useState<"participant" | "spectator">("participant");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -92,6 +93,7 @@ export default function CreerCoursePage() {
           language,
           durationSeconds: duration,
           maxPlayers: lobbySize,
+          hostRole,
           textMode,
           textLength: length,
           errorMode,
@@ -202,12 +204,36 @@ export default function CreerCoursePage() {
               <input
                 type="range"
                 min={2}
-                max={100}
+                max={30}
                 value={lobbySize}
                 onChange={(e) => setLobbySize(Number(e.target.value))}
                 aria-label="Taille maximale du lobby"
                 className="w-full accent-[#3f7d24]"
               />
+            </div>
+
+            <div>
+              <PixelLabel>TON RÔLE</PixelLabel>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setHostRole("participant")}
+                  data-on={hostRole === "participant"}
+                  className="pixel-chip flex flex-col items-start gap-1 leading-tight"
+                >
+                  <b className="font-pixel text-[11px] font-normal">PARTICIPANT</b>
+                  <span className="text-lg">Tu cours avec les autres.</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHostRole("spectator")}
+                  data-on={hostRole === "spectator"}
+                  className="pixel-chip flex flex-col items-start gap-1 leading-tight"
+                >
+                  <b className="font-pixel text-[11px] font-normal">SPECTATEUR</b>
+                  <span className="text-lg">Tu organises et tu regardes.</span>
+                </button>
+              </div>
             </div>
 
             <div>

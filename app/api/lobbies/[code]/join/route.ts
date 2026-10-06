@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getIdentity } from "@/lib/auth/identity";
 import { getLobbyByCode, joinLobby } from "@/lib/lobby";
 
-const schema = z.object({ role: z.enum(["participant", "spectator"]).default("participant") });
+const schema = z.object({ role: z.enum(["participant", "spectator"]).optional() });
 
 // SALLE-09 / SALLE-05 / SALLE-06: on ne rejoint une salle qu'en attente ou sur
 // l'écran des résultats, sans dépasser la capacité, et jamais depuis une autre salle.
@@ -27,7 +27,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   }
 
   const body = schema.safeParse(await request.json().catch(() => ({})));
-  const role = body.success ? body.data.role : "participant";
+  const role = body.success ? body.data.role : undefined;
 
   const result = await joinLobby(lobby, identity, role);
   if (!result.ok) {

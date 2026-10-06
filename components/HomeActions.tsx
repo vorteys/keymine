@@ -42,7 +42,7 @@ export function JoinByCodeForm() {
       const res = await fetch(`/api/lobbies/${trimmed}/join`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: "participant" }),
+        body: JSON.stringify({}),
       });
       // On renvoie le code de la salle pour que le hook sache où naviguer.
       const body = (await res.clone().json().catch(() => ({}))) as Record<string, unknown>;

@@ -149,7 +149,38 @@ export interface RaceParticipantsTable {
   created_at: ColumnType<Date, string | undefined, never>;
 }
 
+export interface LobbyInvitesTable {
+  id: Generated<string>;
+  lobby_id: string;
+  token: string;
+  label: string | null;
+  created_at: ColumnType<Date, string | undefined, never>;
+  claimed_at: ColumnType<Date, Date | null, Date | null> | null;
+  claimed_ip: string | null;
+  claimed_user_id: string | null;
+  claimed_guest_id: string | null;
+  claimed_name: string | null;
+  revoked_at: ColumnType<Date, Date | null, Date | null> | null;
+}
+
+export interface LobbyBansTable {
+  id: Generated<string>;
+  lobby_id: string;
+  user_id: string | null;
+  guest_id: string | null;
+  created_at: ColumnType<Date, string | undefined, never>;
+}
+
+export interface JoinAttemptsTable {
+  id: Generated<string>;
+  ip: string;
+  attempted_at: ColumnType<Date, string | undefined, never>;
+}
+
 export interface Database {
+  lobby_invites: LobbyInvitesTable;
+  lobby_bans: LobbyBansTable;
+  join_attempts: JoinAttemptsTable;
   users: UsersTable;
   key_stats: KeyStatsTable;
   lobbies: LobbiesTable;

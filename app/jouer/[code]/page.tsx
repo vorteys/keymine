@@ -2,6 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { InvitePanel } from "@/components/lobby/InvitePanel";
 import { HostSettingsEditor } from "@/components/lobby/HostSettingsEditor";
 import { PixelShell } from "@/components/PixelShell";
 import { PixelAvatar, PixelButton, PixelPanel, PixelSlot } from "@/components/ui";
@@ -68,6 +69,14 @@ export default function LobbyPage() {
   useEffect(() => {
     if (status === "closed" || status === "removed") router.push("/");
   }, [status, router]);
+
+  async function kick(playerId: string) {
+    await fetch(`/api/lobbies/${code}/kick`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ playerId }),
+    });
+  }
 
   async function removeBot(playerId: string) {
     await fetch(`/api/lobbies/${code}/bots`, {
@@ -165,11 +174,12 @@ export default function LobbyPage() {
                               : "PRÊT"}
                     </div>
                   </div>
-                  {p.isBot && lobby?.isHost && (
+                  {lobby?.isHost && !p.isHost && (
                     <button
                       type="button"
-                      onClick={() => void removeBot(p.id)}
-                      aria-label={`Retirer ${p.name}`}
+                      onClick={() => void (p.isBot ? removeBot(p.id) : kick(p.id))}
+                      aria-label={p.isBot ? `Retirer ${p.name}` : `Expulser ${p.name}`}
+                      title={p.isBot ? "Retirer le bot" : "Expulser"}
                       className="pixel-chip h-8 w-8 flex-none text-xl leading-none"
                     >
                       ×
@@ -178,6 +188,26 @@ export default function LobbyPage() {
                 </PixelSlot>
               ))}
             </div>
+            {spectators.length > 0 && (
+              <ul aria-label="Spectateurs" className="mt-4 flex flex-wrap gap-2">
+                {spectators.map((p) => (
+                  <li key={p.id} className="pixel-chip flex items-center gap-2 text-xl">
+                    <span>{p.name}</span>
+                    {lobby?.isHost && !p.isHost && (
+                      <button
+                        type="button"
+                        onClick={() => void kick(p.id)}
+                        aria-label={`Expulser ${p.name}`}
+                        title="Expulser"
+                        className="leading-none"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
           </PixelPanel>
         </div>
 
@@ -237,6 +267,8 @@ export default function LobbyPage() {
               </PixelButton>
             </PixelPanel>
           )}
+
+          {lobby?.isHost && <InvitePanel code={code} refreshKey={view} />}
 
           {error && (
             <div className="border-4 border-black bg-[#f39a8c] px-3.5 py-2.5 text-xl text-black">

@@ -4,6 +4,7 @@ import { getIdentity } from "@/lib/auth/identity";
 import { getLobbyByCode, isHost } from "@/lib/lobby";
 import { sweepLobbies } from "@/lib/lobby-sweep";
 import { lobbyUpdateSchema } from "@/lib/lobby-schema";
+import { revokeAllInvites } from "@/lib/invites";
 import { applyLobbySettings } from "@/lib/lobby-settings";
 import { assertTransition } from "@/lib/race/state";
 import { loadLobbySnapshot, viewLobby, type Viewer } from "@/lib/lobby-snapshot";
@@ -46,6 +47,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
       .set({ status: "closed", closed_at: new Date() })
       .where("id", "=", lobby.id)
       .execute();
+    await revokeAllInvites(lobby.id); // SALLE-04 : plus aucun lien ne fonctionne
   }
 
   return NextResponse.json({ ok: true });

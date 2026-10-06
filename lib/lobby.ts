@@ -1,6 +1,7 @@
 import { customAlphabet } from "nanoid";
 import { db } from "@/lib/db";
 import type { Identity } from "@/lib/auth/identity";
+import { isBanned } from "@/lib/bans";
 
 // Alphabet sans caractères ambigus (0/O, 1/I/l) pour un code "à la Kahoot"
 // facile à lire et à retaper (COUR-2).
@@ -41,6 +42,7 @@ type PlayerRole = "participant" | "spectator";
 export type JoinResult =
   | { ok: true }
   | { ok: false; reason: "full" }
+  | { ok: false; reason: "banned" }
   | { ok: false; reason: "already_in_room"; currentCode: string };
 
 /** Salle active (non fermée) où cette personne se trouve déjà, s'il y en a une (SALLE-06). */
@@ -81,6 +83,9 @@ export async function joinLobby(
   identity: Identity,
   role?: PlayerRole,
 ): Promise<JoinResult> {
+  // SALLE-07 : une personne expulsée ne peut plus rejoindre cette salle.
+  if (await isBanned(lobby.id, identity)) return { ok: false, reason: "banned" };
+
   const existing = await db
     .selectFrom("lobby_players")
     .select(["id", "active", "role"])

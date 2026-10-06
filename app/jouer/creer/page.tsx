@@ -5,19 +5,31 @@ import { useRouter } from "next/navigation";
 import { PixelShell } from "@/components/PixelShell";
 import { PixelButton, PixelLabel, PixelPanel, PixelSlot } from "@/components/ui";
 import { generateRaceText } from "@/lib/text/generate";
-import type { BotLevel } from "@/db/types";
+import { BUNDLED_CORPUS } from "@/lib/text/corpus";
+import type { BotLevel, Difficulty, TextType } from "@/db/types";
 import { useLanguage } from "@/lib/i18n";
 
 type Access = "public" | "unlisted" | "private";
 type ErrorMode = "accumuler" | "bloquer";
-type TextMode = "texte" | "desordre" | "accents" | "cible";
 
+// CONF-01 : de 15 secondes à 2 heures.
 const DURATIONS = [
+  ["15 secondes", 15],
+  ["30 secondes", 30],
+  ["1 minute", 60],
+  ["2 minutes", 120],
   ["5 minutes", 300],
   ["10 minutes", 600],
   ["30 minutes", 1800],
+  ["1 heure", 3600],
   ["2 heures", 7200],
 ] as const;
+
+const COMPLEXITY_LABELS: Record<Difficulty, [string, string]> = {
+  easy: ["FACILE", "Mots de 2 à 5 lettres, sans accent."],
+  medium: ["MOYEN", "Mots de 4 à 8 lettres."],
+  hard: ["DIFFICILE", "Mots de 7 lettres ou plus, accents compris."],
+};
 
 function Chip({
   on,
@@ -53,33 +65,38 @@ export default function CreerCoursePage() {
   const [errorMode, setErrorMode] = useState<ErrorMode>("accumuler");
   const [penalty, setPenalty] = useState(true);
   const [bots, setBots] = useState<Set<BotLevel>>(new Set(["intermediaire", "expert"]));
-  const [textMode, setTextMode] = useState<TextMode>("desordre");
+  const [textType, setTextType] = useState<TextType>("coherent");
   const [length, setLength] = useState(40);
-  const [accents, setAccents] = useState<Set<string>>(new Set(["é", "è", "ç"]));
-  const [targets, setTargets] = useState<Set<string>>(new Set(["z"]));
-  const [options, setOptions] = useState<Set<string>>(new Set(["Majuscules", "Ponctuation"]));
+  const [complexity, setComplexity] = useState<Difficulty>("easy");
+  const [includeChars, setIncludeChars] = useState<Set<string>>(new Set());
+  const [excludeChars, setExcludeChars] = useState<Set<string>>(new Set());
+  const [options, setOptions] = useState<Set<string>>(new Set(["Accents"]));
+  const [comebackBonus, setComebackBonus] = useState(true);
   const [hostRole, setHostRole] = useState<"participant" | "spectator">("participant");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const preview = useMemo(() => {
     try {
-      const text = generateRaceText({
-        mode: textMode,
-        language,
-        length: 12,
-        uppercase: options.has("Majuscules"),
-        punctuation: options.has("Ponctuation"),
-        digits: options.has("Chiffres"),
-        symbols: options.has("Symboles"),
-        targetChars: [...targets],
-        accentChars: [...accents],
-      });
-      return text;
+      return generateRaceText(
+        {
+          type: textType,
+          language,
+          length: 12,
+          complexity,
+          uppercase: options.has("Majuscules"),
+          punctuation: options.has("Ponctuation"),
+          digits: options.has("Nombres"),
+          accents: options.has("Accents"),
+          includeChars: [...includeChars],
+          excludeChars: [...excludeChars],
+        },
+        BUNDLED_CORPUS,
+      );
     } catch {
       return "";
     }
-  }, [textMode, language, options, targets, accents]);
+  }, [textType, language, complexity, options, includeChars, excludeChars]);
 
   async function createLobby() {
     setError(null);
@@ -94,16 +111,18 @@ export default function CreerCoursePage() {
           durationSeconds: duration,
           maxPlayers: lobbySize,
           hostRole,
-          textMode,
+          textType,
           textLength: length,
+          complexity,
+          comebackBonus,
           errorMode,
           penaltySeconds: penalty ? 1 : 0,
           uppercase: options.has("Majuscules"),
           punctuation: options.has("Ponctuation"),
-          digits: options.has("Chiffres"),
-          symbols: options.has("Symboles"),
-          targetChars: [...targets],
-          accentChars: [...accents],
+          digits: options.has("Nombres"),
+          accents: options.has("Accents"),
+          includeChars: textType === "aleatoire" ? [...includeChars] : [],
+          excludeChars: textType === "aleatoire" ? [...excludeChars] : [],
         }),
       });
       const data = await res.json();
@@ -280,9 +299,14 @@ export default function CreerCoursePage() {
               </div>
             </div>
 
-            <label className="flex items-center gap-2.5 text-xl text-[#6b6b6b]">
-              <input type="checkbox" disabled className="h-5 w-5 accent-[#3f7d24]" />
-              Activer les bonus (Rallonge, Raccourci, Flou) — à venir
+            <label className="flex items-center gap-2.5 text-xl">
+              <input
+                type="checkbox"
+                checked={comebackBonus}
+                onChange={(e) => setComebackBonus(e.target.checked)}
+                className="h-5 w-5 accent-[#3f7d24]"
+              />
+              Bonus de remontée activés
             </label>
           </div>
         </PixelPanel>
@@ -290,32 +314,44 @@ export default function CreerCoursePage() {
         <PixelPanel className="w-full flex-grow p-6">
           <div className="flex flex-col gap-4">
             <div>
-              <PixelLabel>MODE DE TEXTE</PixelLabel>
-              <div className="flex gap-2">
+              <PixelLabel>TYPE DE TEXTE</PixelLabel>
+              <div className="grid grid-cols-2 gap-2">
                 {(
                   [
-                    ["texte", "TEXTE"],
-                    ["desordre", "DÉSORDRE"],
-                    ["accents", "ACCENTS"],
-                    ["cible", "CIBLÉ"],
+                    ["coherent", "COHÉRENT", "Vrais passages d’œuvres du domaine public."],
+                    ["aleatoire", "ALÉATOIRE", "Mots tirés d’un dictionnaire."],
                   ] as const
-                ).map(([key, label]) => (
+                ).map(([key, title, sub]) => (
                   <button
                     key={key}
                     type="button"
-                    onClick={() => setTextMode(key)}
-                    data-on={textMode === key}
-                    disabled={key === "accents" && language !== "fr"}
-                    className="pixel-chip flex-1 justify-center text-xl disabled:opacity-40"
+                    onClick={() => setTextType(key)}
+                    data-on={textType === key}
+                    className="pixel-chip flex flex-col items-start gap-1 leading-tight"
                   >
-                    {label}
+                    <b className="font-pixel text-[11px] font-normal">{title}</b>
+                    <span className="text-lg">{sub}</span>
                   </button>
                 ))}
               </div>
-              <p className="mt-1.5 text-lg text-[#3a3a3a]">
-                Texte: vrais mots et phrases. Désordre: mots sans lien. Accents: mots en désordre
-                avec accents (FR seulement). Ciblé: on travaille des caractères précis.
-              </p>
+            </div>
+
+            <div>
+              <PixelLabel>COMPLEXITÉ</PixelLabel>
+              <div className="grid grid-cols-3 gap-2">
+                {(Object.keys(COMPLEXITY_LABELS) as Difficulty[]).map((level) => (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => setComplexity(level)}
+                    data-on={complexity === level}
+                    className="pixel-chip flex flex-col items-start gap-1 leading-tight"
+                  >
+                    <b className="font-pixel text-[11px] font-normal">{COMPLEXITY_LABELS[level][0]}</b>
+                    <span className="text-lg">{COMPLEXITY_LABELS[level][1]}</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div>
@@ -323,48 +359,79 @@ export default function CreerCoursePage() {
               <input
                 type="range"
                 min={10}
-                max={300}
+                max={400}
                 value={length}
                 onChange={(e) => setLength(Number(e.target.value))}
-                aria-label="Longueur du texte"
+                aria-label="Longueur du texte en mots"
                 className="w-full accent-[#3f7d24]"
               />
-              <p className="mt-1 text-lg text-[#3a3a3a]">
-                Un extrait peut toujours être coupé net à la longueur choisie.
-              </p>
-            </div>
-
-            <div>
-              <PixelLabel>ACCENTS (AU MOINS UN MOT EN CONTIENT)</PixelLabel>
-              <div className="flex flex-wrap gap-2">
-                {["é", "è", "ê", "à", "ç", "ù", "î", "ô"].map((a) => (
-                  <Chip key={a} on={accents.has(a)} onClick={() => setAccents(toggle(accents, a))}>
-                    {a}
-                  </Chip>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <PixelLabel>CARACTÈRES CIBLÉS</PixelLabel>
-              <div className="flex flex-wrap gap-2">
-                {["z", "q", "x", "w", "j"].map((c) => (
-                  <Chip key={c} on={targets.has(c)} onClick={() => setTargets(toggle(targets, c))}>
-                    {c}
-                  </Chip>
-                ))}
-              </div>
             </div>
 
             <div>
               <PixelLabel>OPTIONS DU TEXTE</PixelLabel>
               <div className="flex flex-wrap gap-2">
-                {["Majuscules", "Ponctuation", "Chiffres", "Symboles"].map((o) => (
-                  <Chip key={o} on={options.has(o)} onClick={() => setOptions(toggle(options, o))}>
+                {["Majuscules", "Ponctuation", "Nombres", "Accents"].map((o) => (
+                  <Chip
+                    key={o}
+                    on={options.has(o)}
+                    onClick={() => setOptions(toggle(options, o))}
+                  >
                     {o}
                   </Chip>
                 ))}
               </div>
+              <p className="mt-1.5 text-lg text-[#3a3a3a]">
+                En mode cohérent, les passages sont adaptés (accents et ponctuation retirés si
+                désactivés).
+              </p>
+            </div>
+
+            <div aria-disabled={textType === "coherent"} className={textType === "coherent" ? "opacity-40" : ""}>
+              <PixelLabel>CARACTÈRES À INCLURE</PixelLabel>
+              <div className="flex flex-wrap gap-2">
+                {["z", "q", "x", "w", "j", "k", "é", "ç"].map((c) => (
+                  <Chip
+                    key={c}
+                    on={includeChars.has(c)}
+                    onClick={() => {
+                      if (textType === "coherent") return;
+                      setIncludeChars(toggle(includeChars, c));
+                      setExcludeChars((prev) => {
+                        const next = new Set(prev);
+                        next.delete(c);
+                        return next;
+                      });
+                    }}
+                  >
+                    {c}
+                  </Chip>
+                ))}
+              </div>
+              <PixelLabel>CARACTÈRES À EXCLURE</PixelLabel>
+              <div className="flex flex-wrap gap-2">
+                {["e", "a", "s", "t", "n", "r", "u", "l"].map((c) => (
+                  <Chip
+                    key={c}
+                    on={excludeChars.has(c)}
+                    onClick={() => {
+                      if (textType === "coherent") return;
+                      setExcludeChars(toggle(excludeChars, c));
+                      setIncludeChars((prev) => {
+                        const next = new Set(prev);
+                        next.delete(c);
+                        return next;
+                      });
+                    }}
+                  >
+                    {c}
+                  </Chip>
+                ))}
+              </div>
+              {textType === "coherent" && (
+                <p className="mt-1.5 text-lg text-[#3a3a3a]">
+                  Réglage désactivé en mode cohérent : réservé au texte aléatoire.
+                </p>
+              )}
             </div>
 
             <div>

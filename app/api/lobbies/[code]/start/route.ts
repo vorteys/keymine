@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getIdentity } from "@/lib/auth/identity";
 import { getLobbyByCode, isHost } from "@/lib/lobby";
-import { generateRaceText } from "@/lib/text/generate";
+import { NoTextAvailableError } from "@/lib/text/generate";
+import { generateTextForRace } from "@/lib/text/service";
 
 const COUNTDOWN_MS = 5_000; // JEU-1
 
@@ -49,17 +50,29 @@ export async function POST(_request: Request, { params }: { params: Promise<{ co
     );
   }
 
-  const textContent = generateRaceText({
-    mode: lobby.text_mode,
-    language: lobby.language,
-    length: lobby.text_length,
-    uppercase: lobby.allow_uppercase,
-    punctuation: lobby.allow_punctuation,
-    digits: lobby.allow_digits,
-    symbols: lobby.allow_symbols,
-    targetChars: lobby.target_chars,
-    accentChars: lobby.accent_chars,
-  });
+  let textContent: string;
+  try {
+    textContent = await generateTextForRace({
+      type: lobby.text_type,
+      language: lobby.language,
+      length: lobby.text_length,
+      complexity: lobby.complexity,
+      uppercase: lobby.allow_uppercase,
+      punctuation: lobby.allow_punctuation,
+      digits: lobby.allow_digits,
+      accents: lobby.allow_accents,
+      includeChars: lobby.include_chars,
+      excludeChars: lobby.exclude_chars,
+    });
+  } catch (error) {
+    if (error instanceof NoTextAvailableError) {
+      return NextResponse.json(
+        { error: "Aucun texte ne correspond à ces réglages", code: "no_text" },
+        { status: 422 },
+      );
+    }
+    throw error;
+  }
 
   const startsAt = new Date(Date.now() + COUNTDOWN_MS);
 

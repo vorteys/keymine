@@ -15,7 +15,8 @@ export async function GET() {
       "code",
       "name",
       "language",
-      "text_mode",
+      "text_type",
+      "complexity",
       "max_players",
       eb
         .selectFrom("lobby_players")
@@ -33,7 +34,8 @@ export async function GET() {
       code: l.code,
       name: l.name,
       language: l.language,
-      textMode: l.text_mode,
+      textType: l.text_type,
+      complexity: l.complexity,
       maxPlayers: l.max_players,
       playerCount: Number(l.player_count ?? 0),
     })),
@@ -80,16 +82,18 @@ export async function POST(request: Request) {
       language: s.language,
       max_players: s.maxPlayers,
       duration_seconds: s.durationSeconds,
-      text_mode: s.textMode,
+      text_type: s.textType,
       text_length: s.textLength,
+      complexity: s.complexity,
       error_mode: s.errorMode,
       penalty_seconds: s.penaltySeconds,
       allow_uppercase: s.uppercase,
       allow_punctuation: s.punctuation,
       allow_digits: s.digits,
-      allow_symbols: s.symbols,
-      target_chars: s.targetChars,
-      accent_chars: s.accentChars,
+      allow_accents: s.accents,
+      include_chars: s.includeChars,
+      exclude_chars: s.excludeChars,
+      comeback_bonus: s.comebackBonus,
     })
     .returning(["id", "code"])
     .executeTakeFirstOrThrow();

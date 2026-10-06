@@ -4,7 +4,8 @@ import type { ColumnType, Generated } from "kysely";
 
 export type Access = "public" | "unlisted" | "private";
 export type Language = "fr" | "en";
-export type TextMode = "texte" | "desordre" | "accents" | "cible";
+export type Difficulty = "easy" | "medium" | "hard";
+export type TextType = "coherent" | "aleatoire";
 export type ErrorMode = "accumuler" | "bloquer";
 export type LobbyStatus = "lobby" | "countdown" | "racing" | "finished" | "closed";
 export type PlayerRole = "participant" | "spectator";
@@ -50,16 +51,18 @@ export interface LobbiesTable {
   language: Generated<Language>;
   max_players: Generated<number>;
   duration_seconds: Generated<number>;
-  text_mode: Generated<TextMode>;
+  text_type: Generated<TextType>;
+  complexity: Generated<Difficulty>;
   text_length: Generated<number>;
   error_mode: Generated<ErrorMode>;
   penalty_seconds: Generated<number>;
   allow_uppercase: Generated<boolean>;
   allow_punctuation: Generated<boolean>;
   allow_digits: Generated<boolean>;
-  allow_symbols: Generated<boolean>;
-  target_chars: Generated<string[]>;
-  accent_chars: Generated<string[]>;
+  allow_accents: Generated<boolean>;
+  include_chars: Generated<string[]>;
+  exclude_chars: Generated<string[]>;
+  comeback_bonus: Generated<boolean>;
   status: Generated<LobbyStatus>;
   is_quick: Generated<boolean>;
   auto_start_at: ColumnType<Date, Date | string | null, Date | string | null> | null;
@@ -82,7 +85,6 @@ export interface LobbyPlayersTable {
   last_seen_at: ColumnType<Date, string | undefined, Date | string>;
 }
 
-export type Difficulty = "easy" | "medium" | "hard";
 
 export interface CorpusTextsTable {
   id: Generated<number>;

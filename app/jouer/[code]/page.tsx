@@ -12,11 +12,15 @@ import type { BotLevel } from "@/db/types";
 const DURATION_LABEL = (s: number) =>
   s >= 3600 ? `${Math.round(s / 3600)} h` : `${Math.round(s / 60)} min`;
 
-const TEXT_MODE_LABEL: Record<string, string> = {
-  texte: "Texte",
-  desordre: "Désordre",
-  accents: "Accents",
-  cible: "Caractères ciblés",
+const TEXT_TYPE_LABEL: Record<string, string> = {
+  coherent: "Cohérent",
+  aleatoire: "Aléatoire",
+};
+
+const COMPLEXITY_LABEL: Record<string, string> = {
+  easy: "Facile",
+  medium: "Moyen",
+  hard: "Difficile",
 };
 
 const AVATAR_COLORS = ["#3d6fc4", "#b03a7a", "#a85512", "#17706f", "#7a45b0", "#3f7d24", "#b63a32"];
@@ -160,7 +164,9 @@ export default function LobbyPage() {
             </div>
             {[
               ["Langue", (lobby?.language ?? "fr").toUpperCase()],
-              ["Texte", TEXT_MODE_LABEL[lobby?.textMode ?? "texte"]],
+              ["Texte", TEXT_TYPE_LABEL[lobby?.textType ?? "coherent"]],
+              ["Complexité", COMPLEXITY_LABEL[lobby?.complexity ?? "easy"]],
+              ["Longueur", `${lobby?.textLength ?? 40} mots`],
               ["Durée max", DURATION_LABEL(lobby?.durationSeconds ?? 300)],
               ["Erreurs", lobby?.errorMode === "bloquer" ? "Bloquer" : "Accumuler"],
             ].map(([k, v]) => (

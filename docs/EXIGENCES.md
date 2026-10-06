@@ -9,7 +9,7 @@ Statuts : **complet** (fait et vérifié), **partiel** (existe mais incomplet ou
 | TECH-01 | complet | `app/`, `next.config.ts` | — | Next.js 16 App Router, React 19. |
 | TECH-02 | partiel | `tsconfig.json`, `eslint.config.mjs` | `bun run lint`, `bun run typecheck` (CI) | `strict: true`, aucun `any` explicite, aucun `@ts-ignore`. Restent des fichiers `.mjs` (`scripts/*.mjs`, configs) à porter en TypeScript. |
 | TECH-03 | complet | `app/globals.css`, composants | — | Tailwind v4. |
-| TECH-04 | partiel | `db/migrations/`, `db/migrate.ts`, `db/types.ts` | — | PostgreSQL + Kysely (query builder, pas un ORM — choix à défendre dans l'ADR), migrations SQL versionnées. **Script de seed absent.** |
+| TECH-04 | complet | db/migrations/, db/migrate.ts, db/seed.ts, db/types.ts | tests/db/seed.test.ts | PostgreSQL + Kysely (query builder, pas un ORM : choix à défendre dans l'ADR). Migrations SQL versionnées ; seed idempotent (corpus, dictionnaires, 5 comptes de démo + historique), lancé par bun run db:seed. |
 | TECH-05 | non fait | — | — | Déploiement VPS + HTTPS à faire par l'étudiant ; fichiers de déploiement (Docker, Caddy) à préparer. |
 | TECH-06 | partiel | realtime/server.ts, realtime/lobby-channel.ts, components/useLobbyLive.ts | tests/db/realtime.test.ts | WebSocket (ws) authentifié par cookie signé + contrôle d'origine ; salle d'attente en direct via LISTEN/NOTIFY avec repli HTTP. Course : protocole validé, mais la fréquence d'envoi côté client n'est pas encore réduite. |
 | TECH-07 | partiel | realtime/protocol.ts, lib/lobby-schema.ts, app/api/** | tests/unit/realtime-protocol.test.ts | Messages WebSocket validés par Zod (course et salle). Couverture Zod des routes API restant à auditer route par route. |
@@ -41,15 +41,15 @@ Statuts : **complet** (fait et vérifié), **partiel** (existe mais incomplet ou
 | JOIN-01 | partiel | components/HomeActions.tsx, components/useLobbyLive.ts | tests/db/realtime.test.ts | Champ de code sur l'accueil ; liste des présents mise à jour en direct. Limitation de tentatives (SALLE-10) à faire. |
 | JOIN-02 | partiel | `app/page.tsx` | — | Liste des salles publiques ; filtres et mise à jour sans rechargement absents. |
 | JOIN-03 | partiel | `app/api/play/quick/route.ts` | — | Choisit la salle publique la plus proche de sa capacité maximale (égalité : la plus ancienne) ; état vide pour invité, création proposée aux comptes. |
-| CONF-01 | partiel | `app/jouer/creer/page.tsx` | — | Durées actuelles 5 min à 2 h ; demandé : aucune ou 30 s à 10 min. |
-| CONF-02 | complet | `lib/lobby-schema.ts` | `tests/unit/text-generate.test.ts` | Langue du texte indépendante de l'interface. |
-| CONF-03 | partiel | `lib/text/` | `tests/unit/text-generate.test.ts` | Cohérent/aléatoire en mémoire ; le corpus doit être stocké en base. |
-| CONF-04 | complet | `lib/text/generate.ts` | `tests/unit/text-generate.test.ts` | Longueur en nombre de mots. |
-| CONF-05 | non fait | — | — | Complexité facile/moyen/difficile non implémentée. |
-| CONF-06 | partiel | `lib/text/generate.ts` | `tests/unit/text-generate.test.ts` | Ponctuation, chiffres, majuscules OK ; accents via un mode séparé. |
-| CONF-07 | partiel | `lib/text/generate.ts` | `tests/unit/text-generate.test.ts` | Caractères ciblés ; exclusion et comportement en mode cohérent à documenter. |
+| CONF-01 | complet | lib/lobby-schema.ts, app/jouer/creer/page.tsx | — | Durée max 15 s à 2 h (liste de 9 valeurs), validée par Zod. Éditable en salle d'attente : voir CONF-12. |
+| CONF-02 | complet | lib/text/generate.ts | tests/unit/text-generate.test.ts | Langue du texte indépendante de la langue de l'interface. |
+| CONF-03 | complet | lib/text/generate.ts, lib/text/service.ts, db/seed.ts | tests/db/seed.test.ts, tests/unit/text-generate.test.ts | Cohérent : passages du domaine public lus en base (repli embarqué si la base est vide). Aléatoire : dictionnaire en base. Passages transcrits de mémoire : à re-vérifier (voir docs/IA.md). |
+| CONF-04 | complet | lib/lobby-schema.ts | tests/unit/text-generate.test.ts | Longueur en mots, 10 à 400. |
+| CONF-05 | complet | lib/text/difficulty.ts | tests/unit/text-generate.test.ts | Critères mesurables (longueur des mots, accents, part de caractères spéciaux) documentés dans le code ; à recopier dans ARCHITECTURE.md. |
+| CONF-06 | complet | lib/text/generate.ts | tests/unit/text-generate.test.ts | Ponctuation, nombres, majuscules, accents. En cohérent : le passage est adapté (accents/ponctuation retirés), apostrophes et traits d'union conservés. |
+| CONF-07 | complet | lib/text/generate.ts, app/jouer/creer/page.tsx | tests/unit/text-generate.test.ts | Inclure/exclure : texte aléatoire seulement ; désactivé en mode cohérent (choix documenté). L'exclusion l'emporte sur l'inclusion. |
 | CONF-08 | partiel | `app/course/[code]/page.tsx` | — | Modes « accumuler » et « bloquer » ; non vérifié de bout en bout. |
-| CONF-09 | non fait | — | — | Bonus de remontée absents. |
+| CONF-09 | partiel | db/migrations/0005_configuration_du_texte.sql, app/jouer/creer/page.tsx | — | Réglage enregistré en base ; les bonus eux-mêmes ne sont pas encore implémentés (voir BONUS). |
 | CONF-10 | partiel | `app/api/lobbies/[code]/bots/route.ts` | — | 4 niveaux au lieu de 5 ; retrait d'un bot absent. |
 | CONF-11 | partiel | `app/jouer/creer/page.tsx` | — | Visibilité et capacité réglables à la création. |
 | CONF-12 | non fait | `app/jouer/[code]/page.tsx` | — | Pas de modification de la configuration en salle d'attente, ni diffusion en direct. |

@@ -16,7 +16,8 @@ async function getPublicLobbies() {
       "code",
       "name",
       "language",
-      "text_mode",
+      "text_type",
+      "complexity",
       "max_players",
       eb
         .selectFrom("lobby_players")
@@ -31,7 +32,7 @@ async function getPublicLobbies() {
 
   return lobbies.map((l) => ({
     name: l.name,
-    sub: `Publique · ${l.text_mode} · ${l.language.toUpperCase()}`,
+    sub: `Publique · ${l.text_type} · ${l.language.toUpperCase()}`,
     count: `${Number(l.player_count ?? 0)}/${l.max_players}`,
     full: Number(l.player_count ?? 0) >= l.max_players,
     href: `/jouer/${l.code}`,

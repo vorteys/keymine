@@ -1,139 +1,208 @@
-import {
-  ACCENT_WORDS_FR,
-  SENTENCES_EN,
-  SENTENCES_FR,
-  WORDS_EN,
-  WORDS_FR,
-} from "./bank";
-import type { Language, TextMode } from "@/db/types";
+import type { Difficulty, Language, TextType } from "@/db/types";
+import { hasAccent, wordMatchesComplexity } from "./difficulty";
 
-export type GenerateOptions = {
-  mode: TextMode;
+// Génération du texte d'une course (CONF-02 à CONF-07). Fonction pure : le
+// corpus est fourni par l'appelant (base de données ou repli embarqué) et le
+// hasard est injectable, pour des tests reproductibles.
+
+export type CorpusText = {
+  title: string;
   language: Language;
-  length: number; // nombre de mots visé (TXT-7)
-  uppercase: boolean;
-  punctuation: boolean;
-  digits: boolean;
-  symbols: boolean;
-  targetChars: string[]; // mode "cible" (TXT-5)
-  accentChars: string[]; // mode "accents" (TXT-4)
+  difficulty: Difficulty;
+  content: string;
 };
 
-const SYMBOLS = ["@", "#", "%", "&", "*", "+"];
+export type Corpus = { texts: CorpusText[]; words: Record<Language, string[]> };
 
-function pick<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)]!;
+export type GenerateOptions = {
+  type: TextType; // CONF-03
+  language: Language; // CONF-02
+  length: number; // CONF-04 : nombre de mots
+  complexity: Difficulty; // CONF-05
+  uppercase: boolean; // CONF-06
+  punctuation: boolean;
+  digits: boolean;
+  accents: boolean;
+  includeChars: string[]; // CONF-07 (texte aléatoire uniquement)
+  excludeChars: string[];
+};
+
+export class NoTextAvailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "NoTextAvailableError";
+  }
 }
 
-function shuffled<T>(arr: T[]): T[] {
-  const copy = [...arr];
+export const MIN_WORDS = 5;
+export const MAX_WORDS = 400;
+
+type Rng = () => number;
+
+function pick<T>(items: readonly T[], rng: Rng): T {
+  return items[Math.floor(rng() * items.length)]!;
+}
+
+function shuffled<T>(items: readonly T[], rng: Rng): T[] {
+  const copy = [...items];
   for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rng() * (i + 1));
     [copy[i], copy[j]] = [copy[j]!, copy[i]!];
   }
   return copy;
 }
 
-function decorate(words: string[], opts: GenerateOptions): string[] {
+function stripAccents(text: string): string {
+  return text
+    .replace(/œ/g, "oe")
+    .replace(/Œ/g, "Oe")
+    .replace(/æ/g, "ae")
+    .replace(/Æ/g, "Ae")
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "");
+}
+
+const SENTENCE_PUNCTUATION = /[.,;:!?«»"“”‘’()[\]…—–]/g;
+
+/**
+ * Applique les options CONF-06 à un passage du corpus : le passage reste réel,
+ * on retire seulement ce qui est désactivé (accents, ponctuation de phrase,
+ * majuscules, mots contenant des chiffres). Apostrophes et traits d'union font
+ * partie des mots et sont conservés.
+ */
+export function applyOptionsToPassage(
+  content: string,
+  options: Pick<GenerateOptions, "uppercase" | "punctuation" | "digits" | "accents">,
+): string {
+  let text = content;
+  if (!options.accents) text = stripAccents(text);
+  if (!options.punctuation) text = text.replace(SENTENCE_PUNCTUATION, " ").replace(/\s+/g, " ").trim();
+  if (!options.uppercase) text = text.toLowerCase();
+  if (!options.digits) {
+    text = text
+      .split(/\s+/)
+      .filter((word) => !/\d/.test(word))
+      .join(" ");
+  }
+  return text.trim();
+}
+
+const DIFFICULTY_ORDER: Difficulty[] = ["easy", "medium", "hard"];
+
+/** Ordre de préférence des passages : la complexité demandée d'abord, puis les plus proches. */
+function difficultyPreference(wanted: Difficulty): Difficulty[] {
+  const index = DIFFICULTY_ORDER.indexOf(wanted);
+  return [...DIFFICULTY_ORDER].sort((a, b) => {
+    const da = Math.abs(DIFFICULTY_ORDER.indexOf(a) - index);
+    const db = Math.abs(DIFFICULTY_ORDER.indexOf(b) - index);
+    return da - db;
+  });
+}
+
+function coherentText(options: GenerateOptions, corpus: Corpus, rng: Rng): string {
+  const candidates = corpus.texts.filter((t) => t.language === options.language);
+  if (candidates.length === 0) {
+    throw new NoTextAvailableError("Aucun passage dans le corpus pour cette langue");
+  }
+  const words: string[] = [];
+  for (const level of difficultyPreference(options.complexity)) {
+    for (const passage of shuffled(
+      candidates.filter((t) => t.difficulty === level),
+      rng,
+    )) {
+      const adapted = applyOptionsToPassage(passage.content, options);
+      if (adapted) words.push(...adapted.split(" "));
+      if (words.length >= options.length) return words.slice(0, options.length).join(" ");
+    }
+  }
+  // Corpus plus court que la longueur demandée : on reprend les passages.
+  if (words.length === 0) throw new NoTextAvailableError("Aucun passage compatible avec les options");
+  const result: string[] = [];
+  while (result.length < options.length) result.push(...words);
+  return result.slice(0, options.length).join(" ");
+}
+
+const VOWELS = ["a", "e", "i", "o", "u"];
+
+function includesAny(word: string, chars: string[]): boolean {
+  const lower = word.toLowerCase();
+  return chars.some((c) => lower.includes(c));
+}
+
+function randomText(options: GenerateOptions, corpus: Corpus, rng: Rng): string {
+  const exclude = options.excludeChars.map((c) => c.toLowerCase()).filter(Boolean);
+  const include = options.includeChars
+    .map((c) => c.toLowerCase())
+    .filter((c) => c && !exclude.includes(c)); // l'exclusion l'emporte
+
+  const allowed = (word: string) =>
+    !includesAny(word, exclude) && (options.accents || !hasAccent(word));
+
+  const dictionary = corpus.words[options.language].filter(allowed);
+  let pool = dictionary.filter((w) => wordMatchesComplexity(w, options.complexity));
+  if (pool.length === 0) pool = dictionary; // aucun mot de ce niveau : tout le dictionnaire permis
+  if (pool.length === 0 && include.length === 0) {
+    throw new NoTextAvailableError("Aucun mot disponible avec ces restrictions");
+  }
+
+  const matching = include.length > 0 ? dictionary.filter((w) => includesAny(w, include)) : [];
+  const vowels = VOWELS.filter((v) => !exclude.includes(v));
+
+  const words: string[] = [];
+  for (let i = 0; i < options.length; i++) {
+    if (include.length > 0 && rng() < 0.7) {
+      if (matching.length > 0) {
+        words.push(pick(matching, rng));
+      } else {
+        // Aucun vrai mot ne contient ces caractères : on fabrique un mot autour d'eux.
+        const c = pick(include, rng);
+        const filler = vowels.length > 0 ? pick(vowels, rng) : "";
+        words.push(`${filler}${c}${filler}${c}`);
+      }
+    } else {
+      words.push(pick(pool, rng));
+    }
+  }
+  return decorate(words, options, exclude, rng).join(" ");
+}
+
+function decorate(words: string[], options: GenerateOptions, exclude: string[], rng: Rng): string[] {
   let out = [...words];
 
-  if (opts.uppercase) {
-    out = out.map((w) => (Math.random() < 0.18 ? w[0]!.toUpperCase() + w.slice(1) : w));
+  if (options.uppercase) {
+    out = out.map((w) => (rng() < 0.18 ? w[0]!.toUpperCase() + w.slice(1) : w));
   }
 
-  if (opts.digits) {
-    const count = Math.max(1, Math.round(out.length / 12));
-    for (let i = 0; i < count; i++) {
-      const pos = Math.floor(Math.random() * out.length);
-      out.splice(pos, 0, String(Math.floor(Math.random() * 900) + 1));
+  if (options.digits) {
+    const digits = "0123456789".split("").filter((d) => !exclude.includes(d));
+    if (digits.length > 0) {
+      const count = Math.max(1, Math.round(out.length / 12));
+      for (let i = 0; i < count; i++) {
+        const size = 1 + Math.floor(rng() * 3);
+        const number = Array.from({ length: size }, () => pick(digits, rng)).join("");
+        out.splice(Math.floor(rng() * (out.length + 1)), 0, number);
+      }
     }
   }
 
-  if (opts.symbols) {
-    const count = Math.max(1, Math.round(out.length / 15));
-    for (let i = 0; i < count; i++) {
-      const pos = Math.floor(Math.random() * out.length);
-      out.splice(pos, 0, pick(SYMBOLS));
+  if (options.punctuation) {
+    const marks = [",", "."].filter((m) => !exclude.includes(m));
+    if (marks.length > 0) {
+      out = out.map((w, i) => (i < out.length - 1 && rng() < 0.1 ? `${w}${pick(marks, rng)}` : w));
+      if (marks.includes(".")) out[out.length - 1] = `${out[out.length - 1]}.`;
     }
-  }
-
-  if (opts.punctuation) {
-    out = out.map((w, i) => {
-      if (i === out.length - 1) return w;
-      const r = Math.random();
-      if (r < 0.08) return `${w},`;
-      if (r < 0.12) return `${w}.`;
-      return w;
-    });
-    out[out.length - 1] = `${out[out.length - 1]}.`;
   }
 
   return out;
 }
 
-function wordsForText(mode: TextMode, language: Language, opts: GenerateOptions): string[] {
-  const baseWords = language === "en" ? WORDS_EN : WORDS_FR;
-
-  if (mode === "accents" && language === "fr") {
-    const pool =
-      opts.accentChars.length > 0
-        ? ACCENT_WORDS_FR.filter((w) => opts.accentChars.some((c) => w.includes(c)))
-        : ACCENT_WORDS_FR;
-    const accentPool = pool.length > 0 ? pool : ACCENT_WORDS_FR;
-    const words: string[] = [];
-    for (let i = 0; i < opts.length; i++) {
-      // TXT-4: "au moins un mot" accentué — on vise ~45% pour que ce soit visible.
-      words.push(Math.random() < 0.45 ? pick(accentPool) : pick(baseWords));
-    }
-    if (!words.some((w) => accentPool.includes(w))) {
-      words[0] = pick(accentPool);
-    }
-    return words;
-  }
-
-  if (mode === "cible" && opts.targetChars.length > 0) {
-    const targets = opts.targetChars.map((c) => c.toLowerCase());
-    const fullPool = language === "en" ? WORDS_EN : [...WORDS_FR, ...ACCENT_WORDS_FR];
-    const matches = fullPool.filter((w) => targets.some((c) => w.toLowerCase().includes(c)));
-    const words: string[] = [];
-    for (let i = 0; i < opts.length; i++) {
-      if (matches.length > 0 && Math.random() < 0.7) {
-        words.push(pick(matches));
-      } else {
-        // Pas assez de vrais mots: on fabrique un petit pseudo-mot autour du
-        // caractère ciblé pour que le texte "en soit rempli" (TXT-5).
-        const c = pick(targets);
-        const filler = ["a", "e", "i", "o", "u"][Math.floor(Math.random() * 5)];
-        words.push(`${filler}${c}${filler}${c}`);
-      }
-    }
-    return words;
-  }
-
-  // Mode "désordre" par défaut: mots sans lien entre eux (TXT-3).
-  const words: string[] = [];
-  for (let i = 0; i < opts.length; i++) words.push(pick(baseWords));
-  return words;
-}
-
-/** TXT-1 à TXT-8: génère le texte d'une course selon les réglages de l'hôte. */
-export function generateRaceText(options: GenerateOptions): string {
-  const length = Math.max(5, Math.min(400, options.length));
-  const opts = { ...options, length };
-
-  if (opts.mode === "texte") {
-    const sentences = shuffled(opts.language === "en" ? SENTENCES_EN : SENTENCES_FR);
-    const words: string[] = [];
-    let i = 0;
-    while (words.length < length) {
-      const sentence = sentences[i % sentences.length]!;
-      words.push(...sentence.split(" "));
-      i++;
-    }
-    // TXT-7: un extrait peut être coupé net, pas besoin de finir la phrase.
-    return words.slice(0, length).join(" ");
-  }
-
-  const words = wordsForText(opts.mode, opts.language, opts);
-  return decorate(words, opts).join(" ");
+/** Génère le texte d'une course selon les réglages de la salle. */
+export function generateRaceText(
+  options: GenerateOptions,
+  corpus: Corpus,
+  rng: Rng = Math.random,
+): string {
+  const length = Math.max(MIN_WORDS, Math.min(MAX_WORDS, Math.round(options.length)));
+  const sized = { ...options, length };
+  return sized.type === "coherent" ? coherentText(sized, corpus, rng) : randomText(sized, corpus, rng);
 }

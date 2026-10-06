@@ -25,9 +25,18 @@ export type RawLobbySnapshot = {
     language: string;
     maxPlayers: number;
     durationSeconds: number;
-    textMode: string;
+    textType: string;
     textLength: number;
+    complexity: string;
+    uppercase: boolean;
+    punctuation: boolean;
+    digits: boolean;
+    accents: boolean;
+    includeChars: string[];
+    excludeChars: string[];
     errorMode: string;
+    penaltySeconds: number;
+    comebackBonus: boolean;
     status: string;
     hostUserId: string | null;
     hostGuestId: string | null;
@@ -99,9 +108,18 @@ export async function loadLobbySnapshot(code: string): Promise<RawLobbySnapshot 
       language: lobby.language,
       maxPlayers: lobby.max_players,
       durationSeconds: lobby.duration_seconds,
-      textMode: lobby.text_mode,
+      textType: lobby.text_type,
       textLength: lobby.text_length,
+      complexity: lobby.complexity,
+      uppercase: lobby.allow_uppercase,
+      punctuation: lobby.allow_punctuation,
+      digits: lobby.allow_digits,
+      accents: lobby.allow_accents,
+      includeChars: lobby.include_chars,
+      excludeChars: lobby.exclude_chars,
       errorMode: lobby.error_mode,
+      penaltySeconds: lobby.penalty_seconds,
+      comebackBonus: lobby.comeback_bonus,
       status: lobby.status,
       hostUserId: lobby.host_user_id,
       hostGuestId: lobby.host_guest_id,

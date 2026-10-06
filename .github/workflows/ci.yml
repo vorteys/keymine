@@ -66,6 +66,9 @@ jobs:
       - name: Run DB migrations
         run: bun run db:migrate
 
+      - name: Database integration tests
+        run: bun run test:db
+
       - name: Build (production build, fails the job on type/build errors)
         run: bun run build
 

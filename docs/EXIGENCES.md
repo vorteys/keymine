@@ -20,7 +20,7 @@ Statuts : **complet** (fait et vérifié), **partiel** (existe mais incomplet ou
 | DES-02 | non fait | — | — | À faire par l'étudiant, sans IA. Favicon à intégrer ensuite. |
 | DES-03 | non fait | `docs/DEMARCHE-CREATIVE.md` | — | Moodboard, palette, typographies : à faire par l'étudiant. |
 | DES-04 | partiel | `components/ui.tsx`, `app/globals.css` | — | Style pixel maison (pas de shadcn). La piste de progression, élément signature, n'est pas faite. |
-| DES-05 | partiel | `components/PixelShell.tsx`, `app/globals.css` | — | Sélecteur présent mais thème clair modeste, **flash au chargement** et préférence système non respectée. |
+| DES-05 | partiel | `app/layout.tsx`, `components/PixelShell.tsx`, `app/globals.css` | — | Script bloquant dans head : choix enregistré sinon préférence système, sans flash. Palette claire à reprendre avec l identité visuelle (contrastes AA à vérifier). |
 | DES-06 | partiel | — | — | Mise en page adaptable non vérifiée à 360 px ; message « clavier physique » sur mobile absent. |
 | AUTH-01 | partiel | `app/api/auth/**`, `lib/auth/oauth.ts` | — | Discord, GitHub et mot de passe écrits ; OAuth jamais testé avec de vraies clés. |
 | AUTH-02 | partiel | `lib/auth/guest.ts`, `lib/auth/pseudo.ts`, `app/api/auth/guest/route.ts`, `components/useRoomEntry.tsx` | `tests/unit/guest-pseudo.test.ts` | Pseudo 3–20 caractères validé par Zod, cookie JWT signé (7 jours). Parcours navigateur non encore vérifié. |
@@ -80,8 +80,8 @@ Statuts : **complet** (fait et vérifié), **partiel** (existe mais incomplet ou
 | RES-05 | partiel | `lib/stats.ts` | — | Résultats persistés ; série temporelle du MPM absente. |
 | HIST-01 | non fait | `app/profil/page.tsx` | — | Seules les dernières courses sont affichées, sans pagination. |
 | HIST-02 | non fait | — | — | Réaffichage d'une course passée absent. |
-| I18N-01 | partiel | `lib/i18n.tsx` | — | Couverture limitée à la navigation et à l'accueil. |
-| I18N-02 | partiel | `components/PixelShell.tsx` | — | Sélecteur sur toutes les pages ; langue du navigateur par défaut à vérifier. |
+| I18N-01 | partiel | `lib/i18n.tsx` | — | Dictionnaire FR/EN avec interpolation et métadonnées ; la plupart des pages restent à migrer vers le dictionnaire. |
+| I18N-02 | partiel | `lib/i18n.tsx`, `lib/i18n-dictionary.ts`, `lib/i18n-server.ts`, `app/layout.tsx` | — | Langue choisie côté serveur (cookie km_lang, sinon Accept-Language) : aucun flash. Sélecteur dans l en-tête de chaque page. Couverture des textes encore partielle (voir I18N-01). |
 | I18N-03 | non fait | — | — | Formatage localisé des dates et nombres absent. |
 | TEST-01 | partiel | `tests/unit/` | 9 tests | Texte, carte de chaleur, composants UI ; logique de course et bots à couvrir. |
 | TEST-02 | partiel | `tests/e2e/home.spec.ts` | 2 parcours | Non exécuté dans cet environnement. |

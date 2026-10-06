@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
+import { getRequestLang } from "@/lib/i18n-server";
+import { translate } from "@/lib/i18n-dictionary";
 
 const pressStart = localFont({
   src: "./fonts/press-start-2p.woff2",
@@ -17,16 +19,28 @@ const vt323 = localFont({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "KeyMine",
-  description: "Courses de frappe en temps réel pour la classe.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const lang = await getRequestLang();
+  return { title: "KeyMine", description: translate(lang, "meta.description") };
+}
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+// DES-05: le thème est posé avant le premier rendu (pas de flash du mauvais
+// thème). Priorité : choix enregistré, sinon préférence système.
+const THEME_SCRIPT = `(function(){try{var s=localStorage.getItem("km_theme");var t=(s==="light"||s==="dark")?s:(window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme="dark";}})();`;
+
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const lang = await getRequestLang();
   return (
-    <html lang="fr" className={`${pressStart.variable} ${vt323.variable}`}>
+    <html
+      lang={lang}
+      suppressHydrationWarning
+      className={`${pressStart.variable} ${vt323.variable}`}
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="min-h-screen antialiased">
-        <Providers>{children}</Providers>
+        <Providers initialLang={lang}>{children}</Providers>
       </body>
     </html>
   );

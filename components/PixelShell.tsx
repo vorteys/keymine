@@ -1,40 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { PixelAvatar } from "./ui";
 import { useLanguage, type SiteLang } from "@/lib/i18n";
 
 type NavKey = "jouer" | "lobbys" | "stats" | null;
 
+function currentTheme(): "dark" | "light" {
+  return document.documentElement.dataset.theme === "light" ? "light" : "dark";
+}
+
+// DES-05: le thème initial est posé par un script dans <head> (voir app/layout.tsx).
+// Ici on ne fait que basculer et mémoriser le choix.
 function useTheme() {
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("km_theme");
-      if (stored === "light" || stored === "dark") {
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- lu depuis localStorage, pas dispo au premier rendu serveur
-        setTheme(stored);
-        document.documentElement.dataset.theme = stored;
-      }
-    } catch {
-      // stockage indisponible: thème sombre par défaut
-    }
-  }, []);
-
   function toggle() {
-    const next = theme === "dark" ? "light" : "dark";
-    setTheme(next);
+    const next = currentTheme() === "dark" ? "light" : "dark";
     document.documentElement.dataset.theme = next;
     try {
       localStorage.setItem("km_theme", next);
     } catch {
-      // ignoré
+      // stockage indisponible: le choix vaut pour la page courante seulement
     }
   }
-
-  return { theme, toggle };
+  return { toggle };
 }
 
 export function PixelShell({

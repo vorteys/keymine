@@ -25,6 +25,7 @@ export type ResultRow = {
   progress: number;
   textLength: number;
   bonuses: BonusRecord[];
+  /** Un point par seconde : `t` en secondes depuis le départ, `wpm` = MPM moyen depuis le départ. */
   series: { t: number; wpm: number }[];
   keyCorrect: Record<string, number>;
   keyErrors: Record<string, number>;

@@ -44,6 +44,12 @@ Autres erreurs corrigées en cours de route (plus petites) : curseur de capacit�
 **Détection.** L'étudiant, en jouant : un joueur qui martelait le clavier terminait premier avec un temps très court. Aucun test ne couvrait l'option car aucun code ne l'utilisait.
 **Correction.** Le moteur calcule maintenant le temps classé (temps réel + erreurs × pénalité, mode libre seulement), la pénalité est enregistrée (`penalty_ms`) et affichée ; sept tests unitaires et un test navigateur couvrent le cas. Leçon : tout réglage proposé dans l'interface doit avoir un test qui prouve son effet.
 
+### 6. Un graphique « vérifié » qui n'affichait rien d'utile
+
+**Ce qui s'est passé.** Le graphique du MPM de la page des résultats divisait par 1000 des temps déjà exprimés en secondes : tous les points tombaient à l'instant 0 et les courbes de tous les participants se superposaient sur une seule verticale.
+**Détection.** L'étudiant a remarqué que les bots « se confondaient sur la même ligne » ; la correction a été confirmée sur une capture d'écran. Le test e2e existant ne comptait que le nombre de courbes (une par participant), pas leur forme.
+**Correction.** Unité corrigée, test unitaire du moteur sur l'unité de `t`, tests du composant (courbes, masquage, étiquettes), et refonte du graphique pour qu'il reste lisible quand des courbes se superposent. Leçon : un test « il y a N éléments » ne prouve pas que le dessin est juste ; regarder le rendu.
+
 ## Réflexion sur notre façon de travailler avec les agents
 
 _À rédiger par l'équipe, avec ses propres mots : ce qui a bien marché, ce qui a demandé de la vigilance, ce que nous referions autrement._

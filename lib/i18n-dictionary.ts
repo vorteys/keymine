@@ -111,7 +111,11 @@ export const DICTIONARY = {
     "res.bonus_fog": "Brouillard",
     "res.bonus_none": "—",
     "res.chart": "EVOLUTION DU MPM",
-    "res.chart_desc": "Courbe du MPM de chaque participant au fil de la course.",
+    "res.chart_desc":
+      "Courbe du MPM moyen de chaque participant, relevé chaque seconde depuis le départ.",
+    "res.chart_note":
+      "Chaque point est le MPM moyen depuis le départ, relevé chaque seconde : le dernier point est donc ton MPM final. Les {seconds} premières secondes sont masquées, car sur si peu de temps une seule rafale de frappes fait exploser la courbe. Des courbes identiques se superposent : clique sur un nom pour masquer ou afficher sa courbe.",
+    "res.chart_show_all": "Tout afficher",
     "res.chart_x": "secondes",
     "res.chart_y": "MPM",
     "res.heatmap": "HEATMAP DU CLAVIER",
@@ -508,7 +512,10 @@ export const DICTIONARY = {
     "res.bonus_fog": "Fog",
     "res.bonus_none": "—",
     "res.chart": "WPM OVER TIME",
-    "res.chart_desc": "Each participant's WPM curve during the race.",
+    "res.chart_desc": "Each participant's average WPM, sampled every second since the start.",
+    "res.chart_note":
+      "Each point is the average WPM since the start, sampled every second, so the last point is your final WPM. The first {seconds} seconds are hidden because over such a short time a single burst of keystrokes blows the curve up. Identical curves overlap: click a name to hide or show its curve.",
+    "res.chart_show_all": "Show all",
     "res.chart_x": "seconds",
     "res.chart_y": "WPM",
     "res.heatmap": "KEYBOARD HEATMAP",

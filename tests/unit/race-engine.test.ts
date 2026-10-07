@@ -451,3 +451,12 @@ describe("pénalité par erreur non corrigée", () => {
     expect(ranks).toEqual({ typist: 1, masher: 2 });
   });
 });
+
+describe("série du MPM (RES-03)", () => {
+  it("un point par seconde, avec `t` en secondes depuis le départ", () => {
+    const e = engine([human("a")]);
+    e.applyProgress("a", { progressChars: 20, errorCount: 0 }, START + 1_500);
+    e.tick(START + 3_500);
+    expect(e.racers.get("a")!.series.map((p) => p.t)).toEqual([1, 2, 3]);
+  });
+});

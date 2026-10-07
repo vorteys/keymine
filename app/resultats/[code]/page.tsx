@@ -3,6 +3,7 @@ import { participantName } from "@/lib/bot-name";
 import { PixelAvatar, PixelDisclosure, PixelKeyboard, PixelPanel } from "@/components/ui";
 import { ResultsActions } from "@/components/results/ResultsActions";
 import { WpmChart } from "@/components/results/WpmChart";
+import { HIDDEN_FIRST_SECONDS } from "@/components/results/chart-config";
 import { peekIdentity } from "@/lib/auth/identity";
 import { formatNumber, formatPercent, formatRaceTime } from "@/lib/format";
 import { heatmapRowsFromCounts } from "@/lib/heatmap";
@@ -290,14 +291,17 @@ export default async function ResultatsPage({
               <WpmChart
                 title={t("res.chart")}
                 description={t("res.chart_desc")}
+                note={t("res.chart_note", { seconds: HIDDEN_FIRST_SECONDS })}
+                showAllLabel={t("res.chart_show_all")}
                 xLabel={t("res.chart_x")}
                 yLabel={t("res.chart_y")}
                 series={rows.map((r) => ({
                   id: r.id,
                   name: `${participantName(t, r)} · ${formatNumber(lang, r.wpm)} ${t("race.wpm")}`,
+                  shortName: participantName(t, r),
                   isBot: r.isBot,
                   isMe: r.ownerKey != null && r.ownerKey === myKey,
-                  points: r.series.map((s) => ({ t: Math.round(s.t / 1000), wpm: s.wpm })),
+                  points: r.series,
                 }))}
               />
             </PixelDisclosure>

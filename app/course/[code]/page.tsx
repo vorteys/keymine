@@ -156,6 +156,12 @@ export default function CoursePage() {
   const raceText = text ?? info?.baseText ?? "";
   const serverNow = now + clockOffset;
   const me = state?.participants.find((p) => p.id === info?.meId) ?? null;
+
+  // Un joueur qui a abandonné (même après un rechargement) ne revient pas dans cette course.
+  const abandoned = me?.status === "abandoned";
+  useEffect(() => {
+    if (abandoned) router.replace("/");
+  }, [abandoned, router]);
   const isParticipant = info?.role === "participant";
   const secondsToStart = state ? Math.ceil((state.startsAt - serverNow) / 1000) : 3;
   const racing = !!state && state.phase === "racing" && serverNow >= state.startsAt;
@@ -240,7 +246,8 @@ export default function CoursePage() {
 
   function abandon() {
     send({ type: "abandon" });
-    router.push(`/resultats/${code}`);
+    // Un joueur qui abandonne quitte la course : retour à la liste des lobbys (COURSE-07).
+    router.push("/");
   }
 
   if (loadError) {

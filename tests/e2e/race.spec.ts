@@ -145,3 +145,28 @@ test("marteler le clavier est pénalisé : la pénalité s'ajoute au temps d'arr
   await expect(page).toHaveURL(new RegExp(`/resultats/${code}`), { timeout: 30_000 });
   await expect(page.getByRole("table")).toContainText("de pénalité");
 });
+
+// COURSE-07 : après un abandon, retour à la liste des lobbys ; on ne revient pas dans la course abandonnée.
+test("abandonner ramène à la liste des lobbys et ferme la porte de cette course", async ({
+  page,
+}) => {
+  await registerViaApi(page.request, "abandon");
+  const code = await createRoomViaApi(page.request, {
+    textLength: 10,
+    durationSeconds: 30,
+    comebackBonus: false,
+  });
+  await addBotViaApi(page.request, code, "noob");
+  await page.goto(`/jouer/${code}`);
+  await page.getByRole("button", { name: "DEMARRER" }).click();
+  await expect(page).toHaveURL(new RegExp(`/course/${code}`), { timeout: 15_000 });
+  await expect(page.getByText("La course commence…")).toBeHidden({ timeout: 20_000 });
+
+  await page.getByRole("button", { name: "ABANDONNER", exact: true }).click();
+  await page.getByRole("button", { name: "OUI, ABANDONNER" }).click();
+  await expect(page).toHaveURL("/", { timeout: 15_000 });
+
+  // Revenir sur l'adresse de la course renvoie aussitôt aux lobbys.
+  await page.goto(`/course/${code}`);
+  await expect(page).toHaveURL("/", { timeout: 15_000 });
+});

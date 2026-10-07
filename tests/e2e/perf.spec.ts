@@ -7,7 +7,8 @@ test("course à 30 participants : la piste reste fluide (PERF-03)", async ({ pag
   await page.setViewportSize({ width: 1280, height: 900 });
   await registerViaApi(page.request, "perf");
   const code = await createRoomViaApi(page.request, { maxPlayers: 30, durationSeconds: 30 });
-  for (let i = 0; i < 29; i++) await addBotViaApi(page.request, code, ["noob", "intermediaire", "expert"][i % 3]);
+  for (let i = 0; i < 29; i++)
+    await addBotViaApi(page.request, code, ["noob", "intermediaire", "expert"][i % 3]);
 
   await page.addInitScript(() => {
     const w = window as unknown as { __longTasks: number[] };
@@ -20,7 +21,12 @@ test("course à 30 participants : la piste reste fluide (PERF-03)", async ({ pag
   await page.getByRole("button", { name: "DEMARRER" }).click();
   await expect(page).toHaveURL(new RegExp(`/course/${code}`), { timeout: 15_000 });
   await expect(page.getByText("La course commence…")).toBeHidden({ timeout: 15_000 });
-  await expect(page.getByRole("list", { name: "Piste de progression" }).getByRole("listitem")).toHaveCount(30);
+  const rows = page.getByRole("list", { name: "Piste de progression" }).getByRole("listitem");
+  // La piste est repliée par défaut : seules les premières lignes (et la mienne) sont affichées.
+  await expect(rows).not.toHaveCount(30);
+  await expect(page.locator('[data-me="true"]')).toBeVisible();
+  await page.getByRole("button", { name: /Voir les \d+ autres/ }).click();
+  await expect(rows).toHaveCount(30);
 
   const stats = await page.evaluate(
     () =>

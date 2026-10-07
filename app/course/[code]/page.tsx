@@ -442,10 +442,10 @@ export default function CoursePage() {
                     })}
                   </div>
                   <div className="mt-3 flex items-center justify-between gap-4">
-                    <span className="font-pixel text-[11px] text-white">
+                    <span className="font-pixel text-[11px] text-[#2b2b2b]">
                       {t("race.progress", { pct })}
                     </span>
-                    <span className="text-xl text-[#d8d8d8]">
+                    <span className="text-xl text-[#3a3a3a]">
                       {info.errorMode === "bloquer" ? t("race.hint_block") : t("race.hint_free")}
                     </span>
                   </div>

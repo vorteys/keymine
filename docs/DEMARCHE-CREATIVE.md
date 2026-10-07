@@ -14,7 +14,7 @@ Le but est de créer un site qui attire les jeunes des écoles. Pour ça, je vou
 
 **L'idée.** J'aime beaucoup les pixels, et Minecraft est un jeu entièrement fait de pixels (de gros blocs carrés). C'est ce qui m'a amené à faire un logo en pixels : il est dans le même univers que le nom, et il se reconnaît tout de suite dans le style du site.
 
-**Comment je suis arrivé au logo final.**
+**Comment je suis arrivé au logo final.** Je n'ai pas fait de croquis sur papier : mes croquis sont les essais que j'ai faits directement dans Canva (les images ci-dessous, de l'essai raté jusqu'au logo final).
 
 1. **Mes essais ratés.** Avant le logo final, j'ai fait plusieurs essais que je n'aimais pas. J'ai d'abord voulu tester un logo avec seulement des lettres. Ensuite j'ai essayé « KEY » en lettres lisses grises, avec une pioche grise en relief, un cercle noir et un fond de gros carrés verts. Je n'étais pas fan du résultat, et surtout ça ne faisait pas pixel, alors que c'est justement ce que j'aime. Ça m'a poussé à chercher des éléments vraiment en pixels.
 

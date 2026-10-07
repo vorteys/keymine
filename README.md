@@ -73,6 +73,7 @@ Voir `.env.example`.
 | --- | --- |
 | `bun run dev:all` | Site + serveur temps réel en développement |
 | `bun run db:migrate` / `bun run db:seed` | Migrations / données de démonstration |
+| `bun run db:import-corpus` | Ajoute des centaines de passages tirés de livres du domaine public (Project Gutenberg ; Internet requis, idempotent) |
 | `bun run lint` / `bun run typecheck` | Qualité du code |
 | `bun run test` | Tests unitaires (Vitest) |
 | `bun run test:db` | Tests d'intégration contre PostgreSQL (`DATABASE_URL` migrée requis) |

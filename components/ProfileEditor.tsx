@@ -8,7 +8,13 @@ import { useLanguage } from "@/lib/i18n";
 // AUTH-04 / AUTH-05 : modification du pseudonyme et de la photo de profil.
 const ACCEPT = "image/jpeg,image/png,image/webp";
 
-export function ProfileEditor({ displayName, hasPhoto }: { displayName: string; hasPhoto: boolean }) {
+export function ProfileEditor({
+  displayName,
+  hasPhoto,
+}: {
+  displayName: string;
+  hasPhoto: boolean;
+}) {
   const router = useRouter();
   const { t } = useLanguage();
   const [name, setName] = useState(displayName);
@@ -79,31 +85,47 @@ export function ProfileEditor({ displayName, hasPhoto }: { displayName: string; 
       </form>
 
       <div className="flex flex-col gap-2">
-        <label htmlFor="profile-photo">
-          <PixelLabel>{t("profile.edit_photo")}</PixelLabel>
-        </label>
+        <PixelLabel>{t("profile.edit_photo")}</PixelLabel>
+        {/* Le champ fichier natif est presque invisible : on le cache et un vrai bouton l'ouvre. */}
         <input
           id="profile-photo"
           ref={fileInput}
           type="file"
           accept={ACCEPT}
           disabled={busy}
+          tabIndex={-1}
+          aria-hidden="true"
           onChange={(e) => {
             const file = e.target.files?.[0];
             if (file) void upload(file);
           }}
-          className="text-lg"
+          className="hidden"
         />
+        <PixelButton
+          variant="gold"
+          disabled={busy}
+          onClick={() => fileInput.current?.click()}
+          className="h-11 self-start px-4 text-[10px]"
+        >
+          {t("profile.change_photo")}
+        </PixelButton>
         <p className="text-lg text-[#3a3a3a]">{t("profile.photo_hint")}</p>
         {hasPhoto && (
-          <button type="button" onClick={() => void removePhoto()} className="pixel-chip self-start text-lg">
+          <button
+            type="button"
+            onClick={() => void removePhoto()}
+            className="pixel-chip self-start text-lg"
+          >
             {t("profile.photo_remove")}
           </button>
         )}
       </div>
 
       {message && (
-        <p role={message.kind === "error" ? "alert" : "status"} className={`text-xl ${message.kind === "error" ? "text-[#9b3a2e]" : "text-[#2f6b18]"}`}>
+        <p
+          role={message.kind === "error" ? "alert" : "status"}
+          className={`text-xl ${message.kind === "error" ? "text-[#9b3a2e]" : "text-[#2f6b18]"}`}
+        >
           {message.text}
         </p>
       )}

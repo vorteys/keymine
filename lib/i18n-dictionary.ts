@@ -24,7 +24,8 @@ export const DICTIONARY = {
       "Partie rapide: on te place dans un lobby, ou on en crée un et tu deviens le Chef.",
     "home.create": "CRÉER UNE COURSE",
     "home.account": "COMPTE",
-    "home.guest_note": "Sans compte, tu joues en invité: ton historique s’efface à la fermeture de la page.",
+    "home.guest_note":
+      "Sans compte, tu joues en invité: ton historique s’efface à la fermeture de la page.",
     "home.public_lobbies": "LOBBYS PUBLICS",
     "entry.pseudo_title": "CHOISIS UN PSEUDO",
     "entry.pseudo_hint": "3 à 20 caractères. Sans compte, tu joues en invité.",
@@ -34,8 +35,10 @@ export const DICTIONARY = {
     "entry.conflict_go": "RETOURNER DANS MA SALLE",
     "entry.conflict_leave": "QUITTER ET CONTINUER",
     "entry.none_title": "AUCUNE SALLE DISPONIBLE",
-    "entry.none_guest": "Il n'y a pas de salle publique ouverte pour l'instant. Reviens dans un moment.",
-    "entry.none_user": "Il n'y a pas de salle publique ouverte. Tu peux en créer une et devenir l'hôte.",
+    "entry.none_guest":
+      "Il n'y a pas de salle publique ouverte pour l'instant. Reviens dans un moment.",
+    "entry.none_user":
+      "Il n'y a pas de salle publique ouverte. Tu peux en créer une et devenir l'hôte.",
     "entry.none_create": "CRÉER UNE SALLE PUBLIQUE",
     "entry.error": "Impossible de continuer. Réessaie.",
     "entry.cancel": "ANNULER",
@@ -57,7 +60,8 @@ export const DICTIONARY = {
     "race.text_aria": "Texte à taper",
     "race.abandon": "ABANDONNER",
     "race.abandon_title": "Abandonner la course ?",
-    "race.abandon_text": "Tu seras classé après tous ceux qui ont continué. Cette action est définitive.",
+    "race.abandon_text":
+      "Tu seras classé après tous ceux qui ont continué. Cette action est définitive.",
     "race.abandon_confirm": "OUI, ABANDONNER",
     "race.abandon_cancel": "CONTINUER LA COURSE",
     "race.progress": "PROGRESSION {pct} %",
@@ -71,7 +75,8 @@ export const DICTIONARY = {
     "race.refused": "Tu ne fais pas partie de cette course.",
     "race.overtake": "TU REMONTES AU CLASSEMENT !",
     "race.mobile_title": "UN CLAVIER PHYSIQUE EST RECOMMANDÉ",
-    "race.mobile_text": "La course se joue au clavier. Ouvre KeyMine sur un ordinateur pour participer.",
+    "race.mobile_text":
+      "La course se joue au clavier. Ouvre KeyMine sur un ordinateur pour participer.",
     "race.mobile_results": "VOIR LES RÉSULTATS",
     "race.bonus_minus": "{name} reçoit « -3 mots » !",
     "race.bonus_plus": "{name} reçoit « +3 mots » : le meneur doit taper 3 mots de plus !",
@@ -211,9 +216,12 @@ export const DICTIONARY = {
     "auth.submit_login": "CONNEXION",
     "auth.submit_register": "CRÉER LE COMPTE",
     "auth.or": "OU",
-    "auth.photo_note": "Ta photo Discord ou GitHub sert de photo de profil. Tu pourras la changer ou en téléverser une autre.",
-    "auth.no_email": "Aucun courriel demandé. Mot de passe oublié? Pas de récupération: tu crées un nouveau compte.",
-    "auth.guest_merge": "Tu as joué en invité? Tes courses de la session s'ajoutent à ton compte quand tu te connectes.",
+    "auth.photo_note":
+      "Ta photo Discord ou GitHub sert de photo de profil. Tu pourras la changer ou en téléverser une autre.",
+    "auth.no_email":
+      "Aucun courriel demandé. Mot de passe oublié? Pas de récupération: tu crées un nouveau compte.",
+    "auth.guest_merge":
+      "Tu as joué en invité? Tes courses de la session s'ajoutent à ton compte quand tu te connectes.",
     "create.title": "CRÉER UNE COURSE",
     "create.hint": "Minimum 2 participants, bots inclus. Tu seras le Chef de la course.",
     "create.cancel": "ANNULER",
@@ -262,7 +270,8 @@ export const DICTIONARY = {
     "set.opt_Ponctuation": "Ponctuation",
     "set.opt_Nombres": "Nombres",
     "set.opt_Accents": "Accents",
-    "set.options_note": "En mode cohérent, les passages sont adaptés (accents et ponctuation retirés si désactivés).",
+    "set.options_note":
+      "En mode cohérent, les passages sont adaptés (accents et ponctuation retirés si désactivés).",
     "set.include": "CARACTÈRES À INCLURE",
     "set.exclude": "CARACTÈRES À EXCLURE",
     "set.chars_disabled": "Réglage désactivé en mode cohérent : réservé au texte aléatoire.",
@@ -306,7 +315,8 @@ export const DICTIONARY = {
     "lobby.not_found": "Salle introuvable",
     "lobby.start_failed": "Impossible de démarrer",
     "invite.title": "LIENS D'INVITATION",
-    "invite.note": "Un lien par invité, à usage unique. Une salle privée ne s'ouvre qu'avec un lien.",
+    "invite.note":
+      "Un lien par invité, à usage unique. Une salle privée ne s'ouvre qu'avec un lien.",
     "invite.label_aria": "Nom de l'invité (facultatif)",
     "invite.label_placeholder": "Pour qui ? (facultatif)",
     "invite.generate": "GÉNÉRER",
@@ -332,7 +342,8 @@ export const DICTIONARY = {
     "profile.races": "COURSES",
     "profile.wins": "VICTOIRES",
     "profile.progress": "PROGRESSION · {count} DERNIÈRES COURSES",
-    "profile.progress_aria": "Courbe de progression de la vitesse en mots par minute sur les dernières courses",
+    "profile.progress_aria":
+      "Courbe de progression de la vitesse en mots par minute sur les dernières courses",
     "profile.record": "RECORD {value}",
     "profile.progress_empty": "Termine quelques courses pour voir ta progression ici.",
     "profile.worst_keys": "TOUCHES À TRAVAILLER",
@@ -340,6 +351,7 @@ export const DICTIONARY = {
     "profile.history_empty": "Aucune course terminée pour l'instant.",
     "profile.edit_name": "PSEUDONYME",
     "profile.edit_photo": "PHOTO DE PROFIL",
+    "profile.change_photo": "CHANGER LA PHOTO",
     "profile.photo_hint": "JPEG, PNG ou WebP, 2 Mo maximum.",
     "profile.photo_remove": "Retirer la photo",
     "profile.saved_name": "Pseudonyme enregistré.",
@@ -347,7 +359,8 @@ export const DICTIONARY = {
     "profile.ok": "OK",
     "profile.logout": "DÉCONNEXION",
     "guest.title": "TES STATISTIQUES",
-    "guest.note": "Tu joues en invité : ces stats restent dans cet onglet et disparaîtront si tu le fermes. Connecte-toi pour les garder pour de bon.",
+    "guest.note":
+      "Tu joues en invité : ces stats restent dans cet onglet et disparaîtront si tu le fermes. Connecte-toi pour les garder pour de bon.",
     "guest.create_account": "CRÉER UN COMPTE",
     "guest.session_races": "COURSES (SESSION)",
     "guest.session_list": "COURSES DE CETTE SESSION",
@@ -385,7 +398,8 @@ export const DICTIONARY = {
     "lobbies.full": "PLEIN",
     "lobbies.in_progress": "EN COURSE",
     "lobbies.offline": "Mise à jour impossible pour l'instant, nouvel essai en cours…",
-    "lobbies.empty": "Aucune salle publique ne correspond. Lance la première avec « Créer une course » !",
+    "lobbies.empty":
+      "Aucune salle publique ne correspond. Lance la première avec « Créer une course » !",
   },
   en: {
     "meta.description": "Real-time typing races for the classroom.",
@@ -408,7 +422,8 @@ export const DICTIONARY = {
       "Quick play: we drop you into a lobby, or create one and you become the Host.",
     "home.create": "CREATE A RACE",
     "home.account": "ACCOUNT",
-    "home.guest_note": "No account: you play as a guest, your history clears when you close the page.",
+    "home.guest_note":
+      "No account: you play as a guest, your history clears when you close the page.",
     "home.public_lobbies": "PUBLIC LOBBIES",
     "entry.pseudo_title": "PICK A NICKNAME",
     "entry.pseudo_hint": "3 to 20 characters. Without an account you play as a guest.",
@@ -455,11 +470,12 @@ export const DICTIONARY = {
     "race.refused": "You are not part of this race.",
     "race.overtake": "YOU MOVED UP THE RANKING!",
     "race.mobile_title": "A PHYSICAL KEYBOARD IS RECOMMENDED",
-    "race.mobile_text": "The race is played on a keyboard. Open KeyMine on a computer to take part.",
+    "race.mobile_text":
+      "The race is played on a keyboard. Open KeyMine on a computer to take part.",
     "race.mobile_results": "VIEW RESULTS",
-    "race.bonus_minus": "{name} gets \"-3 words\"!",
-    "race.bonus_plus": "{name} gets \"+3 words\": the leader must type 3 more words!",
-    "race.bonus_fog": "{name} gets \"Fog\": the leader's view is blurred!",
+    "race.bonus_minus": '{name} gets "-3 words"!',
+    "race.bonus_plus": '{name} gets "+3 words": the leader must type 3 more words!',
+    "race.bonus_fog": '{name} gets "Fog": the leader\'s view is blurred!',
     "race.bonus_you_minus": "BONUS: 3 fewer words for you!",
     "race.bonus_you_plus": "OPPONENT BONUS: you must type 3 more words!",
     "race.bonus_you_fog": "FOG: your next words are blurred!",
@@ -595,9 +611,11 @@ export const DICTIONARY = {
     "auth.submit_login": "LOG IN",
     "auth.submit_register": "CREATE ACCOUNT",
     "auth.or": "OR",
-    "auth.photo_note": "Your Discord or GitHub picture is used as your profile picture. You can change it or upload another one.",
+    "auth.photo_note":
+      "Your Discord or GitHub picture is used as your profile picture. You can change it or upload another one.",
     "auth.no_email": "No email asked. Forgot your password? No recovery: create a new account.",
-    "auth.guest_merge": "Played as a guest? Your session's races are added to your account when you log in.",
+    "auth.guest_merge":
+      "Played as a guest? Your session's races are added to your account when you log in.",
     "create.title": "CREATE A RACE",
     "create.hint": "At least 2 participants, bots included. You will be the host.",
     "create.cancel": "CANCEL",
@@ -646,7 +664,8 @@ export const DICTIONARY = {
     "set.opt_Ponctuation": "Punctuation",
     "set.opt_Nombres": "Numbers",
     "set.opt_Accents": "Accents",
-    "set.options_note": "In coherent mode, passages are adapted (accents and punctuation removed when disabled).",
+    "set.options_note":
+      "In coherent mode, passages are adapted (accents and punctuation removed when disabled).",
     "set.include": "CHARACTERS TO INCLUDE",
     "set.exclude": "CHARACTERS TO EXCLUDE",
     "set.chars_disabled": "Disabled in coherent mode: only for random text.",
@@ -724,6 +743,7 @@ export const DICTIONARY = {
     "profile.history_empty": "No finished race yet.",
     "profile.edit_name": "NICKNAME",
     "profile.edit_photo": "PROFILE PICTURE",
+    "profile.change_photo": "CHANGE PICTURE",
     "profile.photo_hint": "JPEG, PNG or WebP, 2 MB maximum.",
     "profile.photo_remove": "Remove the picture",
     "profile.saved_name": "Nickname saved.",
@@ -731,7 +751,8 @@ export const DICTIONARY = {
     "profile.ok": "OK",
     "profile.logout": "LOG OUT",
     "guest.title": "YOUR STATS",
-    "guest.note": "You are playing as a guest: these stats stay in this tab and disappear when you close it. Log in to keep them.",
+    "guest.note":
+      "You are playing as a guest: these stats stay in this tab and disappear when you close it. Log in to keep them.",
     "guest.create_account": "CREATE AN ACCOUNT",
     "guest.session_races": "RACES (SESSION)",
     "guest.session_list": "RACES OF THIS SESSION",
@@ -769,7 +790,7 @@ export const DICTIONARY = {
     "lobbies.full": "FULL",
     "lobbies.in_progress": "RACING",
     "lobbies.offline": "Cannot refresh right now, retrying…",
-    "lobbies.empty": "No public room matches. Start the first one with \"Create a race\"!",
+    "lobbies.empty": 'No public room matches. Start the first one with "Create a race"!',
   },
 } as const;
 

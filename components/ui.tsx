@@ -13,12 +13,14 @@ type ButtonAsLink = ButtonBaseProps & {
   href: string;
   onClick?: never;
   type?: never;
+  disabled?: never;
 };
 
 type ButtonAsButton = ButtonBaseProps & {
   href?: undefined;
   onClick?: () => void;
   type?: "button" | "submit";
+  disabled?: boolean;
 };
 
 export function PixelButton(props: ButtonAsLink | ButtonAsButton) {
@@ -33,9 +35,15 @@ export function PixelButton(props: ButtonAsLink | ButtonAsButton) {
     );
   }
 
-  const { onClick, type = "button" } = props as ButtonAsButton;
+  const { onClick, type = "button", disabled } = props as ButtonAsButton;
   return (
-    <button type={type} onClick={onClick} data-variant={variant} className={classes}>
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      data-variant={variant}
+      className={classes}
+    >
       {children}
     </button>
   );

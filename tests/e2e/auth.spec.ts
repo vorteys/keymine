@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { PASSWORD, uniqueName } from "./helpers";
+import sharp from "sharp";
+import { PASSWORD, registerViaApi, uniqueName } from "./helpers";
 
 // TEST-03 : connexion par nom d'utilisateur et mot de passe (pas d'OAuth).
 test("créer un compte, se déconnecter, se reconnecter", async ({ page }) => {
@@ -11,10 +12,15 @@ test("créer un compte, se déconnecter, se reconnecter", async ({ page }) => {
   await page.getByRole("button", { name: "CRÉER LE COMPTE" }).click();
   await expect(page).toHaveURL("/");
   // L'en-tête affiche le pseudo de la personne connectée et mène à son profil.
-  await expect(page.getByRole("banner").getByRole("link", { name: username })).toHaveAttribute("href", "/profil");
+  await expect(page.getByRole("banner").getByRole("link", { name: username })).toHaveAttribute(
+    "href",
+    "/profil",
+  );
 
   await page.goto("/profil");
-  await expect(page.getByRole("main").getByText(username.toUpperCase(), { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("main").getByText(username.toUpperCase(), { exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "DÉCONNEXION" }).click();
 
   await page.goto("/connexion");
@@ -23,12 +29,17 @@ test("créer un compte, se déconnecter, se reconnecter", async ({ page }) => {
   await page.getByRole("button", { name: "CONNEXION" }).last().click();
   await expect(page).toHaveURL("/");
   await page.goto("/profil");
-  await expect(page.getByRole("main").getByText(username.toUpperCase(), { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("main").getByText(username.toUpperCase(), { exact: true }),
+  ).toBeVisible();
 });
 
 test("sans connexion, l'en-tête propose la connexion (« Invité »)", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("banner").getByRole("link", { name: "Invité" })).toHaveAttribute("href", "/connexion");
+  await expect(page.getByRole("banner").getByRole("link", { name: "Invité" })).toHaveAttribute(
+    "href",
+    "/connexion",
+  );
 });
 
 test("un mauvais mot de passe affiche un message d'erreur traduit", async ({ page }) => {
@@ -44,4 +55,22 @@ test("un invité ne peut pas créer de salle (AUTH-03)", async ({ request }) => 
   const res = await request.post("/api/lobbies", { data: {} });
   expect(res.status()).toBe(403);
   expect((await res.json()).code).toBe("account_required");
+});
+
+// AUTH-05 : un vrai bouton (et non le champ fichier natif) permet de changer la photo.
+test("le bouton « CHANGER LA PHOTO » ouvre le sélecteur et met la photo à jour", async ({
+  page,
+}) => {
+  await registerViaApi(page.request, "photo");
+  await page.goto("/profil");
+  const png = await sharp({ create: { width: 64, height: 64, channels: 3, background: "#3d6fc4" } })
+    .png()
+    .toBuffer();
+
+  const chooser = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "CHANGER LA PHOTO" }).click();
+  await (await chooser).setFiles({ name: "photo.png", mimeType: "image/png", buffer: png });
+
+  await expect(page.getByText("Photo mise à jour.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Retirer la photo" })).toBeVisible();
 });

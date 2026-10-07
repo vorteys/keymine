@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import { participantName } from "@/lib/bot-name";
 import { useEffect, useRef, useState } from "react";
 import { InvitePanel } from "@/components/lobby/InvitePanel";
 import { HostSettingsEditor } from "@/components/lobby/HostSettingsEditor";
@@ -152,12 +153,12 @@ export default function LobbyPage() {
               {participants.map((p, i) => (
                 <PixelSlot key={p.id} className="flex h-16 items-center gap-3 px-2.5">
                   <PixelAvatar
-                    label={p.name[0]?.toUpperCase() ?? "?"}
+                    label={participantName(t, p)[0]?.toUpperCase() ?? "?"}
                     color={p.isBot ? "#555555" : AVATAR_COLORS[i % AVATAR_COLORS.length]!}
                     className="h-9 w-9 text-sm"
                   />
                   <div className="min-w-0 flex-grow leading-none">
-                    <div className="truncate text-2xl text-white">{p.name}</div>
+                    <div className="truncate text-2xl text-white">{participantName(t, p)}</div>
                     <div className="font-pixel mt-1 text-[8px] text-[#ffe08a]">
                       {p.isBot
                         ? t("lobby.tag_bot")
@@ -176,7 +177,7 @@ export default function LobbyPage() {
                     <button
                       type="button"
                       onClick={() => void (p.isBot ? removeBot(p.id) : kick(p.id))}
-                      aria-label={p.isBot ? t("lobby.remove_bot", { name: p.name }) : t("lobby.kick", { name: p.name })}
+                      aria-label={p.isBot ? t("lobby.remove_bot", { name: participantName(t, p) }) : t("lobby.kick", { name: participantName(t, p) })}
                       title={p.isBot ? t("lobby.remove_bot_title") : t("lobby.kick_title")}
                       className="pixel-chip h-8 w-8 flex-none text-xl leading-none"
                     >
@@ -190,12 +191,12 @@ export default function LobbyPage() {
               <ul aria-label={t("lobby.spectators_list")} className="mt-4 flex flex-wrap gap-2">
                 {spectators.map((p) => (
                   <li key={p.id} className="pixel-chip flex items-center gap-2 text-xl">
-                    <span>{p.name}</span>
+                    <span>{participantName(t, p)}</span>
                     {lobby?.isHost && !p.isHost && (
                       <button
                         type="button"
                         onClick={() => void kick(p.id)}
-                        aria-label={t("lobby.kick", { name: p.name })}
+                        aria-label={t("lobby.kick", { name: participantName(t, p) })}
                         title={t("lobby.kick_title")}
                         className="leading-none"
                       >

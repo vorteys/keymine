@@ -1,4 +1,5 @@
 import { PixelShell } from "@/components/PixelShell";
+import { participantName } from "@/lib/bot-name";
 import { PixelAvatar, PixelKeyboard, PixelPanel } from "@/components/ui";
 import { ResultsActions } from "@/components/results/ResultsActions";
 import { WpmChart } from "@/components/results/WpmChart";
@@ -124,7 +125,7 @@ export default async function ResultatsPage({
                 return (
                   <li key={p.id} className="flex w-36 flex-col items-center gap-1">
                     <PixelAvatar
-                      label={p.name[0]?.toUpperCase() ?? "?"}
+                      label={participantName(t, p)[0]?.toUpperCase() ?? "?"}
                       color={p.isBot ? "#555555" : "#3d6fc4"}
                       src={p.avatarUrl}
                       className={style.avatar}
@@ -218,7 +219,7 @@ export default async function ResultatsPage({
                         {p.rank}
                       </th>
                       <td className={`max-w-40 truncate pr-2.5 ${p.ownerKey && p.ownerKey === myKey ? "font-bold" : ""}`}>
-                        {p.name}
+                        {participantName(t, p)}
                       </td>
                       <td className="pr-2.5">{formatNumber(lang, p.wpm)}</td>
                       <td className="pr-2.5">{formatNumber(lang, p.rawWpm)}</td>
@@ -243,7 +244,7 @@ export default async function ResultatsPage({
               yLabel={t("res.chart_y")}
               series={rows.map((r) => ({
                 id: r.id,
-                name: `${r.name} · ${formatNumber(lang, r.wpm)} ${t("race.wpm")}`,
+                name: `${participantName(t, r)} · ${formatNumber(lang, r.wpm)} ${t("race.wpm")}`,
                 isBot: r.isBot,
                 isMe: r.ownerKey != null && r.ownerKey === myKey,
                 points: r.series.map((s) => ({ t: Math.round(s.t / 1000), wpm: s.wpm })),

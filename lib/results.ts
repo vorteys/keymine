@@ -8,6 +8,7 @@ export type ResultRow = {
   id: string;
   name: string;
   isBot: boolean;
+  botLevel: string | null;
   userId: string | null;
   /** Clé d'identité (u:<id> compte, g:<id> invité) ; null pour un bot. */
   ownerKey: string | null;
@@ -55,6 +56,7 @@ export async function loadRaceResults(raceId: string): Promise<RaceResults | nul
       "race_participants.id",
       "race_participants.display_name",
       "race_participants.is_bot",
+      "race_participants.bot_level",
       "race_participants.user_id",
       "race_participants.guest_id",
       "race_participants.role",
@@ -92,6 +94,7 @@ export async function loadRaceResults(raceId: string): Promise<RaceResults | nul
       id: r.id,
       name: r.display_name,
       isBot: r.is_bot,
+      botLevel: r.bot_level,
       userId: r.user_id,
       ownerKey: r.user_id ? `u:${r.user_id}` : r.guest_id ? `g:${r.guest_id}` : null,
       rank: r.rank ?? participants.length,

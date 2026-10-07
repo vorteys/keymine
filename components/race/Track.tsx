@@ -1,6 +1,7 @@
 "use client";
 
 import { PixelAvatar } from "@/components/ui";
+import { participantName } from "@/lib/bot-name";
 import { useLanguage } from "@/lib/i18n";
 import type { RaceParticipantView } from "./types";
 
@@ -38,7 +39,7 @@ export function Track({
               <span className="flex min-w-0 items-center gap-2 text-xl text-white">
                 <span className="font-pixel w-6 text-[11px] text-[#ffe08a]">{p.rank}</span>
                 <span className="truncate">
-                  {p.name}
+                  {participantName(t, p)}
                   {isMe && <b className="font-pixel ml-2 text-[9px] text-[#ffd84a]">{t("race.you")}</b>}
                   {p.isBot && (
                     <b className="font-pixel ml-2 border-2 border-[#8b8b8b] px-1 text-[8px] text-[#cfcfcf]">
@@ -63,7 +64,7 @@ export function Track({
                 style={{ left: `clamp(14px, ${left}, calc(100% - 14px))` }}
               >
                 <PixelAvatar
-                  label={p.name[0]?.toUpperCase() ?? "?"}
+                  label={participantName(t, p)[0]?.toUpperCase() ?? "?"}
                   color={p.isBot ? "#555555" : AVATAR_COLORS[index % AVATAR_COLORS.length]!}
                   src={p.isBot ? null : p.avatarUrl}
                   className={`h-6 w-6 text-[10px] ${isMe ? "ring-2 ring-[#ffd84a]" : ""}`}

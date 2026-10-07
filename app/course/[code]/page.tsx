@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import { participantName } from "@/lib/bot-name";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Track } from "@/components/race/Track";
 import type { RaceState } from "@/components/race/types";
@@ -274,7 +275,10 @@ export default function CoursePage() {
     );
   }
 
-  const nameOf = (id: string) => state.participants.find((p) => p.id === id)?.name ?? "?";
+  const nameOf = (id: string) => {
+    const found = state.participants.find((p) => p.id === id);
+    return found ? participantName(t, found) : "?";
+  };
   const visibleAnnouncements = announcements.filter((a) => now - a.at < 4_500);
   const personalBanner = visibleAnnouncements.find(
     (a) =>

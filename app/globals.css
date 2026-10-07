@@ -47,13 +47,35 @@ body {
 /* --- Pixel / Minecraft component classes ------------------------------- */
 
 @layer components {
+  /* Chaque page occupe au moins tout l'écran: le contenu s'étire (<main>) et le
+     pied de page reste collé en bas, même quand la page est courte. */
   .pixel-night {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
     background-image:
       repeating-conic-gradient(rgba(0, 0, 0, 0.25) 0% 25%, transparent 0% 50%),
       repeating-conic-gradient(rgba(255, 255, 255, 0.035) 0% 25%, transparent 0% 50%);
-    background-position: 0 0, 12px 12px;
-    background-size: 32px 32px, 24px 24px;
+    background-position:
+      0 0,
+      12px 12px;
+    background-size:
+      32px 32px,
+      24px 24px;
     background-color: var(--color-ink);
+  }
+
+  .pixel-night > * {
+    flex-shrink: 0;
+  }
+
+  .pixel-night > main {
+    flex: 1 0 auto;
+  }
+
+  .pixel-night > footer {
+    margin-top: auto;
   }
 
   .pixel-grass {
@@ -247,11 +269,18 @@ body {
 /* Thème clair, A11Y-01 : les textes posés directement sur le fond de page (hors
    panneaux, champs et barres sombres) passent en brun foncé ; à l'intérieur des
    panneaux et des champs ils gardent leurs couleurs d'origine. */
-[data-theme="light"] .pixel-night main :is(h1, .page-text, .text-\[\#f1e6c9\], .text-\[\#c9bb98\], .text-\[\#ffd84a\]):not(.pixel-panel *, .pixel-slot *, .pixel-btn *, .pixel-dark *) {
+[data-theme="light"]
+  .pixel-night
+  main
+  :is(h1, .page-text, .text-\[\#f1e6c9\], .text-\[\#c9bb98\], .text-\[\#ffd84a\]):not(
+    .pixel-panel *,
+    .pixel-slot *,
+    .pixel-btn *,
+    .pixel-dark *
+  ) {
   color: #2b1e13;
   text-shadow: none;
 }
-
 
 /* A11Y-04 : indicateur de focus visible partout, lisible sur fond clair et sombre
    (double contour : un trait sombre à l'intérieur, un trait doré à l'extérieur). */

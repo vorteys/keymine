@@ -7,7 +7,19 @@ import { useLanguage } from "@/lib/i18n";
 import { BUNDLED_CORPUS } from "@/lib/text/corpus";
 import { generateRaceText } from "@/lib/text/generate";
 import type { Difficulty } from "@/db/types";
-import { toggled, type Access, type ErrorMode, type SettingsState, type TextOption } from "./settings";
+import { BONUS_KINDS } from "@/lib/race/bonus";
+import { LETTER_ROWS, SYMBOL_ROWS } from "./key-maps";
+import {
+  setBonusEnabled,
+  settingsToPayload,
+  toggleBonusKind,
+  toggled,
+  type Access,
+  type ErrorMode,
+  type SettingsState,
+  type TextOption,
+} from "./settings";
+import { AccentKeyMap, CharKeyMap } from "./TriStateKeys";
 
 // CONF-01 : de 15 secondes à 2 heures.
 export const DURATIONS = [15, 30, 60, 120, 300, 600, 1800, 3600, 7200] as const;
@@ -43,16 +55,19 @@ function Choice({
   onClick,
   title,
   sub,
+  disabled,
 }: {
   on: boolean;
   onClick: () => void;
   title: string;
   sub: string;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       data-on={on}
       aria-pressed={on}
       className="pixel-chip flex flex-col items-start gap-1 leading-tight"
@@ -83,6 +98,8 @@ export function SettingsForm({
   const { t, lang } = useLanguage();
   const v = value;
   const random = v.textType === "aleatoire";
+  const accents = v.options.includes("Accents") && v.language === "fr"; // CONF-06 : accents « pour le français »
+  const punctuation = v.options.includes("Ponctuation");
 
   // L'aperçu est tiré au hasard : on ne le calcule qu'après l'hydratation, sinon le texte
   // du serveur et celui du navigateur diffèrent (erreur d'hydratation React).
@@ -91,6 +108,9 @@ export function SettingsForm({
     () => true,
     () => false,
   );
+
+  // Ce que le serveur recevra vraiment : l'aperçu montre donc le même texte que la course.
+  const payload = useMemo(() => settingsToPayload(v), [v]);
 
   const preview = useMemo(() => {
     if (!hydrated) return "";
@@ -105,15 +125,17 @@ export function SettingsForm({
           punctuation: v.options.includes("Ponctuation"),
           digits: v.options.includes("Nombres"),
           accents: v.options.includes("Accents"),
-          includeChars: v.includeChars,
-          excludeChars: v.excludeChars,
+          includeChars: payload.includeChars,
+          excludeChars: payload.excludeChars,
+          accentWanted: payload.accentWanted,
+          accentForbidden: payload.accentForbidden,
         },
         BUNDLED_CORPUS,
       );
     } catch {
       return "";
     }
-  }, [hydrated, v.textType, v.language, v.complexity, v.options, v.includeChars, v.excludeChars]);
+  }, [hydrated, v.textType, v.language, v.complexity, v.options, payload]);
 
   const general = (
     <div className="flex flex-col gap-4">
@@ -198,15 +220,30 @@ export function SettingsForm({
         </label>
       </div>
 
-      <label className="flex items-center gap-2.5 text-xl">
-        <input
-          type="checkbox"
-          checked={v.comebackBonus}
-          onChange={(e) => onChange({ comebackBonus: e.target.checked })}
-          className="h-5 w-5 accent-[#3f7d24]"
-        />
-        {t("set.bonus")}
-      </label>
+      <fieldset className="min-w-0">
+        <legend className="font-pixel mb-2 text-[11px] text-[#3a3a3a]">{t("set.bonus_title")}</legend>
+        <label className="flex items-center gap-2.5 text-xl">
+          <input
+            type="checkbox"
+            checked={v.comebackBonus}
+            onChange={(e) => onChange(setBonusEnabled(v, e.target.checked))}
+            className="h-5 w-5 accent-[#3f7d24]"
+          />
+          {t("set.bonus")}
+        </label>
+        <div className="mt-2 grid gap-2 sm:grid-cols-3">
+          {BONUS_KINDS.map((kind) => (
+            <Choice
+              key={kind}
+              on={v.comebackBonus && v.bonusKinds.includes(kind)}
+              disabled={!v.comebackBonus}
+              onClick={() => onChange(toggleBonusKind(v, kind))}
+              title={t(`set.bonus_${kind}`)}
+              sub={t(`set.bonus_${kind}_sub`)}
+            />
+          ))}
+        </div>
+      </fieldset>
     </div>
   );
 
@@ -258,8 +295,8 @@ export function SettingsForm({
         />
       </div>
 
-      <div>
-        <PixelLabel>{t("set.options")}</PixelLabel>
+      <fieldset className="min-w-0 border-2 border-[#6b6b6b] p-3">
+        <legend className="font-pixel px-1 text-[11px] text-[#3a3a3a]">{t("set.options")}</legend>
         <div className="flex flex-wrap gap-2">
           {TEXT_OPTIONS.map((o) => (
             <Chip key={o} on={v.options.includes(o)} onClick={() => onChange({ options: toggled(v.options, o) })}>
@@ -268,47 +305,56 @@ export function SettingsForm({
           ))}
         </div>
         <p className="mt-1.5 text-lg text-[#3a3a3a]">{t("set.options_note")}</p>
-      </div>
 
-      <div aria-disabled={!random} className={!random ? "opacity-40" : ""}>
-        <PixelLabel>{t("set.include")}</PixelLabel>
-        <div className="flex flex-wrap gap-2">
-          {["z", "q", "x", "w", "j", "k", "é", "ç"].map((c) => (
-            <Chip
-              key={c}
-              on={v.includeChars.includes(c)}
-              onClick={() => {
-                if (!random) return;
-                onChange({ includeChars: toggled(v.includeChars, c), excludeChars: v.excludeChars.filter((x) => x !== c) });
-              }}
-            >
-              {c}
-            </Chip>
-          ))}
-        </div>
-        <PixelLabel>{t("set.exclude")}</PixelLabel>
-        <div className="flex flex-wrap gap-2">
-          {["e", "a", "s", "t", "n", "r", "u", "l"].map((c) => (
-            <Chip
-              key={c}
-              on={v.excludeChars.includes(c)}
-              onClick={() => {
-                if (!random) return;
-                onChange({ excludeChars: toggled(v.excludeChars, c), includeChars: v.includeChars.filter((x) => x !== c) });
-              }}
-            >
-              {c}
-            </Chip>
-          ))}
-        </div>
-        {!random && (
-          <p className="mt-1.5 text-lg text-[#3a3a3a]">{t("set.chars_disabled")}</p>
+        {accents && (
+          <div className="mt-4">
+            <PixelLabel>{t("set.accent_types")}</PixelLabel>
+            <AccentKeyMap
+              label={t("set.accent_types")}
+              wanted={v.accentWanted}
+              forbidden={v.accentForbidden}
+              onChange={(next) => onChange({ accentWanted: next.wanted, accentForbidden: next.forbidden })}
+            />
+            <p className="mt-1.5 text-lg text-[#3a3a3a]">{t("set.accent_note")}</p>
+          </div>
         )}
+
+        {punctuation && (
+          <div className="mt-4" aria-disabled={!random} data-testid="symbol-map">
+            <PixelLabel>{t("set.symbols")}</PixelLabel>
+            <CharKeyMap
+              rows={SYMBOL_ROWS}
+              label={t("set.symbols")}
+              wanted={v.includeChars}
+              forbidden={v.excludeChars}
+              disabled={!random}
+              onChange={(next) => onChange({ includeChars: next.wanted, excludeChars: next.forbidden })}
+            />
+            {!random && <p className="mt-1.5 text-lg text-[#3a3a3a]">{t("set.chars_disabled")}</p>}
+          </div>
+        )}
+      </fieldset>
+
+      <div aria-disabled={!random} data-testid="letter-map">
+        <PixelLabel>{t("set.letters")}</PixelLabel>
+        <CharKeyMap
+          rows={LETTER_ROWS}
+          label={t("set.letters")}
+          wanted={v.includeChars}
+          forbidden={v.excludeChars}
+          disabled={!random}
+          onChange={(next) => onChange({ includeChars: next.wanted, excludeChars: next.forbidden })}
+        />
+        <p className="mt-1.5 text-lg text-[#3a3a3a]">
+          {random ? t("set.letters_note") : t("set.chars_disabled")}
+        </p>
       </div>
 
       <div>
         <PixelLabel>{t("set.preview")}</PixelLabel>
-        <PixelSlot className="px-3.5 py-3 text-3xl leading-snug text-white">{preview || "…"}</PixelSlot>
+        <div data-testid="text-preview">
+          <PixelSlot className="px-3.5 py-3 text-3xl leading-snug text-white">{preview || "…"}</PixelSlot>
+        </div>
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import { generateUniqueLobbyCode } from "@/lib/lobby";
 import type { LobbySettings } from "@/lib/lobby-schema";
 import type { Selectable } from "kysely";
 import type { LobbiesTable } from "@/db/types";
+import { toAccentTypes, toBonusKinds } from "@/lib/lobby-choices";
 
 /** Crée une salle pour un compte avec ces réglages ; l'hôte y entre avec son rôle. Renvoie le code. */
 export async function createLobby(userId: string, s: LobbySettings): Promise<string> {
@@ -30,6 +31,9 @@ export async function createLobby(userId: string, s: LobbySettings): Promise<str
       include_chars: s.includeChars,
       exclude_chars: s.excludeChars,
       comeback_bonus: s.comebackBonus,
+      bonus_kinds: s.bonusKinds,
+      accent_wanted: s.accentWanted,
+      accent_forbidden: s.accentForbidden,
     })
     .returning(["id", "code"])
     .executeTakeFirstOrThrow();
@@ -62,5 +66,8 @@ export function settingsFromLobby(lobby: Selectable<LobbiesTable>): LobbySetting
     errorMode: lobby.error_mode,
     penaltySeconds: lobby.penalty_seconds,
     comebackBonus: lobby.comeback_bonus,
+    bonusKinds: toBonusKinds(lobby.bonus_kinds),
+    accentWanted: toAccentTypes(lobby.accent_wanted),
+    accentForbidden: toAccentTypes(lobby.accent_forbidden),
   };
 }

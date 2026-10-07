@@ -5,6 +5,7 @@ import { assertTransition } from "@/lib/race/state";
 import { RaceEngine, type EngineEvent, type RacerInit } from "@/lib/race/engine";
 import { isBotLevel } from "@/lib/race/bots";
 import { loadCorpus } from "@/lib/text/service";
+import { toBonusKinds } from "@/lib/lobby-choices";
 import type { RealtimeIdentity } from "./auth";
 import { createRateLimiter, parseMessage, raceClientMessage } from "./protocol";
 
@@ -135,6 +136,7 @@ async function createRoom(raceId: string): Promise<Room | null> {
       errorMode: lobby.error_mode,
       penaltySeconds: lobby.penalty_seconds,
       comebackBonus: race.comeback_bonus,
+      bonusKinds: toBonusKinds(race.bonus_kinds),
       language: race.language,
       wordPool: corpus.words[race.language],
     },

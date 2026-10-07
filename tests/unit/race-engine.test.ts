@@ -282,6 +282,24 @@ describe("bonus de remontée dans le moteur (BONUS-01 à BONUS-04)", () => {
     expect(e.racers.get("b")!.bonuses).toHaveLength(0);
   });
 
+  it("n'attribue que les types de bonus permis par la salle (CONF-09)", () => {
+    for (const kinds of [["fog"], ["plus_words"], ["minus_words"], ["fog", "plus_words"]] as const) {
+      for (let seed = 1; seed <= 6; seed++) {
+        const e = engine([human("a"), human("b")], { comebackBonus: true, bonusKinds: kinds, seed });
+        advance(e, { a: 0.9, b: 0.05 });
+        const given = e.racers.get("b")!.bonuses;
+        expect(given.length).toBeGreaterThan(0);
+        for (const bonus of given) expect(kinds).toContain(bonus.kind);
+      }
+    }
+  });
+
+  it("sans aucun type permis, aucun bonus n'est donné même si l'interrupteur est actif", () => {
+    const e = engine([human("a"), human("b")], { comebackBonus: true, bonusKinds: [] });
+    advance(e, { a: 0.9, b: 0.05 });
+    expect(e.racers.get("b")!.bonuses).toHaveLength(0);
+  });
+
   it("donne un bonus au retardataire quand le meneur passe 25 %, 50 % puis 75 %", () => {
     const e = engine([human("a"), human("b")], { comebackBonus: true });
     advance(e, { a: 0.9, b: 0.05 });

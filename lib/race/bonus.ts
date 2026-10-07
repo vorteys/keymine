@@ -12,8 +12,9 @@ export const LAG_THRESHOLD = 0.25;
 export const BONUS_WORDS = 3;
 export const FOG_DURATION_MS = 5_000;
 
-export type BonusKind = "minus_words" | "plus_words" | "fog";
-export const BONUS_KINDS: readonly BonusKind[] = ["minus_words", "plus_words", "fog"];
+// CONF-09 : l'hôte choisit lesquels de ces bonus peuvent être attribués.
+export const BONUS_KINDS = ["minus_words", "plus_words", "fog"] as const;
+export type BonusKind = (typeof BONUS_KINDS)[number];
 
 /** Libellés pour l'annonce visuelle (BONUS-03). */
 export const BONUS_LABELS: Record<BonusKind, string> = {

@@ -30,9 +30,9 @@ async function lobby(status = "lobby") {
     )
   ).rows[0].id;
   const row = (
-    await client.query<{ id: string; code: string; status: string; include_chars: string[]; exclude_chars: string[] }>(
+    await client.query<{ id: string; code: string; status: string; include_chars: string[]; exclude_chars: string[]; accent_wanted: string[]; accent_forbidden: string[] }>(
       `insert into lobbies (code, host_user_id, name, status) values ($1, $2, 's', $3)
-       returning id, code, status, include_chars, exclude_chars`,
+       returning id, code, status, include_chars, exclude_chars, accent_wanted, accent_forbidden`,
       [`S${suffix().toUpperCase().slice(0, 5)}`, host, status],
     )
   ).rows[0];
@@ -85,6 +85,40 @@ describe("modification des réglages (CONF-12)", () => {
       reason: "include_exclude_conflict",
     });
     expect((await read(l.id)).exclude_chars).toEqual([]);
+  });
+
+  it("enregistre les types de bonus et d'accents choisis (CONF-06, CONF-09)", async () => {
+    const l = await lobby();
+    const update = lobbyUpdateSchema.parse({
+      bonusKinds: ["fog", "plus_words"],
+      accentWanted: ["cedille"],
+      accentForbidden: ["trema"],
+      includeChars: ["z", "@"],
+      excludeChars: ["'"],
+    });
+    expect(await applyLobbySettings(l, update)).toEqual({ ok: true });
+    const after = await read(l.id);
+    expect(after.bonus_kinds).toEqual(["fog", "plus_words"]);
+    expect(after.accent_wanted).toEqual(["cedille"]);
+    expect(after.accent_forbidden).toEqual(["trema"]);
+    expect(after.include_chars).toEqual(["z", "@"]);
+    expect(after.exclude_chars).toEqual(["'"]);
+  });
+
+  it("refuse un type d'accent à la fois souhaité et interdit, même si une seule liste change", async () => {
+    const l = await lobby();
+    expect(await applyLobbySettings(l, { accentWanted: ["aigu"] })).toEqual({ ok: true });
+    const current = { ...l, accent_wanted: ["aigu"] };
+    expect(await applyLobbySettings(current, { accentForbidden: ["aigu"] })).toEqual({
+      ok: false,
+      reason: "include_exclude_conflict",
+    });
+  });
+
+  it("le schéma refuse un type de bonus ou d'accent inconnu ou en conflit", () => {
+    expect(lobbyUpdateSchema.safeParse({ bonusKinds: ["teleport"] }).success).toBe(false);
+    expect(lobbyUpdateSchema.safeParse({ accentWanted: ["ogonek"] }).success).toBe(false);
+    expect(lobbyUpdateSchema.safeParse({ accentWanted: ["aigu"], accentForbidden: ["aigu"] }).success).toBe(false);
   });
 
   it("le schéma refuse des valeurs hors limites", () => {

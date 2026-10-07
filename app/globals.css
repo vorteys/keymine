@@ -138,6 +138,75 @@ body {
       var(--color-green-light);
   }
 
+  .pixel-chip:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  /* Touche à trois états du formulaire de création (CONF-06/07) : gris = neutre, vert = souvent,
+     rouge = jamais. La couleur n'est jamais seule : une marque (+ / ×) et un trait barrant la lettre
+     la doublent, et chaque touche porte un nom accessible qui annonce son état. */
+  .pixel-tri-key {
+    position: relative;
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 3px solid;
+    font-family: var(--font-pixel), monospace;
+    font-size: 0.8rem;
+    line-height: 1;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .pixel-tri-key[data-wide="true"] {
+    width: auto;
+    min-width: 5.5rem;
+    height: auto;
+    min-height: 2.75rem;
+    flex-direction: column;
+    gap: 4px;
+    padding: 4px 10px;
+  }
+
+  .pixel-tri-key::after {
+    content: attr(data-mark);
+    position: absolute;
+    top: 1px;
+    right: 3px;
+    font-size: 0.6rem;
+  }
+
+  .pixel-tri-key[data-state="neutral"] {
+    background: #a8a8a8;
+    color: #2b2b2b;
+    border-color: #e6e6e6 #555555 #555555 #e6e6e6;
+  }
+
+  .pixel-tri-key[data-state="wanted"] {
+    background: var(--color-green);
+    color: #ffffff;
+    border-color: var(--color-green-light) var(--color-green-dark) var(--color-green-dark)
+      var(--color-green-light);
+  }
+
+  .pixel-tri-key[data-state="forbidden"] {
+    background: var(--color-red);
+    color: #ffffff;
+    text-decoration: line-through;
+    text-decoration-thickness: 2px;
+    border-color: var(--color-red-light) var(--color-red-dark) var(--color-red-dark)
+      var(--color-red-light);
+  }
+
+  .pixel-tri-key:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
   /* Toutes les touches ont exactement la même taille (rangée du bas comprise). */
   .pixel-keymap {
     --key: 2.75rem;

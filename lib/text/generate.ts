@@ -1,4 +1,5 @@
 import type { Difficulty, Language, TextType } from "@/db/types";
+import { accentTypesIn, stripAccentTypes, type AccentType } from "./accents";
 import { hasAccent, wordMatchesComplexity } from "./difficulty";
 
 // Génération du texte d'une course (CONF-02 à CONF-07). Fonction pure : le
@@ -23,8 +24,16 @@ export type GenerateOptions = {
   punctuation: boolean;
   digits: boolean;
   accents: boolean;
-  includeChars: string[]; // CONF-07 (texte aléatoire uniquement)
+  /**
+   * CONF-07 (texte aléatoire uniquement). Lettres : « à privilégier » (vert) et « interdites »
+   * (rouge) ; les touches grises ne figurent dans aucune liste. Symboles : mêmes listes, mais seuls
+   * les symboles interdits filtrent les mots ; ceux à privilégier ne servent qu'avec `punctuation`.
+   */
+  includeChars: string[];
   excludeChars: string[];
+  /** CONF-06 : types d'accents à privilégier (texte aléatoire) ou interdits (les deux modes). */
+  accentWanted?: AccentType[];
+  accentForbidden?: AccentType[];
 };
 
 export class NoTextAvailableError extends Error {
@@ -72,10 +81,12 @@ const SENTENCE_PUNCTUATION = /[.,;:!?«»"“”‘’()[\]…—–]/g;
  */
 export function applyOptionsToPassage(
   content: string,
-  options: Pick<GenerateOptions, "uppercase" | "punctuation" | "digits" | "accents">,
+  options: Pick<GenerateOptions, "uppercase" | "punctuation" | "digits" | "accents"> &
+    Partial<Pick<GenerateOptions, "accentForbidden">>,
 ): string {
   let text = content;
   if (!options.accents) text = stripAccents(text);
+  else if (options.accentForbidden?.length) text = stripAccentTypes(text, options.accentForbidden);
   if (!options.punctuation) text = text.replace(SENTENCE_PUNCTUATION, " ").replace(/\s+/g, " ").trim();
   if (!options.uppercase) text = text.toLowerCase();
   if (!options.digits) {
@@ -129,44 +140,98 @@ function includesAny(word: string, chars: string[]): boolean {
   return chars.some((c) => lower.includes(c));
 }
 
+const IS_LETTER = /^\p{L}$/u;
+const NATURAL_MARKS = [",", "."];
+
 function randomText(options: GenerateOptions, corpus: Corpus, rng: Rng): string {
   const exclude = options.excludeChars.map((c) => c.toLowerCase()).filter(Boolean);
   const include = options.includeChars
     .map((c) => c.toLowerCase())
     .filter((c) => c && !exclude.includes(c)); // l'exclusion l'emporte
+  // Les lettres à privilégier orientent le choix des mots ; les symboles sont ajoutés ensuite.
+  const favoredLetters = include.filter((c) => IS_LETTER.test(c));
+  const forbiddenAccents = options.accentForbidden ?? [];
+  const favoredAccents = options.accents
+    ? (options.accentWanted ?? []).filter((a) => !forbiddenAccents.includes(a))
+    : [];
 
-  const allowed = (word: string) =>
-    !includesAny(word, exclude) && (options.accents || !hasAccent(word));
+  const allowed = (word: string) => {
+    if (includesAny(word, exclude)) return false;
+    if (!options.accents) return !hasAccent(word);
+    return forbiddenAccents.length === 0 || ![...accentTypesIn(word)].some((a) => forbiddenAccents.includes(a));
+  };
 
   const dictionary = corpus.words[options.language].filter(allowed);
   let pool = dictionary.filter((w) => wordMatchesComplexity(w, options.complexity));
   if (pool.length === 0) pool = dictionary; // aucun mot de ce niveau : tout le dictionnaire permis
-  if (pool.length === 0 && include.length === 0) {
+  if (pool.length === 0 && favoredLetters.length === 0) {
     throw new NoTextAvailableError("Aucun mot disponible avec ces restrictions");
   }
 
-  const matching = include.length > 0 ? dictionary.filter((w) => includesAny(w, include)) : [];
+  const isFavored = (word: string) =>
+    includesAny(word, favoredLetters) || [...accentTypesIn(word)].some((a) => favoredAccents.includes(a));
+  const favoring = favoredLetters.length > 0 || favoredAccents.length > 0;
+  const matching = favoring ? dictionary.filter(isFavored) : [];
   const vowels = VOWELS.filter((v) => !exclude.includes(v));
 
   const words: string[] = [];
   for (let i = 0; i < options.length; i++) {
-    if (include.length > 0 && rng() < 0.7) {
+    if (favoring && rng() < 0.7) {
       if (matching.length > 0) {
         words.push(pick(matching, rng));
-      } else {
+      } else if (favoredLetters.length > 0) {
         // Aucun vrai mot ne contient ces caractères : on fabrique un mot autour d'eux.
-        const c = pick(include, rng);
+        const c = pick(favoredLetters, rng);
         const filler = vowels.length > 0 ? pick(vowels, rng) : "";
         words.push(`${filler}${c}${filler}${c}`);
+      } else {
+        words.push(pick(pool, rng)); // accent souhaité mais absent du dictionnaire : un mot ordinaire
       }
     } else {
       words.push(pick(pool, rng));
     }
   }
-  return decorate(words, options, exclude, rng).join(" ");
+  const wantedSymbols = options.punctuation ? include.filter((c) => !IS_LETTER.test(c) && !/\d/.test(c)) : [];
+  return decorate(words, options, exclude, wantedSymbols, rng).join(" ");
 }
 
-function decorate(words: string[], options: GenerateOptions, exclude: string[], rng: Rng): string[] {
+// Où se place chaque symbole demandé dans le mot (CONF-07, carte des symboles).
+const WRAPPERS: Record<string, [string, string]> = {
+  "(": ["(", ")"],
+  ")": ["(", ")"],
+  "[": ["[", "]"],
+  "]": ["[", "]"],
+  "{": ["{", "}"],
+  "}": ["{", "}"],
+  "<": ["<", ">"],
+  ">": ["<", ">"],
+  '"': ['"', '"'],
+  "'": ["'", "'"],
+  "`": ["`", "`"],
+};
+const PREFIXES = new Set(["@", "#", "$", "\\", "~"]);
+const INFIXES = new Set(["+", "-", "=", "*", "/", "|", "&", "^", "_"]);
+
+/** Ajoute un symbole à un mot (ou entre deux mots pour les opérateurs) sans jamais utiliser un symbole interdit. */
+function withSymbol(word: string, next: string | undefined, symbol: string, exclude: string[]): [string, boolean] {
+  const wrap = WRAPPERS[symbol];
+  if (wrap) {
+    const [open, close] = wrap;
+    if (!exclude.includes(open) && !exclude.includes(close)) return [`${open}${word}${close}`, false];
+    return [symbol === close ? `${word}${symbol}` : `${symbol}${word}`, false];
+  }
+  if (PREFIXES.has(symbol)) return [`${symbol}${word}`, false];
+  if (INFIXES.has(symbol) && next) return [`${word}${symbol}${next}`, true]; // consomme le mot suivant
+  return [`${word}${symbol}`, false];
+}
+
+function decorate(
+  words: string[],
+  options: GenerateOptions,
+  exclude: string[],
+  wantedSymbols: string[],
+  rng: Rng,
+): string[] {
   let out = [...words];
 
   if (options.uppercase) {
@@ -186,7 +251,23 @@ function decorate(words: string[], options: GenerateOptions, exclude: string[], 
   }
 
   if (options.punctuation) {
-    const marks = [",", "."].filter((m) => !exclude.includes(m));
+    // Symboles demandés (vert) : environ un mot sur quatre en reçoit un.
+    if (wantedSymbols.length > 0) {
+      const decorated: string[] = [];
+      for (let i = 0; i < out.length; i++) {
+        const word = out[i]!;
+        if (rng() < 0.25) {
+          const [text, consumed] = withSymbol(word, out[i + 1], pick(wantedSymbols, rng), exclude);
+          decorated.push(text);
+          if (consumed) i++;
+        } else {
+          decorated.push(word);
+        }
+      }
+      out = decorated;
+    }
+
+    const marks = NATURAL_MARKS.filter((m) => !exclude.includes(m));
     if (marks.length > 0) {
       out = out.map((w, i) => (i < out.length - 1 && rng() < 0.1 ? `${w}${pick(marks, rng)}` : w));
       if (marks.includes(".")) out[out.length - 1] = `${out[out.length - 1]}.`;

@@ -44,6 +44,8 @@ export type EngineConfig = {
    */
   penaltySeconds?: number;
   comebackBonus: boolean;
+  /** Types de bonus que la salle autorise (CONF-09). Tous, par défaut. */
+  bonusKinds?: readonly BonusKind[];
   language: Language;
   /** Mots que le bonus « +3 mots » peut ajouter. */
   wordPool: readonly string[];
@@ -319,7 +321,9 @@ export class RaceEngine {
     }
 
     // Bonus de remontée
-    if (this.config.comebackBonus) events.push(...this.checkBonuses(elapsed));
+    if (this.config.comebackBonus && this.allowedBonusKinds().length > 0) {
+      events.push(...this.checkBonuses(elapsed));
+    }
 
     // Série du MPM pour les graphiques
     while (this.lastSeriesMs + SERIES_STEP_MS <= elapsed) {
@@ -366,17 +370,24 @@ export class RaceEngine {
     return events;
   }
 
+  /** Types de bonus permis par la salle, dans l'ordre canonique (sans doublon). */
+  private allowedBonusKinds(): BonusKind[] {
+    const allowed = this.config.bonusKinds;
+    return allowed ? BONUS_KINDS.filter((kind) => allowed.includes(kind)) : [...BONUS_KINDS];
+  }
+
   private grantBonus(
     laggard: Racer,
     leader: Racer,
     checkpoint: number,
     elapsed: number,
   ): EngineEvent[] {
-    const eligible = BONUS_KINDS.filter(
+    const eligible = this.allowedBonusKinds().filter(
       (kind) =>
         kind !== "minus_words" ||
         wordsAfterCurrent(laggard.text, laggard.progress) >= BONUS_WORDS + 1,
     );
+    if (eligible.length === 0) return []; // seul « -3 mots » est permis et il ne reste plus assez de mots
     const kind: BonusKind = eligible[Math.floor(this.rng() * eligible.length)]!;
     const now = this.config.startsAtMs + elapsed;
     const target = kind === "minus_words" ? laggard : leader;

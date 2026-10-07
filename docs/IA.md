@@ -50,6 +50,12 @@ Autres erreurs corrigées en cours de route (plus petites) : curseur de capacit�
 **Détection.** L'étudiant a remarqué que les bots « se confondaient sur la même ligne » ; la correction a été confirmée sur une capture d'écran. Le test e2e existant ne comptait que le nombre de courbes (une par participant), pas leur forme.
 **Correction.** Unité corrigée, test unitaire du moteur sur l'unité de `t`, tests du composant (courbes, masquage, étiquettes), et refonte du graphique pour qu'il reste lisible quand des courbes se superposent. Leçon : un test « il y a N éléments » ne prouve pas que le dessin est juste ; regarder le rendu.
 
+### 7. Un formulaire qui élargissait toute la page sur mobile
+
+**Ce qui s'est passé.** La carte des symboles du formulaire de création (rangées de touches de largeur fixe, dans une zone qui défile) était placée dans un `<fieldset>`. Un `fieldset` a par défaut une largeur minimale égale à celle de son contenu : à 360 px de large, la page entière s'élargissait à 526 px au lieu de faire défiler la carte seule.
+**Détection.** Aucun test ne l'avait vu ; la capture d'écran à 360 px montrait la page plus large que l'écran, confirmée en mesurant `scrollWidth`.
+**Correction.** `min-w-0` sur les `fieldset` et rangées de symboles refaites en 4 × 8 touches ; `scrollWidth` égal à la largeur de l'écran. Leçon : tester chaque nouvel écran à 360 px (DES-06), pas seulement au bureau.
+
 ## Réflexion sur notre façon de travailler avec les agents
 
 _À rédiger par l'équipe, avec ses propres mots : ce qui a bien marché, ce qui a demandé de la vigilance, ce que nous referions autrement._

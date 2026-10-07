@@ -7,6 +7,7 @@ import { assertTransition, canStartRace } from "@/lib/race/state";
 import { NoTextAvailableError } from "@/lib/text/generate";
 import { generateTextForRace } from "@/lib/text/service";
 import { msg } from "@/lib/api-messages";
+import { toAccentTypes } from "@/lib/lobby-choices";
 
 const COUNTDOWN_MS = 3_000; // COURSE-03 : décompte 3, 2, 1
 
@@ -70,6 +71,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ co
       accents: lobby.allow_accents,
       includeChars: lobby.include_chars,
       excludeChars: lobby.exclude_chars,
+      accentWanted: toAccentTypes(lobby.accent_wanted),
+      accentForbidden: toAccentTypes(lobby.accent_forbidden),
     });
   } catch (error) {
     if (error instanceof NoTextAvailableError) {
@@ -114,6 +117,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ co
         duration_seconds: lobby.duration_seconds,
         seed: Math.floor(Math.random() * 2_000_000_000),
         comeback_bonus: lobby.comeback_bonus,
+        bonus_kinds: lobby.bonus_kinds,
       })
       .returning(["id"])
       .executeTakeFirstOrThrow();

@@ -13,6 +13,8 @@ type LobbyRow = {
   status: string;
   include_chars: string[];
   exclude_chars: string[];
+  accent_wanted: string[];
+  accent_forbidden: string[];
 };
 
 export async function applyLobbySettings(lobby: LobbyRow, s: LobbyUpdate): Promise<ApplySettingsResult> {
@@ -34,7 +36,12 @@ export async function applyLobbySettings(lobby: LobbyRow, s: LobbyUpdate): Promi
   // quand seule l'une des deux listes est modifiée.
   const include = s.includeChars ?? lobby.include_chars;
   const exclude = s.excludeChars ?? lobby.exclude_chars;
-  if (include.some((c) => exclude.includes(c))) return { ok: false, reason: "include_exclude_conflict" };
+  const accentWanted = s.accentWanted ?? lobby.accent_wanted;
+  const accentForbidden = s.accentForbidden ?? lobby.accent_forbidden;
+  if (
+    include.some((c) => exclude.includes(c)) ||
+    accentWanted.some((a) => accentForbidden.includes(a))
+  ) return { ok: false, reason: "include_exclude_conflict" };
 
   const updated = await db
     .updateTable("lobbies")
@@ -55,7 +62,10 @@ export async function applyLobbySettings(lobby: LobbyRow, s: LobbyUpdate): Promi
       ...(s.excludeChars !== undefined && { exclude_chars: s.excludeChars }),
       ...(s.errorMode !== undefined && { error_mode: s.errorMode }),
       ...(s.penaltySeconds !== undefined && { penalty_seconds: s.penaltySeconds }),
+      ...(s.accentWanted !== undefined && { accent_wanted: s.accentWanted }),
+      ...(s.accentForbidden !== undefined && { accent_forbidden: s.accentForbidden }),
       ...(s.comebackBonus !== undefined && { comeback_bonus: s.comebackBonus }),
+      ...(s.bonusKinds !== undefined && { bonus_kinds: s.bonusKinds }),
     })
     .where("id", "=", lobby.id)
     .where("status", "=", "lobby")

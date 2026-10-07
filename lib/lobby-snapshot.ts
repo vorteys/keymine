@@ -38,6 +38,9 @@ export type RawLobbySnapshot = {
     errorMode: string;
     penaltySeconds: number;
     comebackBonus: boolean;
+    bonusKinds: string[];
+    accentWanted: string[];
+    accentForbidden: string[];
     status: string;
     hostUserId: string | null;
     hostGuestId: string | null;
@@ -121,6 +124,9 @@ export async function loadLobbySnapshot(code: string): Promise<RawLobbySnapshot 
       errorMode: lobby.error_mode,
       penaltySeconds: lobby.penalty_seconds,
       comebackBonus: lobby.comeback_bonus,
+      bonusKinds: lobby.bonus_kinds,
+      accentWanted: lobby.accent_wanted,
+      accentForbidden: lobby.accent_forbidden,
       status: lobby.status,
       hostUserId: lobby.host_user_id,
       hostGuestId: lobby.host_guest_id,

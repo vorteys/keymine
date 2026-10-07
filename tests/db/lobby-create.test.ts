@@ -38,11 +38,14 @@ describe("création et clonage d'une salle", () => {
       punctuation: true,
       digits: true,
       accents: false,
-      includeChars: ["z"],
-      excludeChars: ["e"],
+      includeChars: ["z", "@", "("],
+      excludeChars: ["e", "'"],
+      accentWanted: ["cedille", "ligature"],
+      accentForbidden: ["trema"],
+      bonusKinds: ["minus_words", "fog"],
       errorMode: "bloquer",
       penaltySeconds: 2.5,
-      comebackBonus: false,
+      comebackBonus: true,
     });
     const firstCode = await createLobby(userId, settings);
     const first = await db

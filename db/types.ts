@@ -65,6 +65,9 @@ export interface LobbiesTable {
   include_chars: Generated<string[]>;
   exclude_chars: Generated<string[]>;
   comeback_bonus: Generated<boolean>;
+  bonus_kinds: Generated<string[]>;
+  accent_wanted: Generated<string[]>;
+  accent_forbidden: Generated<string[]>;
   status: Generated<LobbyStatus>;
   is_quick: Generated<boolean>;
   auto_start_at: ColumnType<Date, Date | string | null, Date | string | null> | null;
@@ -116,6 +119,7 @@ export interface RacesTable {
   settings: Generated<unknown>;
   seed: Generated<number>;
   comeback_bonus: Generated<boolean>;
+  bonus_kinds: Generated<string[]>;
   status: Generated<RaceStatus>;
   starts_at: ColumnType<Date, string, never>;
   duration_seconds: number;

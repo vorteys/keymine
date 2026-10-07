@@ -162,7 +162,7 @@ test("marteler le clavier est pénalisé : la pénalité s'ajoute au temps d'arr
   await page.goto("/profil");
   const recent = page.getByRole("list", { name: "HISTORIQUE" }).getByRole("listitem");
   await expect(recent).toHaveCount(1);
-  await expect(recent).toContainText("Course jouée");
+  await expect(recent).toContainText("Jouée");
   for (const name of ["DETAILS", "REJOUER", "SUPPRIMER"]) {
     await expect(recent.getByRole(name === "DETAILS" ? "link" : "button", { name })).toBeVisible();
   }

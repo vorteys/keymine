@@ -25,7 +25,7 @@ function Field({ icon, label, children }: { icon: IconName; label: string; child
         <HistoryIcon name={icon} />
         {label}
       </dt>
-      <dd className="mt-1 text-2xl leading-tight break-words">{children}</dd>
+      <dd className="mt-1 text-2xl leading-tight break-words lg:whitespace-nowrap">{children}</dd>
     </div>
   );
 }
@@ -42,7 +42,7 @@ export function HistoryCard({ row: r, lang }: { row: HistoryRow; lang: Language 
 
   return (
     <li className="history-card border-4 border-black bg-[#f4ecd2] p-3">
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 lg:grid-cols-5">
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 lg:flex lg:items-start lg:justify-between lg:gap-x-4">
         <Field icon="date" label={t("hist.col_date")}>
           {formatDate(lang, r.playedAt, true)}
         </Field>

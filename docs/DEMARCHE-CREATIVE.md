@@ -8,6 +8,10 @@
 
 Le but est de créer un site qui attire les jeunes des écoles. Pour ça, je voulais partir d'un jeu qui est déjà très populaire chez eux : ça peut attirer l'attention de plusieurs élèves d'un coup et ça donne un côté amusant au site. « Key » (les touches du clavier) et « Mine » (le minage de Minecraft) racontent en deux mots que c'est un jeu de frappe, avec l'univers des jeux vidéo.
 
+**Autres noms envisagés.** Aucun : KeyMine est le seul nom auquel j'ai pensé.
+
+**Originalité.** J'ai vérifié que ce nom n'est pas déjà utilisé par un produit connu.
+
 ## Logo
 
 ![Logo KeyMine](logo/keymine-logo.png)

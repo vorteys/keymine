@@ -131,6 +131,29 @@ body {
     color: #2b2b2b;
   }
 
+  .pixel-chip {
+    transition:
+      transform 120ms ease,
+      filter 120ms ease,
+      background-color 120ms ease;
+  }
+
+  button.pixel-chip,
+  a .pixel-chip {
+    cursor: pointer;
+  }
+
+  button.pixel-chip:hover:not(:disabled),
+  a:hover .pixel-chip {
+    transform: translateY(-1px);
+    filter: brightness(1.1);
+  }
+
+  button.pixel-chip:active:not(:disabled) {
+    transform: translateY(1px);
+    filter: brightness(0.94);
+  }
+
   .pixel-chip[data-on="true"] {
     background: var(--color-green);
     color: #ffffff;
@@ -202,6 +225,22 @@ body {
       var(--color-red-light);
   }
 
+  .pixel-tri-key {
+    transition:
+      transform 100ms ease,
+      filter 100ms ease;
+  }
+
+  .pixel-tri-key:hover:not(:disabled) {
+    transform: translateY(-2px) scale(1.06);
+    filter: brightness(1.1);
+    z-index: 1;
+  }
+
+  .pixel-tri-key:active:not(:disabled) {
+    transform: translateY(1px) scale(0.96);
+  }
+
   .pixel-tri-key:disabled {
     opacity: 0.45;
     cursor: not-allowed;
@@ -264,6 +303,70 @@ body {
     list-style: none;
     align-items: center;
     gap: 0.75rem;
+  }
+
+  .pixel-disclosure-summary {
+    transition: background-color 120ms ease;
+  }
+
+  .pixel-disclosure-summary:hover {
+    background: rgba(0, 0, 0, 0.07);
+  }
+
+  .pixel-disclosure-summary:hover > .pixel-disclosure-chevron {
+    transform: translateY(2px);
+  }
+
+  .pixel-disclosure[open] > .pixel-disclosure-summary:hover > .pixel-disclosure-chevron {
+    transform: rotate(180deg) translateY(2px);
+  }
+
+  select.pixel-slot,
+  input[type="range"],
+  input[type="checkbox"] {
+    cursor: pointer;
+  }
+
+  select.pixel-slot,
+  input.pixel-slot {
+    transition: filter 120ms ease;
+  }
+
+  select.pixel-slot:hover,
+  input.pixel-slot:hover {
+    filter: brightness(1.15);
+  }
+
+  /* Les panneaux et les titres montent doucement à l'arrivée sur une page (sans fondu : un texte
+     à moitié transparent échouerait aux contrôles de contraste, A11Y-01). */
+  @keyframes pixel-rise {
+    from {
+      transform: translateY(10px);
+    }
+    to {
+      transform: none;
+    }
+  }
+
+  .pixel-night > main > * {
+    animation: pixel-rise 280ms ease-out both;
+  }
+
+  .pixel-night > main > *:nth-child(2) {
+    animation-delay: 60ms;
+  }
+
+  .pixel-night > main > *:nth-child(n + 3) {
+    animation-delay: 120ms;
+  }
+
+  .progress-dot {
+    transition: r 120ms ease;
+    cursor: pointer;
+  }
+
+  .progress-dot:hover {
+    r: 8;
   }
 
   .pixel-disclosure-summary::-webkit-details-marker {
@@ -352,7 +455,17 @@ body {
     text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.4);
     text-align: center;
     cursor: pointer;
-    transition: transform 80ms ease;
+    transition:
+      transform 120ms ease,
+      filter 120ms ease,
+      box-shadow 120ms ease;
+  }
+
+  /* Le bouton se soulève au survol, s'enfonce au clic : le site répond toujours au curseur. */
+  .pixel-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    filter: brightness(1.12);
+    box-shadow: 0 5px 0 rgba(0, 0, 0, 0.35);
   }
 
   .pixel-btn:disabled {
@@ -360,8 +473,10 @@ body {
     opacity: 0.6;
   }
 
-  .pixel-btn:active {
+  .pixel-btn:active:not(:disabled) {
     transform: translateY(2px);
+    filter: brightness(0.94);
+    box-shadow: none;
   }
 
   .pixel-btn[data-variant="green"] {
@@ -398,6 +513,17 @@ body {
     color: var(--color-cream);
     padding: 10px 12px;
     border: 3px solid transparent;
+  }
+
+  .pixel-nav-link {
+    transition:
+      background-color 120ms ease,
+      transform 120ms ease;
+  }
+
+  .pixel-nav-link:hover {
+    background: rgba(255, 255, 255, 0.12);
+    transform: translateY(-1px);
   }
 
   .pixel-nav-link[data-active="true"] {

@@ -16,10 +16,23 @@ Le but est de créer un site qui attire les jeunes des écoles. Pour ça, je vou
 
 **Comment je suis arrivé au logo final.**
 
-1. **Premier essai, avec des lettres seulement.** J'avais d'abord testé un logo avec juste le mot « KEY » en grandes lettres sur un fond de blocs d'herbe verts, avec une pioche grise et un cercle noir autour. Je n'étais pas fan du résultat, alors j'ai cherché autre chose.
-2. **Le texte en vrai pixel art.** J'ai écrit le mot « KEYMINE » à l'aide d'un convertisseur de texte en pixel art (BatchImageTools) : on dessine les lettres avec des 0 et des 1 dans une grille, puis on donne une couleur à chaque chiffre. J'ai mis « KEY » en blanc et « MINE » en or. Là, le côté bloc de Minecraft ressortait enfin.
-3. **L'assemblage dans Canva.** J'ai ensuite tout assemblé dans Canva : un fond vert uni, un cercle noir, le texte pixel au centre, une pioche en or pour le côté « mine », et des touches de clavier **W A S D** (les touches avec lesquelles on se déplace dans Minecraft). Au début j'avais seulement une touche W, puis j'ai ajouté A, S et D pour former le vrai bloc de déplacement.
-4. **Résultat.** La pioche et les touches se rejoignent au-dessus du texte : on lit « clavier » et « Minecraft » dans la même image. Et oui, c'est une pioche en or, qui est la plus forte en couleur et la plus nulle dans le jeu (mais ça va bien avec le jaune du site 🙂).
+1. **Mes essais ratés.** Avant le logo final, j'ai fait plusieurs essais que je n'aimais pas. J'ai d'abord voulu tester un logo avec seulement des lettres. Ensuite j'ai essayé « KEY » en lettres lisses grises, avec une pioche grise en relief, un cercle noir et un fond de gros carrés verts. Je n'étais pas fan du résultat, et surtout ça ne faisait pas pixel, alors que c'est justement ce que j'aime. Ça m'a poussé à chercher des éléments vraiment en pixels.
+
+   ![Essai raté : lettres lisses sur fond de carrés verts](logo/essai-rate.png)
+
+2. **J'ai cherché mes ingrédients.** Les sources sont dans la section Moodboard plus bas. J'ai gardé :
+   - une pioche de Minecraft en pixels, trouvée avec une recherche d'images (j'ai pris la version en or plutôt que celle en fer) ;
+   - des touches de clavier en pixels (un W, puis le bloc W A S D, et un K), dessinées avec le même convertisseur de pixel art que le texte (on voit la grille sur l'image du W) ;
+   - un texte « KEYMINE » fait avec ce convertisseur de texte en pixel art.
+
+   ![Pioche en or](logo/pioche-or.png) ![Pioche en fer](logo/pioche-fer.png) ![Touches WASD](logo/touches-wasd.png) ![Touche W avec la grille de pixels](logo/touche-w-grille.png)
+
+3. **Le texte en vrai pixel art.** J'ai écrit le mot « KEYMINE » avec le convertisseur de texte en pixel art de BatchImageTools : on dessine les lettres avec des chiffres dans une grille, puis on donne une couleur à chaque chiffre. J'ai mis « KEY » en blanc et « MINE » en or. Là, le côté bloc de Minecraft ressortait enfin.
+
+   ![Texte KEYMINE en pixel art](logo/texte-keymine-pixel.png)
+
+4. **L'assemblage dans Canva.** J'ai ensuite tout assemblé dans Canva : un fond vert uni, un cercle noir, le texte pixel au centre, la pioche en or pour le côté « mine », et les touches de clavier **W A S D** (les touches avec lesquelles on se déplace dans Minecraft). Au début j'avais seulement une touche W, puis j'ai ajouté A, S et D pour former le vrai bloc de déplacement.
+5. **Résultat.** La pioche et les touches se rejoignent au-dessus du texte : on lit « clavier » et « Minecraft » dans la même image. Et oui, c'est une pioche en or, qui est la plus forte en couleur et la plus nulle dans le jeu (mais ça va bien avec le jaune du site 🙂).
 
 **Variantes et usages.**
 
@@ -29,11 +42,20 @@ Le but est de créer un site qui attire les jeunes des écoles. Pour ça, je vou
 
 ## Moodboard
 
-_À compléter par l'étudiant : références visuelles collectées (captures ou images, avec la source de chacune)._
+Voici ce que j'ai collecté en cherchant l'ambiance du site, avec ses sources et ce que j'en ai retenu.
+
+![Fond de carrés verts](logo/fond-carres-verts.jpg)
+
+- **Le fond de carrés verts.** Vecteur gratuit « fond de carrés abstraits verts », trouvé sur [Magnific](https://www.magnific.com/fr/vecteurs-libre/conception-fond-carres-abstraits-verts-pour-brochure-couverture-depliant-affiche-illustration-vectorielle_35966976.htm) (anciennement Freepik) avec la recherche [« fond écran minecraft creeper »](https://www.magnific.com/fr/photos-vecteurs-libre/fond-ecran-minecraft-creeper). J'en ai retenu les gros blocs verts de tons différents, qui rappellent l'herbe de Minecraft. Il a servi à mon essai raté, pas au logo final (la licence gratuite demande de citer l'auteur : à garder en tête si on le réutilise).
+- **Recherches d'images Google** : [« minecraft fond »](https://www.google.com/search?q=minecraft+fond) pour l'ambiance générale, et [« pickaxe minecraft »](https://www.google.com/search?q=pickaxe+minecraft) pour trouver la pioche pixel du logo.
+- **Les couleurs du jeu.** [Minecraft Green Color Palette](https://www.color-hex.com/color-palette/3625) (color-hex.com) et les [codes de couleurs de la Minecraft Wiki](https://minecraft.fandom.com/wiki/Formatting_codes), pour retrouver les verts et les jaunes qui font penser au jeu.
+- **Le texte et les touches en pixels.** [BatchImageTools, convertisseur de texte en pixel art](https://www.batchimagetools.com/fr/convert-text-to-pixel-art) (celui que j'ai gardé, pour le texte comme pour les touches) et [Wplace Text to Pixel](https://wplace.style/text-to-pixel) (testé aussi).
+- **L'assemblage.** [Canva](https://www.canva.com/) pour placer le cercle, la pioche, les touches et le texte.
+- **Une référence d'interface.** Le site [JJK Type](https://jjkcursetyper-production.up.railway.app/), un autre jeu de course de frappe en ligne (arènes, classement, profil, salle d'attente). Je l'ai parcouru pour voir comment un site de ce genre organise ses lobbys et sa salle d'attente, afin de faire quelque chose de plus clair et à l'allure de Minecraft.
 
 ## Palette de couleurs
 
-Je suis parti du **vert** et du **jaune/or** : ce sont les couleurs fortes de Minecraft (l'herbe, les creepers, et l'or de la pioche). Le reste vient de la terre et du bois du jeu : un brun foncé pour le fond, un beige crème pour les panneaux. Un rouge franc sert uniquement pour les actions dangereuses.
+Je suis parti du **vert** et du **jaune/or** : ce sont les couleurs fortes de Minecraft (l'herbe, les creepers, et l'or de la pioche). Pour m'y retrouver, j'ai regardé la palette de verts de color-hex.com et les codes de couleurs de la Minecraft Wiki (voir le Moodboard). Le reste vient de la terre et du bois du jeu : un brun foncé pour le fond, un beige crème pour les panneaux. Un rouge franc sert uniquement pour les actions dangereuses.
 
 | Rôle | Couleur | Code |
 | --- | --- | --- |

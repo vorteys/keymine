@@ -6,7 +6,7 @@ Architecture déployée : **Caddy** (HTTPS automatique, seul service exposé) �
 
 ## 1. Préparer le serveur
 
-1. Louer un VPS (1 vCPU et 1 Go de RAM suffisent) ; noter son adresse IP.
+1. Louer un VPS avec **2 Go de RAM** au minimum (le build de Next.js dans Docker est trop gourmand pour 512 Mo, et risqué à 1 Go) ; noter son adresse IP. Ajouter 2 Go de swap : `fallocate -l 2G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile`.
 2. Chez le registraire du nom de domaine, créer un enregistrement **A** `keymine.exemple.com → IP du serveur` (et **AAAA** si IPv6).
 3. Se connecter en SSH et installer Docker :
 

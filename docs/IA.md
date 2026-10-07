@@ -68,6 +68,12 @@ Autres erreurs corrigées en cours de route (plus petites) : curseur de capacit�
 **Détection.** Au moment de prendre les captures, l'étudiant a demandé quel rapport ce site avait avec son projet ; l'agent a vérifié l'historique de la conversation et n'a rien trouvé.
 **Correction.** Le paragraphe a été supprimé (par l'étudiant), le moodboard ne garde que les 5 références réellement consultées, chacune avec sa capture. Leçon : dans un document écrit « par l'étudiant », l'agent ne rédige que ce que l'étudiant a dit ou montré, sans compléter avec des détails plausibles.
 
+### 9. Un Dockerfile jamais lancé qui échouait au premier vrai déploiement
+
+**Ce qui s'est passé.** L'agent avait écrit le `Dockerfile` et le `docker-compose` de production sans pouvoir les lancer (pas de Docker dans son environnement), en le notant dans `docs/EXIGENCES.md` (TECH-05 « partiel »). Au premier déploiement réel, le build de l'image s'est arrêté : `next build` charge `lib/db.ts`, qui lève une erreur si `DATABASE_URL` est absente, et le Dockerfile ne la définissait pas au moment du build.
+**Détection.** L'étudiant a lancé le build sur son serveur et a copié l'erreur (« DATABASE_URL manquant »).
+**Correction.** Une adresse factice est fournie à la seule commande `bun run build` (aucune page n'interroge la base pendant le build) ; le build a été revérifié avec cette adresse sur une base injoignable avant de corriger le fichier. La vraie adresse arrive au démarrage par le docker-compose. Leçon : un fichier de déploiement non exécuté reste une hypothèse ; la mention « non testé » dans les exigences était justifiée.
+
 ## Réflexion sur notre façon de travailler avec les agents
 
 _À rédiger par l'équipe, avec ses propres mots : ce qui a bien marché, ce qui a demandé de la vigilance, ce que nous referions autrement._

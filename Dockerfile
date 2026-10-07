@@ -15,7 +15,11 @@ ARG NEXT_PUBLIC_SITE_URL=https://localhost
 ENV NEXT_PUBLIC_REALTIME_URL=$NEXT_PUBLIC_REALTIME_URL \
     NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
     NEXT_TELEMETRY_DISABLED=1
-RUN bun run build
+# `next build` charge les modules serveur, dont lib/db.ts, qui exige DATABASE_URL
+# même si aucune page ne se connecte à la base pendant le build (elles sont
+# dynamiques). Adresse factice, valable pour cette seule commande : elle n'est
+# pas gardée dans l'image finale. La vraie URL vient du docker-compose au démarrage.
+RUN DATABASE_URL=postgresql://build:build@127.0.0.1:1/build bun run build
 
 FROM base AS runtime
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1

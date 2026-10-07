@@ -49,6 +49,8 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
       .where("id", "=", lobby.id)
       .execute();
     await revokeAllInvites(lobby.id); // SALLE-04 : plus aucun lien ne fonctionne
+    // Une salle fermée ne retient plus personne : chacun peut en créer ou en rejoindre une autre (SALLE-06).
+    await db.updateTable("lobby_players").set({ active: false }).where("lobby_id", "=", lobby.id).execute();
   }
 
   return NextResponse.json({ ok: true });

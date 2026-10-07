@@ -52,6 +52,7 @@ export async function findActiveRoom(identity: Identity) {
     .innerJoin("lobbies", "lobbies.id", "lobby_players.lobby_id")
     .select(["lobbies.id", "lobbies.code"])
     .where("lobby_players.active", "=", true)
+    .where("lobbies.status", "<>", "closed") // une salle fermée ne retient plus personne
     .where((eb) =>
       identity.kind === "user"
         ? eb("lobby_players.user_id", "=", identity.userId)

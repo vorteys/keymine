@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { registerViaApi } from "./helpers";
+import { createRoomViaApi, registerViaApi } from "./helpers";
 
 // CONF-06, CONF-07, CONF-09 : formulaire de création (bonus par type, accents par type,
 // cartes de lettres et de symboles à trois états).
@@ -92,4 +92,23 @@ test("en texte cohérent, les cartes de lettres et de symboles sont désactivée
   await expect(
     page.getByRole("group", { name: "TYPES D'ACCENTS" }).getByRole("button").first(),
   ).toBeEnabled();
+});
+
+// SALLE-06 : dans une salle, la page de création ne montre pas le formulaire.
+test("déjà dans une salle : pas de formulaire, on retourne dans la salle ou on la quitte", async ({
+  page,
+}) => {
+  await registerViaApi(page.request, "dejala");
+  const code = await createRoomViaApi(page.request, {});
+  await page.goto("/jouer/creer");
+  await expect(page.getByRole("heading", { name: "TU ES DEJA DANS UNE SALLE" })).toBeVisible();
+  await expect(page.getByText(code)).toBeVisible();
+  await expect(page.getByRole("button", { name: "CREER LA SALLE" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "RETOURNER A LA SALLE" })).toHaveAttribute(
+    "href",
+    `/jouer/${code}`,
+  );
+
+  await page.getByRole("button", { name: "QUITTER LA SALLE" }).click();
+  await expect(page.getByRole("button", { name: "CREER LA SALLE" })).toBeVisible();
 });

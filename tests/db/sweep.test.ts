@@ -51,8 +51,8 @@ describe("balayage des salles (SALLE-08)", () => {
       [lobby, absent, newcomer, veteran],
     );
     await client.query(
-      `insert into lobby_players (lobby_id, guest_id, guest_name, joined_at) values ($1, 'g-vieux', 'Invité', now() - interval '20 minutes')`,
-      [lobby],
+      `insert into lobby_players (lobby_id, guest_id, guest_name, joined_at) values ($1, $2, 'Invité', now() - interval '20 minutes')`,
+      [lobby, `g-vieux-${Math.random().toString(36).slice(2, 8)}`],
     );
 
     await sweepLobbies();

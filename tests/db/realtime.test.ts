@@ -116,8 +116,8 @@ describe("serveur temps réel", () => {
     });
     await waitFor(() => hostConn.messages.find((m) => m.type === "lobby"));
     await client.query(
-      `insert into lobby_players (lobby_id, guest_id, guest_name) values ($1, 'invite-xyz', 'Invitée')`,
-      [lobby],
+      `insert into lobby_players (lobby_id, guest_id, guest_name) values ($1, $2, 'Invitée')`,
+      [lobby, `invite-${Math.random().toString(36).slice(2, 8)}`],
     );
     await waitFor(() =>
       hostConn.messages.find(

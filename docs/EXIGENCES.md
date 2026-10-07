@@ -7,7 +7,7 @@ Statuts : **complet** (fait et vérifié), **partiel** (existe mais incomplet ou
 | ID | Statut | Fichiers principaux | Tests associés | Notes et choix |
 | --- | --- | --- | --- | --- |
 | TECH-01 | complet | `app/`, `next.config.ts` | — | Next.js 16 App Router, React 19. |
-| TECH-02 | partiel | `tsconfig.json`, `eslint.config.mjs` | `bun run lint`, `bun run typecheck` (CI) | `strict: true`, aucun `any` explicite, aucun `@ts-ignore`. Restent des fichiers `.mjs` (`scripts/*.mjs`, configs) à porter en TypeScript. |
+| TECH-02 | complet | tsconfig.json, eslint.config.ts, postcss.config.ts, next.config.ts | bun run lint, bun run typecheck (CI) | Aucun fichier .js/.jsx/.mjs/.cjs dans le dépôt (configs ESLint, PostCSS, Next, Vitest, Playwright et scripts en .ts) ; strict: true ; @typescript-eslint/no-explicit-any en erreur (vérifié : un « any » fait échouer le lint) ; aucun @ts-ignore. Les seuls eslint-disable sont justifiés par un commentaire. |
 | TECH-03 | complet | `app/globals.css`, composants | — | Tailwind v4. |
 | TECH-04 | complet | db/migrations/, db/migrate.ts, db/seed.ts, db/types.ts | tests/db/seed.test.ts | PostgreSQL + Kysely (query builder, pas un ORM : choix à défendre dans l'ADR). Migrations SQL versionnées ; seed idempotent (corpus, dictionnaires, 5 comptes de démo + historique), lancé par bun run db:seed. |
 | TECH-05 | partiel | Dockerfile, deploy/, docs/DEPLOIEMENT.md | — | Fichiers de déploiement prêts (Docker, Caddy HTTPS, guide) mais NON testés ici (pas de Docker dans l'environnement) et pas encore déployés : à faire par l'équipe. |

@@ -144,6 +144,19 @@ test("marteler le clavier est pénalisé : la pénalité s'ajoute au temps d'arr
 
   await expect(page).toHaveURL(new RegExp(`/resultats/${code}`), { timeout: 30_000 });
   await expect(page.getByRole("table")).toContainText("de pénalité");
+
+  // Classement ouvert ; évolution du MPM et clavier thermique repliés jusqu'à ce qu'on les ouvre.
+  const chart = page.locator("figure");
+  await expect(chart).toBeHidden();
+  await page.getByRole("heading", { name: "EVOLUTION DU MPM" }).click();
+  await expect(chart).toBeVisible();
+  const heatmap = page.getByRole("group", { name: /HEATMAP DU CLAVIER/ });
+  await expect(heatmap).toBeHidden();
+  await page
+    .getByText(/HEATMAP DU CLAVIER/)
+    .first()
+    .click();
+  await expect(heatmap).toBeVisible();
 });
 
 // COURSE-07 : après un abandon, retour à la liste des lobbys ; on ne revient pas dans la course abandonnée.

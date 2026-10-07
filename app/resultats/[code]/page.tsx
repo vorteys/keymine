@@ -1,6 +1,6 @@
 import { PixelShell } from "@/components/PixelShell";
 import { participantName } from "@/lib/bot-name";
-import { PixelAvatar, PixelKeyboard, PixelPanel } from "@/components/ui";
+import { PixelAvatar, PixelDisclosure, PixelKeyboard, PixelPanel } from "@/components/ui";
 import { ResultsActions } from "@/components/results/ResultsActions";
 import { WpmChart } from "@/components/results/WpmChart";
 import { peekIdentity } from "@/lib/auth/identity";
@@ -221,106 +221,106 @@ export default async function ResultatsPage({
 
         <div className="flex w-full min-w-0 flex-grow flex-col gap-6">
           <PixelPanel className="p-5">
-            <h2 className="font-pixel mb-2.5 text-sm text-[#2b2b2b]">{t("res.ranking")}</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[40rem] border-collapse text-left text-xl leading-tight">
-                <caption className="sr-only">{t("res.ranking")}</caption>
-                <thead>
-                  <tr>
-                    {(
-                      [
-                        "res.col_rank",
-                        "res.col_player",
-                        "res.col_wpm",
-                        "res.col_raw",
-                        "res.col_accuracy",
-                        "res.col_errors",
-                        "res.col_time",
-                        "res.col_status",
-                        "res.col_bonus",
-                      ] as const
-                    ).map((key) => (
-                      <th
-                        key={key}
-                        scope="col"
-                        className="font-pixel pr-2.5 pb-2 text-[8px] font-normal text-[#3a3a3a]"
-                      >
-                        {t(key)}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((p) => (
-                    <tr key={p.id} className="border-t-2 border-dotted border-[#8b8b8b]">
-                      <th scope="row" className="font-pixel py-1 pr-2.5 text-[11px] font-normal">
-                        {p.rank}
-                      </th>
-                      <td
-                        className={`max-w-40 truncate pr-2.5 ${p.ownerKey && p.ownerKey === myKey ? "font-bold" : ""}`}
-                      >
-                        {participantName(t, p)}
-                      </td>
-                      <td className="pr-2.5">{formatNumber(lang, p.wpm)}</td>
-                      <td className="pr-2.5">{formatNumber(lang, p.rawWpm)}</td>
-                      <td className="pr-2.5">{formatPercent(lang, p.accuracy)}</td>
-                      <td className="pr-2.5">{p.errors}</td>
-                      <td className="pr-2.5">
-                        {p.status === "finished" ? formatRaceTime(lang, p.timeMs) : "—"}
-                        {p.status === "finished" && p.penaltyMs > 0 && (
-                          <span className="block text-base text-[#3a3a3a]">
-                            {t("res.penalty_note", {
-                              seconds: formatNumber(lang, p.penaltyMs / 1000, 1),
-                            })}
-                          </span>
-                        )}
-                      </td>
-                      <td className="pr-2.5">{t(STATUS_KEY[p.status] ?? "res.status_other")}</td>
-                      <td>{bonusSummary(lang, p)}</td>
+            <PixelDisclosure title={t("res.ranking")} defaultOpen>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[40rem] border-collapse text-left text-xl leading-tight">
+                  <caption className="sr-only">{t("res.ranking")}</caption>
+                  <thead>
+                    <tr>
+                      {(
+                        [
+                          "res.col_rank",
+                          "res.col_player",
+                          "res.col_wpm",
+                          "res.col_raw",
+                          "res.col_accuracy",
+                          "res.col_errors",
+                          "res.col_time",
+                          "res.col_status",
+                          "res.col_bonus",
+                        ] as const
+                      ).map((key) => (
+                        <th
+                          key={key}
+                          scope="col"
+                          className="font-pixel pr-2.5 pb-2 text-[8px] font-normal text-[#3a3a3a]"
+                        >
+                          {t(key)}
+                        </th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {rows.map((p) => (
+                      <tr key={p.id} className="border-t-2 border-dotted border-[#8b8b8b]">
+                        <th scope="row" className="font-pixel py-1 pr-2.5 text-[11px] font-normal">
+                          {p.rank}
+                        </th>
+                        <td
+                          className={`max-w-40 truncate pr-2.5 ${p.ownerKey && p.ownerKey === myKey ? "font-bold" : ""}`}
+                        >
+                          {participantName(t, p)}
+                        </td>
+                        <td className="pr-2.5">{formatNumber(lang, p.wpm)}</td>
+                        <td className="pr-2.5">{formatNumber(lang, p.rawWpm)}</td>
+                        <td className="pr-2.5">{formatPercent(lang, p.accuracy)}</td>
+                        <td className="pr-2.5">{p.errors}</td>
+                        <td className="pr-2.5">
+                          {p.status === "finished" ? formatRaceTime(lang, p.timeMs) : "—"}
+                          {p.status === "finished" && p.penaltyMs > 0 && (
+                            <span className="block text-base text-[#3a3a3a]">
+                              {t("res.penalty_note", {
+                                seconds: formatNumber(lang, p.penaltyMs / 1000, 1),
+                              })}
+                            </span>
+                          )}
+                        </td>
+                        <td className="pr-2.5">{t(STATUS_KEY[p.status] ?? "res.status_other")}</td>
+                        <td>{bonusSummary(lang, p)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </PixelDisclosure>
           </PixelPanel>
 
           <PixelPanel className="p-5">
-            <h2 className="font-pixel mb-3 text-sm text-[#2b2b2b]">{t("res.chart")}</h2>
-            <WpmChart
-              title={t("res.chart")}
-              description={t("res.chart_desc")}
-              xLabel={t("res.chart_x")}
-              yLabel={t("res.chart_y")}
-              series={rows.map((r) => ({
-                id: r.id,
-                name: `${participantName(t, r)} · ${formatNumber(lang, r.wpm)} ${t("race.wpm")}`,
-                isBot: r.isBot,
-                isMe: r.ownerKey != null && r.ownerKey === myKey,
-                points: r.series.map((s) => ({ t: Math.round(s.t / 1000), wpm: s.wpm })),
-              }))}
-            />
+            <PixelDisclosure title={t("res.chart")}>
+              <WpmChart
+                title={t("res.chart")}
+                description={t("res.chart_desc")}
+                xLabel={t("res.chart_x")}
+                yLabel={t("res.chart_y")}
+                series={rows.map((r) => ({
+                  id: r.id,
+                  name: `${participantName(t, r)} · ${formatNumber(lang, r.wpm)} ${t("race.wpm")}`,
+                  isBot: r.isBot,
+                  isMe: r.ownerKey != null && r.ownerKey === myKey,
+                  points: r.series.map((s) => ({ t: Math.round(s.t / 1000), wpm: s.wpm })),
+                }))}
+              />
+            </PixelDisclosure>
           </PixelPanel>
 
           {heatmapRows && (
             <PixelPanel className="p-5">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <h2 className="font-pixel text-sm text-[#2b2b2b]">{t("res.heatmap")}</h2>
-                <span className="text-xl text-[#3a3a3a]">{t("res.heatmap_legend")}</span>
-              </div>
-              <PixelKeyboard rows={heatmapRows} label={t("res.heatmap")} />
-              {worstKeys.length > 0 && (
-                <p className="mt-2.5 text-xl">
-                  {t("res.worst_keys")}{" "}
-                  {worstKeys.map(([letter, pct]) => (
-                    <b
-                      key={letter}
-                      className="mr-1.5 border-2 border-black bg-[#ff7b6b] px-1.5 font-normal"
-                    >
-                      {letter} ({pct}%)
-                    </b>
-                  ))}
-                </p>
-              )}
+              <PixelDisclosure title={t("res.heatmap")} aside={t("res.heatmap_legend")}>
+                <PixelKeyboard rows={heatmapRows} label={t("res.heatmap")} />
+                {worstKeys.length > 0 && (
+                  <p className="mt-2.5 text-xl">
+                    {t("res.worst_keys")}{" "}
+                    {worstKeys.map(([letter, pct]) => (
+                      <b
+                        key={letter}
+                        className="mr-1.5 border-2 border-black bg-[#ff7b6b] px-1.5 font-normal"
+                      >
+                        {letter} ({pct}%)
+                      </b>
+                    ))}
+                  </p>
+                )}
+              </PixelDisclosure>
             </PixelPanel>
           )}
         </div>

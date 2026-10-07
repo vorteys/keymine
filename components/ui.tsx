@@ -59,6 +59,36 @@ export function PixelPanel({
   return <div className={`pixel-panel ${className}`}>{children}</div>;
 }
 
+/**
+ * Section repliable (RES-02 à RES-05). Élément natif <details> : fonctionne sans JavaScript,
+ * s'ouvre au clavier (Entrée/Espace) et est annoncé comme repliable par les lecteurs d'écran.
+ */
+export function PixelDisclosure({
+  title,
+  aside,
+  defaultOpen = false,
+  children,
+  className = "",
+}: {
+  title: string;
+  /** Texte secondaire affiché à droite du titre (légende, compteur…). */
+  aside?: ReactNode;
+  defaultOpen?: boolean;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <details className={`pixel-disclosure ${className}`} open={defaultOpen}>
+      <summary className="pixel-disclosure-summary">
+        <h2 className="font-pixel text-sm text-[#2b2b2b]">{title}</h2>
+        {aside && <span className="hidden text-xl text-[#3a3a3a] sm:inline">{aside}</span>}
+        <span aria-hidden="true" className="pixel-disclosure-chevron" />
+      </summary>
+      <div className="pixel-disclosure-body">{children}</div>
+    </details>
+  );
+}
+
 export function PixelSlot({
   children,
   className = "",

@@ -188,6 +188,42 @@ body {
       4px 4px 0 2px rgba(0, 0, 0, 0.45);
   }
 
+  .pixel-disclosure-summary {
+    display: flex;
+    min-height: 2.75rem;
+    cursor: pointer;
+    list-style: none;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .pixel-disclosure-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .pixel-disclosure-summary > h2 {
+    flex: 1 1 auto;
+  }
+
+  /* Flèche en pixels : pointe vers le bas quand la section est fermée, vers le haut quand elle est ouverte. */
+  .pixel-disclosure-chevron {
+    width: 0;
+    height: 0;
+    flex: none;
+    border-top: 10px solid #2b2b2b;
+    border-right: 8px solid transparent;
+    border-left: 8px solid transparent;
+    transition: transform 120ms ease;
+  }
+
+  .pixel-disclosure[open] > .pixel-disclosure-summary > .pixel-disclosure-chevron {
+    transform: rotate(180deg);
+  }
+
+  .pixel-disclosure-body {
+    padding-top: 0.75rem;
+  }
+
   .pixel-btn {
     display: inline-flex;
     align-items: center;

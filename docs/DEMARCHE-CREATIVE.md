@@ -42,20 +42,46 @@ Le but est de créer un site qui attire les jeunes des écoles. Pour ça, je vou
 
 ## Moodboard
 
-Voici ce que j'ai collecté en cherchant l'ambiance du site, avec ses sources et ce que j'en ai retenu.
+Cinq références que j'ai regardées en cherchant l'ambiance du site, chacune avec sa capture d'écran et sa source.
 
-![Fond de carrés verts](logo/fond-carres-verts.jpg)
+### 1. Un fond de gros carrés verts
 
-- **Le fond de carrés verts.** Vecteur gratuit « fond de carrés abstraits verts », trouvé sur [Magnific](https://www.magnific.com/fr/vecteurs-libre/conception-fond-carres-abstraits-verts-pour-brochure-couverture-depliant-affiche-illustration-vectorielle_35966976.htm) (anciennement Freepik) avec la recherche [« fond écran minecraft creeper »](https://www.magnific.com/fr/photos-vecteurs-libre/fond-ecran-minecraft-creeper). J'en ai retenu les gros blocs verts de tons différents, qui rappellent l'herbe de Minecraft. Il a servi à mon essai raté, pas au logo final (la licence gratuite demande de citer l'auteur : à garder en tête si on le réutilise).
-- **Recherches d'images Google** : [« minecraft fond »](https://www.google.com/search?q=minecraft+fond) pour l'ambiance générale, et [« pickaxe minecraft »](https://www.google.com/search?q=pickaxe+minecraft) pour trouver la pioche pixel du logo.
-- **Les couleurs du jeu.** [Minecraft Green Color Palette](https://www.color-hex.com/color-palette/3625) (color-hex.com) et les [codes de couleurs de la Minecraft Wiki](https://minecraft.fandom.com/wiki/Formatting_codes), pour retrouver les verts et les jaunes qui font penser au jeu.
+![Capture : fond de carrés abstraits verts sur Magnific](logo/moodboard-1-carres-verts.jpg)
+
+Vecteur gratuit « conception de fond de carrés abstraits verts » (auteur : flatart), sur [Magnific](https://www.magnific.com/fr/vecteurs-libre/conception-fond-carres-abstraits-verts-pour-brochure-couverture-depliant-affiche-illustration-vectorielle_35966976.htm) (anciennement Freepik), trouvé avec la recherche [« fond écran minecraft creeper »](https://www.magnific.com/fr/photos-vecteurs-libre/fond-ecran-minecraft-creeper). Ce sont de gros blocs verts de tons différents, qui rappellent l'herbe de Minecraft. Il a servi à mon essai raté, pas au logo final. La licence gratuite demande de citer l'auteur : à garder en tête si on le réutilise.
+
+### 2. Les fonds d'écran Minecraft
+
+![Capture : recherche d'images Google « minecraft fond »](logo/moodboard-2-minecraft-fond.jpg)
+
+Recherche d'images Google [« minecraft fond »](https://www.google.com/search?q=minecraft+fond), pour l'ambiance générale du jeu : paysages, terre et herbe en gros blocs, ciel, titre du jeu en lettres de pierre.
+
+### 3. La pioche de Minecraft
+
+![Capture : recherche d'images Google « pickaxe minecraft »](logo/moodboard-3-pickaxe-minecraft.jpg)
+
+Recherche d'images Google [« pickaxe minecraft »](https://www.google.com/search?q=pickaxe+minecraft), où j'ai trouvé la pioche en pixels du logo (la version en or, celle en fer et les autres matériaux sont proposées dans les résultats).
+
+### 4. Une palette de verts
+
+![Capture : palette Minecraft Green sur color-hex](logo/moodboard-4-palette-verts.jpg)
+
+[Minecraft Green Color Palette](https://www.color-hex.com/color-palette/3625) (color-hex.com, par omgabee) : cinq verts « extraits de l'herbe de Minecraft » (`#4a6f28`, `#5b8731`, `#3e5c20`, `#527a2d`, `#5b8b32`). Le fond vert de mon logo (`#4A6F28`) est le premier de cette liste.
+
+### 5. Les codes de couleurs du jeu
+
+![Capture : page « Formatage des codes » de la Minecraft Wiki](logo/moodboard-5-codes-couleurs.jpg)
+
+Page [« Formatage des codes »](https://minecraft.fandom.com/wiki/Formatting_codes) de la Minecraft Wiki, pour retrouver les couleurs que le jeu utilise pour son texte.
+
+### Outils pour fabriquer le logo
+
 - **Le texte et les touches en pixels.** [BatchImageTools, convertisseur de texte en pixel art](https://www.batchimagetools.com/fr/convert-text-to-pixel-art) (celui que j'ai gardé, pour le texte comme pour les touches) et [Wplace Text to Pixel](https://wplace.style/text-to-pixel) (testé aussi).
 - **L'assemblage.** [Canva](https://www.canva.com/) pour placer le cercle, la pioche, les touches et le texte.
-- **Une référence d'interface.** Le site [JJK Type](https://jjkcursetyper-production.up.railway.app/), un autre jeu de course de frappe en ligne (arènes, classement, profil, salle d'attente). Je l'ai parcouru pour voir comment un site de ce genre organise ses lobbys et sa salle d'attente, afin de faire quelque chose de plus clair et à l'allure de Minecraft.
 
 ## Palette de couleurs
 
-Je suis parti du **vert** et du **jaune/or** : ce sont les couleurs fortes de Minecraft (l'herbe, les creepers, et l'or de la pioche). Pour m'y retrouver, j'ai regardé la palette de verts de color-hex.com et les codes de couleurs de la Minecraft Wiki (voir le Moodboard). Le reste vient de la terre et du bois du jeu : un brun foncé pour le fond, un beige crème pour les panneaux. Un rouge franc sert uniquement pour les actions dangereuses.
+Je suis parti du **vert** et du **jaune/or** : ce sont les couleurs fortes de Minecraft (l'herbe, les creepers, et l'or de la pioche). Pour m'y retrouver, j'ai regardé la palette de verts de color-hex.com et les codes de couleurs de la Minecraft Wiki (références 4 et 5 du Moodboard). Le reste vient de la terre et du bois du jeu : un brun foncé pour le fond, un beige crème pour les panneaux. Un rouge franc sert uniquement pour les actions dangereuses.
 
 | Rôle | Couleur | Code |
 | --- | --- | --- |

@@ -62,6 +62,12 @@ Autres erreurs corrigées en cours de route (plus petites) : curseur de capacit�
 **Détection.** Le test d'accessibilité existant pour (a) ; des tests unitaires de faux positifs écrits exprès pour (b), puis un ordre de vérification corrigé (longueur, caractères, lettres, lien, liste).
 **Correction.** Animations limitées au déplacement (sans opacité) ; mots courts ou ambigus retirés de la détection « collée », gardés seulement en comparaison mot entier. Leçon : un filtre de mots doit se tester avec des mots innocents autant qu'avec des mots interdits.
 
+### 9. Une référence de moodboard inventée par l'agent
+
+**Ce qui s'est passé.** En rédigeant la démarche créative à partir des mots de l'étudiant, l'agent a ajouté au moodboard un paragraphe sur un site de jeu de frappe (« Je l'ai parcouru pour voir comment il organise ses lobbys… »), écrit à la première personne comme si l'étudiant l'avait visité. Rien dans ce que l'étudiant avait dit ne le justifiait : le nom venait d'une note de travail, pas de lui. Or le cahier des charges demande une démarche créative personnelle (DES-01 à DES-03).
+**Détection.** Au moment de prendre les captures, l'étudiant a demandé quel rapport ce site avait avec son projet ; l'agent a vérifié l'historique de la conversation et n'a rien trouvé.
+**Correction.** Le paragraphe a été supprimé (par l'étudiant), le moodboard ne garde que les 5 références réellement consultées, chacune avec sa capture. Leçon : dans un document écrit « par l'étudiant », l'agent ne rédige que ce que l'étudiant a dit ou montré, sans compléter avec des détails plausibles.
+
 ## Réflexion sur notre façon de travailler avec les agents
 
 _À rédiger par l'équipe, avec ses propres mots : ce qui a bien marché, ce qui a demandé de la vigilance, ce que nous referions autrement._

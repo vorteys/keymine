@@ -8,6 +8,7 @@ import type { RaceState } from "@/components/race/types";
 import { useRaceConnection } from "@/components/race/useRaceConnection";
 import { PixelButton, PixelPanel } from "@/components/ui";
 import { useLanguage } from "@/lib/i18n";
+import { formatNumber } from "@/lib/format";
 
 // Page de course : zone de frappe (COURSE-04), piste en direct (COURSE-05),
 // décompte 3-2-1 (COURSE-03), abandon avec confirmation (COURSE-07),
@@ -62,7 +63,7 @@ function formatClock(totalSeconds: number) {
 
 export default function CoursePage() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const params = useParams<{ code: string }>();
   const code = params.code.toUpperCase();
   const narrow = useIsNarrow();
@@ -365,6 +366,14 @@ export default function CoursePage() {
               <b className="font-pixel text-[9px] text-[#ffefb3]">{t("race.errors")}</b>
               <span className="text-3xl text-white">{Math.max(view.errors, me?.errors ?? 0)}</span>
             </div>
+            {(me?.penaltyMs ?? 0) > 0 && (
+              <div className="pixel-slot flex w-40 flex-col gap-1 px-4 py-2">
+                <b className="font-pixel text-[9px] text-[#ffefb3]">{t("race.penalty")}</b>
+                <span className="text-3xl text-white">
+                  +{formatNumber(lang, (me?.penaltyMs ?? 0) / 1000)} s
+                </span>
+              </div>
+            )}
             <div className="flex-grow" />
             {isParticipant && me?.status === "racing" && (
               <PixelButton

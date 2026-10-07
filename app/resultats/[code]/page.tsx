@@ -10,15 +10,41 @@ import { getRequestLang, pageMetadata } from "@/lib/i18n-server";
 import { translate, type DictKey, type SiteLang } from "@/lib/i18n-dictionary";
 import { db } from "@/lib/db";
 import { getLobbyByCode, isHost } from "@/lib/lobby";
-import { isPersonalRecord, latestFinishedRaceId, loadRaceResults, type ResultRow } from "@/lib/results";
+import {
+  isPersonalRecord,
+  latestFinishedRaceId,
+  loadRaceResults,
+  type ResultRow,
+} from "@/lib/results";
 
 export const dynamic = "force-dynamic";
 export const generateMetadata = pageMetadata("title.results");
 
 const PODIUM_STYLE = [
-  { height: "h-44", bg: "bg-[#f0b429]", text: "text-[#1b1e13]", size: "text-4xl", avatar: "h-14 w-14 text-2xl", label: "1" },
-  { height: "h-32", bg: "bg-[#a8a8a8]", text: "text-[#1b1b1b]", size: "text-3xl", avatar: "h-13 w-13 text-xl", label: "2" },
-  { height: "h-24", bg: "bg-[#9a6b3c]", text: "text-white", size: "text-2xl", avatar: "h-13 w-13 text-xl", label: "3" },
+  {
+    height: "h-44",
+    bg: "bg-[#f0b429]",
+    text: "text-[#1b1e13]",
+    size: "text-4xl",
+    avatar: "h-14 w-14 text-2xl",
+    label: "1",
+  },
+  {
+    height: "h-32",
+    bg: "bg-[#a8a8a8]",
+    text: "text-[#1b1b1b]",
+    size: "text-3xl",
+    avatar: "h-13 w-13 text-xl",
+    label: "2",
+  },
+  {
+    height: "h-24",
+    bg: "bg-[#9a6b3c]",
+    text: "text-white",
+    size: "text-2xl",
+    avatar: "h-13 w-13 text-xl",
+    label: "3",
+  },
 ];
 
 const STATUS_KEY: Record<string, DictKey> = {
@@ -64,11 +90,16 @@ export default async function ResultatsPage({
   const requested = typeof query.course === "string" ? query.course : null;
   const raceId = requested ?? (await latestFinishedRaceId(lobby.id));
   const results = raceId ? await loadRaceResults(raceId) : null;
-  if (!results || results.race.lobbyId !== lobby.id) return <Message lang={lang} text="res.not_found" />;
+  if (!results || results.race.lobbyId !== lobby.id)
+    return <Message lang={lang} text="res.not_found" />;
   if (results.race.status !== "finished") return <Message lang={lang} text="res.not_finished" />;
 
   const identity = await peekIdentity();
-  const myKey = identity ? (identity.kind === "user" ? `u:${identity.userId}` : `g:${identity.guestId}`) : null;
+  const myKey = identity
+    ? identity.kind === "user"
+      ? `u:${identity.userId}`
+      : `g:${identity.guestId}`
+    : null;
   const me = myKey ? (results.rows.find((r) => r.ownerKey === myKey) ?? null) : null;
   const isSpectator = myKey ? results.spectatorKeys.includes(myKey) : false;
   if (!me && !isSpectator) return <Message lang={lang} text="res.not_allowed" />;
@@ -87,7 +118,8 @@ export default async function ResultatsPage({
       .where("race_id", "!=", results.race.id)
       .executeTakeFirst();
     avgWpm = avg?.avg_wpm != null ? Number(avg.avg_wpm) : null;
-    record = me.status === "finished" && (await isPersonalRecord(me.userId, results.race.id, me.wpm));
+    record =
+      me.status === "finished" && (await isPersonalRecord(me.userId, results.race.id, me.wpm));
   }
 
   const heatmapRows = me ? heatmapRowsFromCounts(me.keyCorrect, me.keyErrors) : null;
@@ -107,7 +139,9 @@ export default async function ResultatsPage({
   return (
     <PixelShell active="lobbys">
       <div className="mb-5 flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="font-pixel text-xl text-white [text-shadow:4px_4px_0_#000]">{t("res.title")}</h1>
+        <h1 className="font-pixel text-xl text-white [text-shadow:4px_4px_0_#000]">
+          {t("res.title")}
+        </h1>
         <span className="text-2xl text-[#f1e6c9]">
           {t("res.room_meta", { code, count: rows.length })}
         </span>
@@ -206,7 +240,11 @@ export default async function ResultatsPage({
                         "res.col_bonus",
                       ] as const
                     ).map((key) => (
-                      <th key={key} scope="col" className="font-pixel pb-2 pr-2.5 text-[8px] font-normal text-[#3a3a3a]">
+                      <th
+                        key={key}
+                        scope="col"
+                        className="font-pixel pr-2.5 pb-2 text-[8px] font-normal text-[#3a3a3a]"
+                      >
                         {t(key)}
                       </th>
                     ))}
@@ -218,14 +256,25 @@ export default async function ResultatsPage({
                       <th scope="row" className="font-pixel py-1 pr-2.5 text-[11px] font-normal">
                         {p.rank}
                       </th>
-                      <td className={`max-w-40 truncate pr-2.5 ${p.ownerKey && p.ownerKey === myKey ? "font-bold" : ""}`}>
+                      <td
+                        className={`max-w-40 truncate pr-2.5 ${p.ownerKey && p.ownerKey === myKey ? "font-bold" : ""}`}
+                      >
                         {participantName(t, p)}
                       </td>
                       <td className="pr-2.5">{formatNumber(lang, p.wpm)}</td>
                       <td className="pr-2.5">{formatNumber(lang, p.rawWpm)}</td>
                       <td className="pr-2.5">{formatPercent(lang, p.accuracy)}</td>
                       <td className="pr-2.5">{p.errors}</td>
-                      <td className="pr-2.5">{p.status === "finished" ? formatRaceTime(lang, p.timeMs) : "—"}</td>
+                      <td className="pr-2.5">
+                        {p.status === "finished" ? formatRaceTime(lang, p.timeMs) : "—"}
+                        {p.status === "finished" && p.penaltyMs > 0 && (
+                          <span className="block text-base text-[#3a3a3a]">
+                            {t("res.penalty_note", {
+                              seconds: formatNumber(lang, p.penaltyMs / 1000, 1),
+                            })}
+                          </span>
+                        )}
+                      </td>
                       <td className="pr-2.5">{t(STATUS_KEY[p.status] ?? "res.status_other")}</td>
                       <td>{bonusSummary(lang, p)}</td>
                     </tr>
@@ -263,7 +312,10 @@ export default async function ResultatsPage({
                 <p className="mt-2.5 text-xl">
                   {t("res.worst_keys")}{" "}
                   {worstKeys.map(([letter, pct]) => (
-                    <b key={letter} className="mr-1.5 border-2 border-black bg-[#ff7b6b] px-1.5 font-normal">
+                    <b
+                      key={letter}
+                      className="mr-1.5 border-2 border-black bg-[#ff7b6b] px-1.5 font-normal"
+                    >
                       {letter} ({pct}%)
                     </b>
                   ))}

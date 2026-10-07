@@ -18,7 +18,10 @@ export type ResultRow = {
   rawWpm: number;
   accuracy: number;
   errors: number;
+  /** Temps classé : temps réel + pénalité d'erreurs. */
   timeMs: number;
+  /** Part de `timeMs` due aux erreurs non corrigées. */
+  penaltyMs: number;
   progress: number;
   textLength: number;
   bonuses: BonusRecord[];
@@ -29,7 +32,15 @@ export type ResultRow = {
 };
 
 export type RaceResults = {
-  race: { id: string; lobbyId: string; status: string; language: string; createdAt: Date; textLength: number; durationSeconds: number };
+  race: {
+    id: string;
+    lobbyId: string;
+    status: string;
+    language: string;
+    createdAt: Date;
+    textLength: number;
+    durationSeconds: number;
+  };
   rows: ResultRow[];
   spectatorKeys: string[];
 };
@@ -67,6 +78,7 @@ export async function loadRaceResults(raceId: string): Promise<RaceResults | nul
       "race_participants.accuracy",
       "race_participants.error_count",
       "race_participants.finish_ms",
+      "race_participants.penalty_ms",
       "race_participants.progress_chars",
       "race_participants.text_length",
       "race_participants.bonuses",
@@ -104,6 +116,7 @@ export async function loadRaceResults(raceId: string): Promise<RaceResults | nul
       accuracy: r.accuracy ?? 100,
       errors: r.error_count,
       timeMs: r.finish_ms ?? 0,
+      penaltyMs: r.penalty_ms,
       progress: r.progress_chars,
       textLength: r.text_length ?? race.text_content.length,
       bonuses: (r.bonuses as BonusRecord[] | null) ?? [],
@@ -119,8 +132,16 @@ export async function loadRaceResults(raceId: string): Promise<RaceResults | nul
 }
 
 /** RES-04 : le MPM de cette course dépasse-t-il tous les MPM de ses courses terminées précédentes ? */
-export async function isPersonalRecord(userId: string, raceId: string, wpm: number): Promise<boolean> {
-  const race = await db.selectFrom("races").select("created_at").where("id", "=", raceId).executeTakeFirst();
+export async function isPersonalRecord(
+  userId: string,
+  raceId: string,
+  wpm: number,
+): Promise<boolean> {
+  const race = await db
+    .selectFrom("races")
+    .select("created_at")
+    .where("id", "=", raceId)
+    .executeTakeFirst();
   if (!race) return false;
   const previous = await db
     .selectFrom("race_participants")

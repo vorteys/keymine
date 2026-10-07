@@ -37,6 +37,12 @@ export type EngineConfig = {
   startsAtMs: number;
   durationMs: number;
   errorMode: ErrorMode;
+  /**
+   * Pénalité en secondes par erreur non corrigée (réglage de la salle). Elle ne s'applique qu'en mode
+   * « libre » (accumuler) : en « correction obligatoire » toute erreur est corrigée avant d'avancer.
+   * Elle s'ajoute au temps d'arrivée et décide du classement, mais pas du MPM (calculé sur le temps réel).
+   */
+  penaltySeconds?: number;
   comebackBonus: boolean;
   language: Language;
   /** Mots que le bonus « +3 mots » peut ajouter. */
@@ -93,7 +99,16 @@ export type ProgressInput = {
 
 export type ProgressResult =
   | { ok: true }
-  | { ok: false; reason: "not_racing" | "not_started" | "backwards" | "too_long" | "impossible_jump" | "unknown_racer" };
+  | {
+      ok: false;
+      reason:
+        | "not_racing"
+        | "not_started"
+        | "backwards"
+        | "too_long"
+        | "impossible_jump"
+        | "unknown_racer";
+    };
 
 export type EngineEvent =
   | { type: "bonus"; bonus: BonusRecord; label: string }
@@ -112,6 +127,8 @@ export type RacerView = {
   wpm: number;
   accuracy: number;
   errors: number;
+  /** Pénalité d'erreurs déjà encourue, en ms (0 si la pénalité est désactivée). */
+  penaltyMs: number;
   status: RacerStatus;
   rank: number;
   fogUntilMs: number;
@@ -133,7 +150,10 @@ export type RacerResult = {
   wpm: number;
   rawWpm: number;
   accuracy: number;
+  /** Temps d'arrivée classé : temps réel + pénalité. */
   timeMs: number;
+  /** Part de `timeMs` due aux erreurs non corrigées. */
+  penaltyMs: number;
   bonuses: BonusRecord[];
   series: { t: number; wpm: number }[];
   keyCorrect: Record<string, number>;
@@ -157,7 +177,8 @@ export class RaceEngine {
   ) {
     this.rng = createRng(config.seed);
     inits.forEach((init, index) => {
-      const botLevel = init.isBot && init.botLevel && isBotLevel(init.botLevel) ? init.botLevel : null;
+      const botLevel =
+        init.isBot && init.botLevel && isBotLevel(init.botLevel) ? init.botLevel : null;
       this.racers.set(init.id, {
         id: init.id,
         name: init.name,
@@ -304,7 +325,10 @@ export class RaceEngine {
     while (this.lastSeriesMs + SERIES_STEP_MS <= elapsed) {
       this.lastSeriesMs += SERIES_STEP_MS;
       for (const r of this.racing()) {
-        r.series.push({ t: this.lastSeriesMs / 1000, wpm: round1(this.wpmAt(r, this.lastSeriesMs)) });
+        r.series.push({
+          t: this.lastSeriesMs / 1000,
+          wpm: round1(this.wpmAt(r, this.lastSeriesMs)),
+        });
       }
     }
 
@@ -342,9 +366,16 @@ export class RaceEngine {
     return events;
   }
 
-  private grantBonus(laggard: Racer, leader: Racer, checkpoint: number, elapsed: number): EngineEvent[] {
+  private grantBonus(
+    laggard: Racer,
+    leader: Racer,
+    checkpoint: number,
+    elapsed: number,
+  ): EngineEvent[] {
     const eligible = BONUS_KINDS.filter(
-      (kind) => kind !== "minus_words" || wordsAfterCurrent(laggard.text, laggard.progress) >= BONUS_WORDS + 1,
+      (kind) =>
+        kind !== "minus_words" ||
+        wordsAfterCurrent(laggard.text, laggard.progress) >= BONUS_WORDS + 1,
     );
     const kind: BonusKind = eligible[Math.floor(this.rng() * eligible.length)]!;
     const now = this.config.startsAtMs + elapsed;
@@ -362,7 +393,9 @@ export class RaceEngine {
     if (kind === "fog") {
       leader.fogUntilMs = now + FOG_DURATION_MS;
     } else if (kind === "minus_words") {
-      events.push(this.setText(laggard, removeUpcomingWords(laggard.text, laggard.progress), elapsed, now));
+      events.push(
+        this.setText(laggard, removeUpcomingWords(laggard.text, laggard.progress), elapsed, now),
+      );
     } else {
       const words = Array.from(
         { length: BONUS_WORDS },
@@ -398,26 +431,58 @@ export class RaceEngine {
     this.rankAll();
   }
 
-  /** COURSE-10 : arrivés (par temps), puis temps écoulé (par progression), puis abandons (par progression). */
-  private rankAll(): void {
-    const order: Record<RacerStatus, number> = { finished: 0, timeout: 1, abandoned: 2, racing: 1 };
-    const sorted = this.list().sort((a, b) => {
-      if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
-      if (a.status === "finished") return (a.endedAtMs ?? 0) - (b.endedAtMs ?? 0) || cmpId(a, b);
-      return this.fraction(b) - this.fraction(a) || cmpId(a, b);
+  /** Pénalité d'erreurs d'un joueur, en ms (mode libre seulement). */
+  private penaltyMs(r: Racer): number {
+    const perError = Math.max(0, this.config.penaltySeconds ?? 0) * 1000;
+    return this.config.errorMode === "accumuler" ? Math.round(r.errors * perError) : 0;
+  }
+
+  /** Temps d'arrivée classé : temps réel + pénalité. */
+  private rankedTimeMs(r: Racer): number {
+    return (
+      Math.max(0, (r.endedAtMs ?? this.config.startsAtMs) - this.config.startsAtMs) +
+      this.penaltyMs(r)
+    );
+  }
+
+  /** Arrivé à temps : a fini le texte et, pénalité comprise, dans la durée de la course. */
+  private finishedInTime(r: Racer): boolean {
+    if (r.status !== "finished") return false;
+    return this.penaltyMs(r) === 0 || this.rankedTimeMs(r) <= this.config.durationMs;
+  }
+
+  /**
+   * Avancement pris en compte pour départager ceux qui n'ont pas fini à temps : avec une pénalité, les
+   * erreurs ne font pas avancer (sinon marteler le clavier suffirait à passer devant).
+   */
+  private rankFraction(r: Racer): number {
+    if (r.text.length === 0) return 1;
+    const penalised =
+      this.config.errorMode === "accumuler" && (this.config.penaltySeconds ?? 0) > 0;
+    const chars = penalised ? Math.max(0, r.progress - r.errors) : r.progress;
+    return Math.min(1, chars / r.text.length);
+  }
+
+  /**
+   * COURSE-10 : arrivés à temps (par temps pénalité comprise), puis les autres (par avancement),
+   * puis les abandons (par avancement).
+   */
+  private sortedForRanking(): Racer[] {
+    const group = (r: Racer) => (r.status === "abandoned" ? 2 : this.finishedInTime(r) ? 0 : 1);
+    return this.list().sort((a, b) => {
+      if (group(a) !== group(b)) return group(a) - group(b);
+      if (group(a) === 0) return this.rankedTimeMs(a) - this.rankedTimeMs(b) || cmpId(a, b);
+      return this.rankFraction(b) - this.rankFraction(a) || cmpId(a, b);
     });
-    sorted.forEach((r, i) => (r.rank = i + 1));
+  }
+
+  private rankAll(): void {
+    this.sortedForRanking().forEach((r, i) => (r.rank = i + 1));
   }
 
   /** Classement en direct, pendant la course (même règle que le classement final). */
   private liveRanks(): Map<string, number> {
-    const order: Record<RacerStatus, number> = { finished: 0, racing: 1, timeout: 1, abandoned: 2 };
-    const sorted = this.list().sort((a, b) => {
-      if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
-      if (a.status === "finished") return (a.endedAtMs ?? 0) - (b.endedAtMs ?? 0) || cmpId(a, b);
-      return this.fraction(b) - this.fraction(a) || cmpId(a, b);
-    });
-    return new Map(sorted.map((r, i) => [r.id, i + 1]));
+    return new Map(this.sortedForRanking().map((r, i) => [r.id, i + 1]));
   }
 
   private elapsedFor(r: Racer, now: number): number {
@@ -441,6 +506,7 @@ export class RaceEngine {
         wpm: round1(netWpm(r.progress, r.errors, this.config.errorMode, elapsed)),
         accuracy: round1(accuracyOf(r.progress, r.errors, this.config.errorMode)),
         errors: r.errors,
+        penaltyMs: this.penaltyMs(r),
         status: r.status,
         rank: r.rank ?? ranks.get(r.id)!,
         fogUntilMs: r.fogUntilMs,
@@ -470,7 +536,8 @@ export class RaceEngine {
           wpm: round1(netWpm(r.progress, r.errors, this.config.errorMode, elapsed)),
           rawWpm: round1(rawWpm(r.progress, r.errors, this.config.errorMode, elapsed)),
           accuracy: round1(accuracyOf(r.progress, r.errors, this.config.errorMode)),
-          timeMs: elapsed,
+          timeMs: elapsed + (r.status === "finished" ? this.penaltyMs(r) : 0),
+          penaltyMs: r.status === "finished" ? this.penaltyMs(r) : 0,
           bonuses: r.bonuses,
           series: r.series,
           keyCorrect: r.keyCorrect,

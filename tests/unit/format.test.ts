@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { formatDate, formatDuration, formatNumber, formatPercent, formatRaceTime } from "@/lib/format";
+import {
+  formatDate,
+  formatDuration,
+  formatNumber,
+  formatPercent,
+  formatRaceTime,
+} from "@/lib/format";
 
 // I18N-03 : dates et nombres formatés selon la langue choisie.
 describe("formatage localisé (I18N-03)", () => {
@@ -14,9 +20,10 @@ describe("formatage localisé (I18N-03)", () => {
   });
 
   it("formate les durées de course", () => {
-    expect(formatRaceTime("fr", 67_400)).toBe("1:07,4");
-    expect(formatRaceTime("en", 67_400)).toBe("1:07.4");
-    expect(formatRaceTime("fr", 0)).toBe("0:00,0");
+    expect(formatRaceTime("fr", 67_400)).toBe("1 min 07,4 s");
+    expect(formatRaceTime("en", 67_400)).toBe("1 min 07.4 s");
+    expect(formatRaceTime("fr", 22_000)).toBe("22,0 s");
+    expect(formatRaceTime("fr", 0)).toBe("0,0 s");
   });
 
   it("formate les dates dans la langue choisie", () => {

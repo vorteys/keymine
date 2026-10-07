@@ -18,7 +18,11 @@ async function typeWholeText(page: Page, code: string) {
       // comme un évènement keydown, sinon la page ne les voit pas.
       for (const char of text.slice(typed)) {
         if (/^[\x20-\x7e]$/.test(char)) await page.keyboard.press(char);
-        else await page.evaluate((key) => window.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true })), char);
+        else
+          await page.evaluate(
+            (key) => window.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true })),
+            char,
+          );
       }
       typed = text.length;
     } else {
@@ -27,12 +31,18 @@ async function typeWholeText(page: Page, code: string) {
   }
 }
 
-test("course complète : hôte + invité + bot, résultats, rejouer (COURSE-03/04/05, RES-01, COURSE-11)", async ({ browser }) => {
+test("course complète : hôte + invité + bot, résultats, rejouer (COURSE-03/04/05, RES-01, COURSE-11)", async ({
+  browser,
+}) => {
   const hostContext = await browser.newContext({ locale: "fr-CA" });
   const guestContext = await browser.newContext({ locale: "fr-CA" });
   const host = await hostContext.newPage();
   await registerViaApi(host.request, "hote");
-  const code = await createRoomViaApi(host.request, { textLength: 10, durationSeconds: 15, comebackBonus: false });
+  const code = await createRoomViaApi(host.request, {
+    textLength: 10,
+    durationSeconds: 15,
+    comebackBonus: false,
+  });
   await addBotViaApi(host.request, code, "noob");
   await host.goto(`/jouer/${code}`);
 
@@ -63,7 +73,9 @@ test("course complète : hôte + invité + bot, résultats, rejouer (COURSE-03/0
   await guestContext.close();
 });
 
-test("l'hôte expulse un invité : il est redirigé hors de la salle et ne peut pas revenir (SALLE-07)", async ({ browser }) => {
+test("l'hôte expulse un invité : il est redirigé hors de la salle et ne peut pas revenir (SALLE-07)", async ({
+  browser,
+}) => {
   const hostContext = await browser.newContext({ locale: "fr-CA" });
   const guestContext = await browser.newContext({ locale: "fr-CA" });
   const host = await hostContext.newPage();
@@ -84,7 +96,9 @@ test("l'hôte expulse un invité : il est redirigé hors de la salle et ne peut 
   await guestContext.close();
 });
 
-test("les réglages modifiés par l'hôte se mettent à jour en direct chez l'invité (SALLE-03)", async ({ browser }) => {
+test("les réglages modifiés par l'hôte se mettent à jour en direct chez l'invité (SALLE-03)", async ({
+  browser,
+}) => {
   const hostContext = await browser.newContext({ locale: "fr-CA" });
   const guestContext = await browser.newContext({ locale: "fr-CA" });
   const host = await hostContext.newPage();
@@ -100,4 +114,34 @@ test("les réglages modifiés par l'hôte se mettent à jour en direct chez l'in
 
   await hostContext.close();
   await guestContext.close();
+});
+
+test("marteler le clavier est pénalisé : la pénalité s'ajoute au temps d'arrivée", async ({
+  page,
+}) => {
+  await registerViaApi(page.request, "martel");
+  const code = await createRoomViaApi(page.request, {
+    textLength: 10,
+    durationSeconds: 15,
+    comebackBonus: false,
+    errorMode: "accumuler",
+    penaltySeconds: 1,
+  });
+  await addBotViaApi(page.request, code, "noob");
+  await page.goto(`/jouer/${code}`);
+  await page.getByRole("button", { name: "DEMARRER" }).click();
+  await expect(page).toHaveURL(new RegExp(`/course/${code}`), { timeout: 15_000 });
+  await expect(page.getByRole("group", { name: "Texte à taper" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("La course commence…")).toBeHidden({ timeout: 15_000 });
+
+  // « § » n'apparaît dans aucun texte : chaque frappe est une erreur, mais le curseur avance quand même.
+  for (let i = 0; i < 400 && !page.url().includes(`/resultats/${code}`); i++) {
+    await page.evaluate(() =>
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "§", bubbles: true })),
+    );
+    await page.waitForTimeout(60);
+  }
+
+  await expect(page).toHaveURL(new RegExp(`/resultats/${code}`), { timeout: 30_000 });
+  await expect(page.getByRole("table")).toContainText("de pénalité");
 });

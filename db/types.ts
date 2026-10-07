@@ -87,7 +87,6 @@ export interface LobbyPlayersTable {
   last_seen_at: ColumnType<Date, string | undefined, Date | string>;
 }
 
-
 export interface CorpusTextsTable {
   id: Generated<number>;
   language: Language;
@@ -144,6 +143,7 @@ export interface RaceParticipantsTable {
   raw_wpm: number | null;
   text_length: number | null;
   finish_ms: number | null;
+  penalty_ms: Generated<number>;
   bonuses: Generated<unknown>;
   wpm_series: Generated<unknown>;
   key_correct: Generated<unknown>;

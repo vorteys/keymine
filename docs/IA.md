@@ -38,6 +38,12 @@ Autres erreurs corrigées en cours de route (plus petites) : curseur de capacit�
 **Détection.** Vérification mot à mot de chacun des 21 passages contre Project Gutenberg : quatre coquilles (« Et bonjour » au lieu de « Hé ! bonjour » chez La Fontaine, « monsieur le baron » au lieu de « M. le baron » dans Candide, la ponctuation du Petit Poucet, une phrase de Dorian Gray coupée en plein milieu).
 **Correction.** Passages corrigés ; les adaptations volontaires (vers fondus en prose, tirets longs remplacés par des virgules, graphie modernisée) sont documentées en tête de `db/seed-data/corpus.ts`.
 
+### 5. Une option affichée mais jamais appliquée (pénalité d'erreurs)
+
+**Ce qui s'est passé.** L'agent avait ajouté au formulaire, au schéma Zod et à la base l'option « Pénalité : +1 s par erreur non corrigée », mais le moteur de course ne la lisait jamais : l'interface promettait un comportement absent.
+**Détection.** L'étudiant, en jouant : un joueur qui martelait le clavier terminait premier avec un temps très court. Aucun test ne couvrait l'option car aucun code ne l'utilisait.
+**Correction.** Le moteur calcule maintenant le temps classé (temps réel + erreurs × pénalité, mode libre seulement), la pénalité est enregistrée (`penalty_ms`) et affichée ; sept tests unitaires et un test navigateur couvrent le cas. Leçon : tout réglage proposé dans l'interface doit avoir un test qui prouve son effet.
+
 ## Réflexion sur notre façon de travailler avec les agents
 
 _À rédiger par l'équipe, avec ses propres mots : ce qui a bien marché, ce qui a demandé de la vigilance, ce que nous referions autrement._

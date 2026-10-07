@@ -57,7 +57,9 @@ function stateMessage(room: Room, now: number) {
     startsAt: room.startsAtMs,
     endsAt: room.engine.endsAtMs,
     serverNow: now,
-    participants: room.engine.snapshot(now).map((v) => ({ ...v, avatarUrl: room.avatars.get(v.id) ?? null })),
+    participants: room.engine
+      .snapshot(now)
+      .map((v) => ({ ...v, avatarUrl: room.avatars.get(v.id) ?? null })),
   };
 }
 
@@ -76,7 +78,7 @@ async function createRoom(raceId: string): Promise<Room | null> {
   if (!race) return null;
   const lobby = await db
     .selectFrom("lobbies")
-    .select(["id", "error_mode", "status"])
+    .select(["id", "error_mode", "penalty_seconds", "status"])
     .where("id", "=", race.lobby_id)
     .executeTakeFirst();
   if (!lobby) return null;
@@ -131,6 +133,7 @@ async function createRoom(raceId: string): Promise<Room | null> {
       startsAtMs,
       durationMs: race.duration_seconds * 1_000,
       errorMode: lobby.error_mode,
+      penaltySeconds: lobby.penalty_seconds,
       comebackBonus: race.comeback_bonus,
       language: race.language,
       wordPool: corpus.words[race.language],
@@ -143,7 +146,8 @@ async function createRoom(raceId: string): Promise<Room | null> {
     lobbyId: lobby.id,
     engine,
     startsAtMs,
-    phase: race.status === "finished" ? "finished" : race.status === "racing" ? "racing" : "countdown",
+    phase:
+      race.status === "finished" ? "finished" : race.status === "racing" ? "racing" : "countdown",
     members,
     sockets: new Map(),
     spectators: new Set(),
@@ -156,7 +160,8 @@ async function createRoom(raceId: string): Promise<Room | null> {
   if (room.phase !== "finished") {
     room.tickTimer = setInterval(() => void tick(room), TICK_MS);
     // Humains non connectés au départ : le compte à rebours de 30 s (COURSE-08) commence maintenant.
-    for (const r of engine.racers.values()) if (!r.isBot) engine.setConnected(r.id, false, Date.now());
+    for (const r of engine.racers.values())
+      if (!r.isBot) engine.setConnected(r.id, false, Date.now());
   }
   return room;
 }
@@ -217,7 +222,11 @@ function stopRoom(room: Room) {
 }
 
 async function setRaceStatus(room: Room, status: "racing") {
-  const lobby = await db.selectFrom("lobbies").select("status").where("id", "=", room.lobbyId).executeTakeFirst();
+  const lobby = await db
+    .selectFrom("lobbies")
+    .select("status")
+    .where("id", "=", room.lobbyId)
+    .executeTakeFirst();
   if (lobby && lobby.status === "countdown") {
     assertTransition("countdown", "racing");
     await db.updateTable("lobbies").set({ status }).where("id", "=", room.lobbyId).execute();
@@ -256,7 +265,8 @@ async function persistResults(room: Room, now: number) {
         rank: r.rank,
         text_length: r.textLength,
         finish_ms: Math.round(r.timeMs),
-        finished_at: new Date(room.startsAtMs + r.timeMs),
+        penalty_ms: Math.round(r.penaltyMs),
+        finished_at: new Date(room.startsAtMs + r.timeMs - r.penaltyMs),
         bonuses: JSON.stringify(r.bonuses),
         wpm_series: JSON.stringify(r.series),
         key_correct: JSON.stringify(r.keyCorrect),
@@ -277,15 +287,27 @@ async function persistResults(room: Room, now: number) {
     .where("id", "=", room.raceId)
     .execute();
 
-  const lobby = await db.selectFrom("lobbies").select("status").where("id", "=", room.lobbyId).executeTakeFirst();
+  const lobby = await db
+    .selectFrom("lobbies")
+    .select("status")
+    .where("id", "=", room.lobbyId)
+    .executeTakeFirst();
   if (lobby?.status === "racing" || lobby?.status === "countdown") {
-    await db.updateTable("lobbies").set({ status: "finished" }).where("id", "=", room.lobbyId).execute();
+    await db
+      .updateTable("lobbies")
+      .set({ status: "finished" })
+      .where("id", "=", room.lobbyId)
+      .execute();
   }
 }
 
 /** Charge au démarrage les courses non terminées (redémarrage du serveur). */
 export async function resumeUnfinishedRaces() {
-  const open = await db.selectFrom("races").select("id").where("status", "in", ["countdown", "racing"]).execute();
+  const open = await db
+    .selectFrom("races")
+    .select("id")
+    .where("status", "in", ["countdown", "racing"])
+    .execute();
   for (const race of open) await loadRoom(race.id);
 }
 
@@ -330,7 +352,12 @@ export async function attachRaceSocket(
     if (m.type === "progress") {
       room.engine.applyProgress(
         racerId,
-        { progressChars: m.progressChars, errorCount: m.errorCount, keyCorrect: m.keyCorrect, keyErrors: m.keyErrors },
+        {
+          progressChars: m.progressChars,
+          errorCount: m.errorCount,
+          keyCorrect: m.keyCorrect,
+          keyErrors: m.keyErrors,
+        },
         now,
       );
     } else {

@@ -25,17 +25,21 @@ export function formatDate(lang: SiteLang, date: Date | string, withTime = false
   }).format(new Date(date));
 }
 
-/** Durée d'une course : 1:07,4 en français, 1:07.4 en anglais. */
+/**
+ * Durée d'une course, avec son unité pour ne pas la confondre (« 22,0 s » et non « 0:22 ») :
+ * « 22,0 s » sous la minute, « 1 min 07,4 s » au-delà (point décimal en anglais).
+ */
 export function formatRaceTime(lang: SiteLang, ms: number): string {
   const total = Math.max(0, ms) / 1000;
   const minutes = Math.floor(total / 60);
   const seconds = total - minutes * 60;
-  const secondsText = new Intl.NumberFormat(localeOf(lang), {
-    minimumIntegerDigits: 2,
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  }).format(seconds);
-  return `${minutes}:${secondsText}`;
+  const format = (digits: number) =>
+    new Intl.NumberFormat(localeOf(lang), {
+      minimumIntegerDigits: digits,
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    }).format(seconds);
+  return minutes === 0 ? `${format(1)} s` : `${minutes} min ${format(2)} s`;
 }
 
 const DURATION_UNITS: Record<SiteLang, Record<"second" | "minute" | "hour", [string, string]>> = {
@@ -50,7 +54,11 @@ const DURATION_UNITS: Record<SiteLang, Record<"second" | "minute" | "hour", [str
  */
 export function formatDuration(lang: SiteLang, seconds: number): string {
   const [unit, value] =
-    seconds % 3600 === 0 ? (["hour", seconds / 3600] as const) : seconds % 60 === 0 ? (["minute", seconds / 60] as const) : (["second", seconds] as const);
+    seconds % 3600 === 0
+      ? (["hour", seconds / 3600] as const)
+      : seconds % 60 === 0
+        ? (["minute", seconds / 60] as const)
+        : (["second", seconds] as const);
   const [one, many] = DURATION_UNITS[lang][unit];
   // Le français met le pluriel à partir de 2, l'anglais dès que la valeur n'est pas 1.
   const plural = lang === "fr" ? value >= 2 : value !== 1;

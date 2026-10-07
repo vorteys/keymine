@@ -44,12 +44,17 @@ describe("calcul du MPM et de la précision", () => {
 describe("serveur autoritaire : rejet des progressions impossibles (COURSE-06)", () => {
   it("accepte une progression plausible", () => {
     const e = engine([human("a"), human("b")]);
-    expect(e.applyProgress("a", { progressChars: 40, errorCount: 1 }, START + 3_000)).toEqual({ ok: true });
+    expect(e.applyProgress("a", { progressChars: 40, errorCount: 1 }, START + 3_000)).toEqual({
+      ok: true,
+    });
   });
 
   it("refuse avant le départ", () => {
     const e = engine([human("a"), human("b")]);
-    expect(e.applyProgress("a", { progressChars: 1, errorCount: 0 }, START - 1)).toEqual({ ok: false, reason: "not_started" });
+    expect(e.applyProgress("a", { progressChars: 1, errorCount: 0 }, START - 1)).toEqual({
+      ok: false,
+      reason: "not_started",
+    });
   });
 
   it("refuse un saut de progression", () => {
@@ -79,21 +84,37 @@ describe("serveur autoritaire : rejet des progressions impossibles (COURSE-06)",
   it("refuse un retour en arrière et un dépassement du texte", () => {
     const e = engine([human("a"), human("b")]);
     e.applyProgress("a", { progressChars: 30, errorCount: 0 }, START + 5_000);
-    expect(e.applyProgress("a", { progressChars: 10, errorCount: 0 }, START + 6_000)).toEqual({ ok: false, reason: "backwards" });
-    expect(e.applyProgress("a", { progressChars: TEXT.length + 5, errorCount: 0 }, START + 60_000)).toEqual({ ok: false, reason: "too_long" });
+    expect(e.applyProgress("a", { progressChars: 10, errorCount: 0 }, START + 6_000)).toEqual({
+      ok: false,
+      reason: "backwards",
+    });
+    expect(
+      e.applyProgress("a", { progressChars: TEXT.length + 5, errorCount: 0 }, START + 60_000),
+    ).toEqual({ ok: false, reason: "too_long" });
   });
 
   it("ne lit jamais un MPM fourni par le client", () => {
     const e = engine([human("a"), human("b")]);
-    e.applyProgress("a", { progressChars: 50, errorCount: 0, ...({ wpm: 999 } as object) }, START + 6_000);
+    e.applyProgress(
+      "a",
+      { progressChars: 50, errorCount: 0, ...({ wpm: 999 } as object) },
+      START + 6_000,
+    );
     const view = e.snapshot(START + 6_000).find((v) => v.id === "a")!;
     expect(view.wpm).toBe(100); // 50 car. / 5 / 0,1 min
   });
 
   it("refuse les actions sur un joueur inconnu ou un bot", () => {
-    const e = engine([human("a"), { id: "bot", name: "Bot", text: TEXT, isBot: true, botLevel: "expert" }]);
-    expect(e.applyProgress("zzz", { progressChars: 1, errorCount: 0 }, START + 1_000)).toMatchObject({ ok: false });
-    expect(e.applyProgress("bot", { progressChars: 1, errorCount: 0 }, START + 1_000)).toMatchObject({ ok: false });
+    const e = engine([
+      human("a"),
+      { id: "bot", name: "Bot", text: TEXT, isBot: true, botLevel: "expert" },
+    ]);
+    expect(
+      e.applyProgress("zzz", { progressChars: 1, errorCount: 0 }, START + 1_000),
+    ).toMatchObject({ ok: false });
+    expect(
+      e.applyProgress("bot", { progressChars: 1, errorCount: 0 }, START + 1_000),
+    ).toMatchObject({ ok: false });
   });
 });
 
@@ -102,10 +123,18 @@ describe("fin de course et classement (COURSE-09, COURSE-10)", () => {
     const e = engine([human("a"), human("b"), human("c"), human("d")], { durationMs: 60_000 });
     // a arrive en premier, b ensuite
     for (let s = 1; s <= 15; s++) {
-      e.applyProgress("a", { progressChars: Math.min(TEXT.length, s * 20), errorCount: 0 }, START + s * 1_000);
+      e.applyProgress(
+        "a",
+        { progressChars: Math.min(TEXT.length, s * 20), errorCount: 0 },
+        START + s * 1_000,
+      );
     }
     for (let s = 1; s <= 17; s++) {
-      e.applyProgress("b", { progressChars: Math.min(TEXT.length, s * 18), errorCount: 0 }, START + s * 1_000);
+      e.applyProgress(
+        "b",
+        { progressChars: Math.min(TEXT.length, s * 18), errorCount: 0 },
+        START + s * 1_000,
+      );
     }
     return e;
   }
@@ -130,7 +159,12 @@ describe("fin de course et classement (COURSE-09, COURSE-10)", () => {
     const e = engine([human("a"), human("b")]);
     e.applyProgress("a", { progressChars: 20, errorCount: 0 }, START + 1_000);
     e.abandon("b", START + 2_000);
-    for (let s = 2; s <= 5; s++) e.applyProgress("a", { progressChars: Math.min(TEXT.length, s * 20), errorCount: 0 }, START + s * 1_000);
+    for (let s = 2; s <= 5; s++)
+      e.applyProgress(
+        "a",
+        { progressChars: Math.min(TEXT.length, s * 20), errorCount: 0 },
+        START + s * 1_000,
+      );
     e.applyProgress("a", { progressChars: TEXT.length, errorCount: 0 }, START + 18_000);
     e.tick(START + 18_000);
     expect(e.isFinalized).toBe(true);
@@ -148,8 +182,13 @@ describe("fin de course et classement (COURSE-09, COURSE-10)", () => {
   it("l'abandon est confirmé côté serveur et figé", () => {
     const e = engine([human("a"), human("b")]);
     e.applyProgress("a", { progressChars: 40, errorCount: 0 }, START + 5_000);
-    expect(e.abandon("a", START + 6_000)).toEqual([{ type: "abandoned", racerId: "a", reason: "player" }]);
-    expect(e.applyProgress("a", { progressChars: 60, errorCount: 0 }, START + 8_000)).toEqual({ ok: false, reason: "not_racing" });
+    expect(e.abandon("a", START + 6_000)).toEqual([
+      { type: "abandoned", racerId: "a", reason: "player" },
+    ]);
+    expect(e.applyProgress("a", { progressChars: 60, errorCount: 0 }, START + 8_000)).toEqual({
+      ok: false,
+      reason: "not_racing",
+    });
     expect(e.abandon("a", START + 9_000)).toEqual([]);
   });
 });
@@ -212,8 +251,14 @@ describe("bots dans le moteur (BOT-04, BOT-05)", () => {
   });
 
   it("les bots sont identifiés dans la vue", () => {
-    const e = engine([human("a"), { id: "bot1", name: "Bot", text: TEXT, isBot: true, botLevel: "noob" }]);
-    expect(e.snapshot(START).find((v) => v.id === "bot1")).toMatchObject({ isBot: true, botLevel: "noob" });
+    const e = engine([
+      human("a"),
+      { id: "bot1", name: "Bot", text: TEXT, isBot: true, botLevel: "noob" },
+    ]);
+    expect(e.snapshot(START).find((v) => v.id === "bot1")).toMatchObject({
+      isBot: true,
+      botLevel: "noob",
+    });
   });
 });
 
@@ -249,7 +294,9 @@ describe("bonus de remontée dans le moteur (BONUS-01 à BONUS-04)", () => {
     const e = engine([human("a"), human("b"), human("c")], { comebackBonus: true });
     advance(e, { a: 0.95, b: 0.05, c: 0.06 });
     for (const id of ["b", "c"]) expect(e.racers.get(id)!.bonuses.length).toBeLessThanOrEqual(3);
-    expect(new Set(e.racers.get("b")!.bonuses.map((b) => b.checkpoint)).size).toBe(e.racers.get("b")!.bonuses.length);
+    expect(new Set(e.racers.get("b")!.bonuses.map((b) => b.checkpoint)).size).toBe(
+      e.racers.get("b")!.bonuses.length,
+    );
   });
 
   it("n'aide pas un joueur proche du meneur qui n'est pas dernier", () => {
@@ -268,7 +315,14 @@ describe("bonus de remontée dans le moteur (BONUS-01 à BONUS-04)", () => {
       for (let s = 1; s <= 40; s++) {
         for (const [id, f] of Object.entries({ a: 0.9, b: 0.05 })) {
           const r = e.racers.get(id)!;
-          e.applyProgress(id, { progressChars: Math.min(Math.floor(r.text.length * f), r.progress + 20), errorCount: 0 }, START + s * 1_000);
+          e.applyProgress(
+            id,
+            {
+              progressChars: Math.min(Math.floor(r.text.length * f), r.progress + 20),
+              errorCount: 0,
+            },
+            START + s * 1_000,
+          );
         }
         events.push(...e.tick(START + s * 1_000));
       }
@@ -283,7 +337,9 @@ describe("bonus de remontée dans le moteur (BONUS-01 à BONUS-04)", () => {
       if (e.racers.get("b")!.bonuses.some((b) => b.kind === "plus_words")) {
         expect(e.racers.get("a")!.text.length).toBeGreaterThan(TEXT.length);
       }
-      expect(events.filter((ev) => ev.type === "bonus").length).toBe(e.racers.get("b")!.bonuses.length);
+      expect(events.filter((ev) => ev.type === "bonus").length).toBe(
+        e.racers.get("b")!.bonuses.length,
+      );
     }
     expect(seen.size).toBe(3); // les trois types existent
   });
@@ -293,7 +349,14 @@ describe("bonus de remontée dans le moteur (BONUS-01 à BONUS-04)", () => {
     for (let s = 1; s <= 40; s++) {
       for (const [id, f] of Object.entries({ a: 0.9, b: 0.1 })) {
         const r = e.racers.get(id)!;
-        e.applyProgress(id, { progressChars: Math.min(Math.floor(r.text.length * f), r.progress + 20), errorCount: 0 }, START + s * 1_000);
+        e.applyProgress(
+          id,
+          {
+            progressChars: Math.min(Math.floor(r.text.length * f), r.progress + 20),
+            errorCount: 0,
+          },
+          START + s * 1_000,
+        );
       }
       e.tick(START + s * 1_000);
     }
@@ -314,6 +377,77 @@ describe("bonus de remontée dans le moteur (BONUS-01 à BONUS-04)", () => {
       { comebackBonus: true, durationMs: 300_000 },
     );
     for (let t = 500; t <= 120_000; t += 500) e.tick(START + t);
-    expect(e.racers.get("slow")!.bonuses.length + e.racers.get("a")!.bonuses.length).toBeGreaterThan(0);
+    expect(
+      e.racers.get("slow")!.bonuses.length + e.racers.get("a")!.bonuses.length,
+    ).toBeGreaterThan(0);
+  });
+});
+
+describe("pénalité par erreur non corrigée", () => {
+  const FULL = TEXT.length;
+  function finish(e: RaceEngine, id: string, atMs: number, errors: number) {
+    expect(e.applyProgress(id, { progressChars: FULL, errorCount: errors }, START + atMs)).toEqual({
+      ok: true,
+    });
+  }
+
+  it("sans pénalité, marteler le clavier suffit pour finir premier (comportement historique)", () => {
+    const e = engine([human("masher"), human("typist")], { penaltySeconds: 0 });
+    finish(e, "masher", 25_000, 150);
+    finish(e, "typist", 40_000, 0);
+    expect(e.results(START + 121_000).map((r) => r.id)).toEqual(["masher", "typist"]);
+  });
+
+  it("chaque erreur ajoute la pénalité au temps classé (le MPM reste calculé sur le temps réel)", () => {
+    const e = engine([human("masher"), human("typist")], { penaltySeconds: 1 });
+    finish(e, "masher", 25_000, 30);
+    finish(e, "typist", 40_000, 0);
+    const results = e.results(START + 121_000);
+    expect(results.map((r) => r.id)).toEqual(["typist", "masher"]);
+    const masher = results.find((r) => r.id === "masher")!;
+    expect(masher.penaltyMs).toBe(30_000);
+    expect(masher.timeMs).toBe(55_000);
+    expect(masher.wpm).toBe(Math.round(netWpm(FULL, 30, "accumuler", 25_000) * 10) / 10);
+  });
+
+  it("peu d'erreurs : le plus rapide gagne encore, malgré la pénalité", () => {
+    const e = engine([human("fast"), human("slow")], { penaltySeconds: 1 });
+    finish(e, "fast", 25_000, 5);
+    finish(e, "slow", 40_000, 0);
+    expect(e.results(START + 121_000).map((r) => r.id)).toEqual(["fast", "slow"]);
+  });
+
+  it("la pénalité peut être fractionnaire", () => {
+    const e = engine([human("a")], { penaltySeconds: 0.5 });
+    finish(e, "a", 25_000, 10);
+    expect(e.results(START + 121_000)[0]!.penaltyMs).toBe(5_000);
+  });
+
+  it("en correction obligatoire, aucune pénalité : les erreurs étaient corrigées", () => {
+    const e = engine([human("a")], { penaltySeconds: 1, errorMode: "bloquer" });
+    finish(e, "a", 25_000, 12);
+    const [r] = e.results(START + 121_000);
+    expect(r!.penaltyMs).toBe(0);
+    expect(r!.timeMs).toBe(25_000);
+  });
+
+  it("une pénalité qui dépasse la durée fait perdre l'arrivée « à temps »", () => {
+    const e = engine([human("masher"), human("partial")], {
+      penaltySeconds: 1,
+      durationMs: 120_000,
+    });
+    finish(e, "masher", 25_000, 200); // 225 s classées > 120 s
+    e.applyProgress("partial", { progressChars: 200, errorCount: 0 }, START + 60_000);
+    const results = e.results(START + 121_000);
+    // « partial » a tapé 200 caractères justes ; « masher » en a seulement 99 de justes.
+    expect(results.map((r) => r.id)).toEqual(["partial", "masher"]);
+  });
+
+  it("le classement en direct ignore les erreurs quand une pénalité est active", () => {
+    const e = engine([human("masher"), human("typist")], { penaltySeconds: 1 });
+    e.applyProgress("masher", { progressChars: 100, errorCount: 90 }, START + 10_000);
+    e.applyProgress("typist", { progressChars: 60, errorCount: 0 }, START + 10_000);
+    const ranks = Object.fromEntries(e.snapshot(START + 10_000).map((v) => [v.id, v.rank]));
+    expect(ranks).toEqual({ typist: 1, masher: 2 });
   });
 });

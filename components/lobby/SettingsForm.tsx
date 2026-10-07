@@ -1,14 +1,16 @@
 "use client";
 
-import { useMemo, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { PixelLabel, PixelPanel, PixelSlot } from "@/components/ui";
 import { formatDuration } from "@/lib/format";
 import { useLanguage } from "@/lib/i18n";
 import { BUNDLED_CORPUS } from "@/lib/text/corpus";
 import { generateRaceText } from "@/lib/text/generate";
-import type { Difficulty } from "@/db/types";
+import type { Difficulty, Language, TextType } from "@/db/types";
+import type { AccentType } from "@/lib/text/accents";
 import { BONUS_KINDS } from "@/lib/race/bonus";
-import { LETTER_ROWS, SYMBOL_ROWS } from "./key-maps";
+import { checkRoomName, normalizeRoomName, ROOM_NAME_MAX } from "@/lib/room-name";
+import { DIGIT_ROWS, LETTER_ROWS, SYMBOL_ROWS } from "./key-maps";
 import {
   setBonusEnabled,
   settingsToPayload,
@@ -30,7 +32,11 @@ const COMPLEXITY_KEYS = {
   hard: ["set.hard", "set.hard_sub"],
 } as const;
 
-const TEXT_OPTIONS: TextOption[] = ["Majuscules", "Ponctuation", "Nombres", "Accents"];
+// Ponctuation et Accents ouvrent chacun une carte de touches ; Nombres et Majuscules sont dans « Lettres ».
+const TEXT_OPTIONS: TextOption[] = ["Ponctuation", "Accents"];
+
+// Délai avant de tirer un nouvel aperçu : le texte ne change pas à chaque cran d'un curseur.
+const PREVIEW_DELAY_MS = 450;
 
 export function Chip({
   on,
@@ -44,7 +50,14 @@ export function Chip({
   label?: string;
 }) {
   return (
-    <button type="button" onClick={onClick} data-on={on} aria-pressed={on} aria-label={label} className="pixel-chip text-xl">
+    <button
+      type="button"
+      onClick={onClick}
+      data-on={on}
+      aria-pressed={on}
+      aria-label={label}
+      className="pixel-chip text-xl"
+    >
       {children}
     </button>
   );
@@ -88,12 +101,15 @@ export function SettingsForm({
   onChange,
   layout = "split",
   leftExtra,
+  requireName = false,
 }: {
   value: SettingsState;
   onChange: (patch: Partial<SettingsState>) => void;
   layout?: "split" | "stacked";
   /** Éléments propres à la création (rôle de l'hôte, bots) insérés dans le panneau de gauche. */
   leftExtra?: ReactNode;
+  /** Création : le nom de la salle est obligatoire (la modification garde l'ancien s'il est vide). */
+  requireName?: boolean;
 }) {
   const { t, lang } = useLanguage();
   const v = value;
@@ -110,38 +126,109 @@ export function SettingsForm({
   );
 
   // Ce que le serveur recevra vraiment : l'aperçu montre donc le même texte que la course.
-  const payload = useMemo(() => settingsToPayload(v), [v]);
+  const payload = settingsToPayload(v);
+
+  // Seuls les réglages qui changent le texte comptent : bouger la taille du lobby, la durée ou la
+  // longueur ne tire pas un nouvel aperçu. Le tirage attend ensuite un court instant (anti-rebond).
+  const textKey = JSON.stringify([
+    v.textType,
+    v.language,
+    v.complexity,
+    payload.uppercase,
+    payload.punctuation,
+    payload.digits,
+    payload.accents,
+    payload.includeChars,
+    payload.excludeChars,
+    payload.accentWanted,
+    payload.accentForbidden,
+  ]);
+  const [settledKey, setSettledKey] = useState(textKey);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettledKey(textKey), PREVIEW_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [textKey]);
 
   const preview = useMemo(() => {
     if (!hydrated) return "";
+    const [
+      type,
+      language,
+      complexity,
+      uppercase,
+      punctuationOn,
+      digits,
+      accentsOn,
+      include,
+      exclude,
+      wanted,
+      forbidden,
+    ] = JSON.parse(settledKey) as [
+      TextType,
+      Language,
+      Difficulty,
+      boolean,
+      boolean,
+      boolean,
+      boolean,
+      string[],
+      string[],
+      AccentType[],
+      AccentType[],
+    ];
     try {
       return generateRaceText(
         {
-          type: v.textType,
-          language: v.language,
+          type,
+          language,
           length: 12,
-          complexity: v.complexity,
-          uppercase: v.options.includes("Majuscules"),
-          punctuation: v.options.includes("Ponctuation"),
-          digits: v.options.includes("Nombres"),
-          accents: v.options.includes("Accents"),
-          includeChars: payload.includeChars,
-          excludeChars: payload.excludeChars,
-          accentWanted: payload.accentWanted,
-          accentForbidden: payload.accentForbidden,
+          complexity,
+          uppercase,
+          punctuation: punctuationOn,
+          digits,
+          accents: accentsOn,
+          includeChars: include,
+          excludeChars: exclude,
+          accentWanted: wanted,
+          accentForbidden: forbidden,
         },
         BUNDLED_CORPUS,
       );
     } catch {
       return "";
     }
-  }, [hydrated, v.textType, v.language, v.complexity, v.options, payload]);
+  }, [hydrated, settledKey]);
+
+  const nameProblem = checkRoomName(normalizeRoomName(v.name));
 
   const general = (
     <div className="flex flex-col gap-4">
       <div>
+        <PixelLabel>{t("set.name")}</PixelLabel>
+        <input
+          type="text"
+          value={v.name}
+          onChange={(e) => onChange({ name: e.target.value })}
+          maxLength={ROOM_NAME_MAX + 10}
+          required={requireName}
+          aria-label={t("set.name_aria")}
+          aria-invalid={v.name !== "" && nameProblem !== null}
+          aria-describedby="room-name-hint"
+          autoComplete="off"
+          className="pixel-slot h-11 w-full px-2.5 text-2xl text-white"
+        />
+        <p
+          id="room-name-hint"
+          role={v.name !== "" && nameProblem ? "alert" : undefined}
+          className={`mt-1 text-lg ${v.name !== "" && nameProblem ? "text-[#9b2d20]" : "text-[#3a3a3a]"}`}
+        >
+          {v.name !== "" && nameProblem ? t(`err.${nameProblem}` as const) : t("set.name_hint")}
+        </p>
+      </div>
+
+      <div>
         <PixelLabel>{t("set.access")}</PixelLabel>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 min-[480px]:grid-cols-3 gap-2">
           {(
             [
               ["public", t("set.access_public"), t("set.access_public_sub")],
@@ -149,7 +236,13 @@ export function SettingsForm({
               ["private", t("set.access_private"), t("set.access_private_sub")],
             ] as [Access, string, string][]
           ).map(([key, title, sub]) => (
-            <Choice key={key} on={v.access === key} onClick={() => onChange({ access: key })} title={title} sub={sub} />
+            <Choice
+              key={key}
+              on={v.access === key}
+              onClick={() => onChange({ access: key })}
+              title={title}
+              sub={sub}
+            />
           ))}
         </div>
       </div>
@@ -159,7 +252,11 @@ export function SettingsForm({
           <PixelLabel>{t("set.language")}</PixelLabel>
           <div className="flex gap-2">
             {(["fr", "en"] as const).map((lang) => (
-              <Chip key={lang} on={v.language === lang} onClick={() => onChange({ language: lang })}>
+              <Chip
+                key={lang}
+                on={v.language === lang}
+                onClick={() => onChange({ language: lang })}
+              >
                 {lang.toUpperCase()}
               </Chip>
             ))}
@@ -199,14 +296,20 @@ export function SettingsForm({
 
       <div>
         <PixelLabel>{t("set.errors")}</PixelLabel>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-2">
           {(
             [
               ["accumuler", t("set.errors_accumulate"), t("set.errors_accumulate_sub")],
               ["bloquer", t("set.errors_block"), t("set.errors_block_sub")],
             ] as [ErrorMode, string, string][]
           ).map(([key, title, sub]) => (
-            <Choice key={key} on={v.errorMode === key} onClick={() => onChange({ errorMode: key })} title={title} sub={sub} />
+            <Choice
+              key={key}
+              on={v.errorMode === key}
+              onClick={() => onChange({ errorMode: key })}
+              title={title}
+              sub={sub}
+            />
           ))}
         </div>
         <label className="mt-2 flex items-center gap-2.5 text-xl">
@@ -221,7 +324,9 @@ export function SettingsForm({
       </div>
 
       <fieldset className="min-w-0">
-        <legend className="font-pixel mb-2 text-[11px] text-[#3a3a3a]">{t("set.bonus_title")}</legend>
+        <legend className="font-pixel mb-2 text-[11px] text-[#3a3a3a]">
+          {t("set.bonus_title")}
+        </legend>
         <label className="flex items-center gap-2.5 text-xl">
           <input
             type="checkbox"
@@ -251,7 +356,7 @@ export function SettingsForm({
     <div className="flex flex-col gap-4">
       <div>
         <PixelLabel>{t("set.text_type")}</PixelLabel>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-2">
           <Choice
             on={v.textType === "coherent"}
             onClick={() => onChange({ textType: "coherent" })}
@@ -269,7 +374,7 @@ export function SettingsForm({
 
       <div>
         <PixelLabel>{t("set.complexity")}</PixelLabel>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 min-[480px]:grid-cols-3 gap-2">
           {(Object.keys(COMPLEXITY_KEYS) as Difficulty[]).map((level) => (
             <Choice
               key={level}
@@ -299,7 +404,11 @@ export function SettingsForm({
         <legend className="font-pixel px-1 text-[11px] text-[#3a3a3a]">{t("set.options")}</legend>
         <div className="flex flex-wrap gap-2">
           {TEXT_OPTIONS.map((o) => (
-            <Chip key={o} on={v.options.includes(o)} onClick={() => onChange({ options: toggled(v.options, o) })}>
+            <Chip
+              key={o}
+              on={v.options.includes(o)}
+              onClick={() => onChange({ options: toggled(v.options, o) })}
+            >
               {t(`set.opt_${o}` as const)}
             </Chip>
           ))}
@@ -313,7 +422,9 @@ export function SettingsForm({
               label={t("set.accent_types")}
               wanted={v.accentWanted}
               forbidden={v.accentForbidden}
-              onChange={(next) => onChange({ accentWanted: next.wanted, accentForbidden: next.forbidden })}
+              onChange={(next) =>
+                onChange({ accentWanted: next.wanted, accentForbidden: next.forbidden })
+              }
             />
             <p className="mt-1.5 text-lg text-[#3a3a3a]">{t("set.accent_note")}</p>
           </div>
@@ -328,23 +439,58 @@ export function SettingsForm({
               wanted={v.includeChars}
               forbidden={v.excludeChars}
               disabled={!random}
-              onChange={(next) => onChange({ includeChars: next.wanted, excludeChars: next.forbidden })}
+              onChange={(next) =>
+                onChange({ includeChars: next.wanted, excludeChars: next.forbidden })
+              }
             />
             {!random && <p className="mt-1.5 text-lg text-[#3a3a3a]">{t("set.chars_disabled")}</p>}
           </div>
         )}
       </fieldset>
 
-      <div aria-disabled={!random} data-testid="letter-map">
+      <div data-testid="letter-map">
         <PixelLabel>{t("set.letters")}</PixelLabel>
-        <CharKeyMap
-          rows={LETTER_ROWS}
-          label={t("set.letters")}
-          wanted={v.includeChars}
-          forbidden={v.excludeChars}
-          disabled={!random}
-          onChange={(next) => onChange({ includeChars: next.wanted, excludeChars: next.forbidden })}
-        />
+        <div className="mb-3 flex flex-wrap gap-2">
+          {(["Nombres", "Majuscules"] as const).map((o) => (
+            <Chip
+              key={o}
+              on={v.options.includes(o)}
+              onClick={() => onChange({ options: toggled(v.options, o) })}
+            >
+              {t(`set.opt_${o}` as const)}
+            </Chip>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-start gap-x-8 gap-y-4">
+          <CharKeyMap
+            rows={LETTER_ROWS}
+            label={t("set.letters")}
+            wanted={v.includeChars}
+            forbidden={v.excludeChars}
+            disabled={!random}
+            onChange={(next) =>
+              onChange({ includeChars: next.wanted, excludeChars: next.forbidden })
+            }
+          />
+          {v.options.includes("Nombres") && (
+            <div data-testid="digit-map" className="pixel-reveal">
+              <div className="mb-2 flex h-7 items-center text-lg text-[#3a3a3a]">
+                {t("set.digits")}
+              </div>
+              <CharKeyMap
+                rows={DIGIT_ROWS}
+                label={t("set.digits")}
+                wanted={v.includeChars}
+                forbidden={v.excludeChars}
+                disabled={!random}
+                showLegend={false}
+                onChange={(next) =>
+                  onChange({ includeChars: next.wanted, excludeChars: next.forbidden })
+                }
+              />
+            </div>
+          )}
+        </div>
         <p className="mt-1.5 text-lg text-[#3a3a3a]">
           {random ? t("set.letters_note") : t("set.chars_disabled")}
         </p>
@@ -353,7 +499,9 @@ export function SettingsForm({
       <div>
         <PixelLabel>{t("set.preview")}</PixelLabel>
         <div data-testid="text-preview">
-          <PixelSlot className="px-3.5 py-3 text-3xl leading-snug text-white">{preview || "…"}</PixelSlot>
+          <PixelSlot className="px-3.5 py-3 text-3xl leading-snug text-white">
+            {preview || "…"}
+          </PixelSlot>
         </div>
       </div>
     </div>

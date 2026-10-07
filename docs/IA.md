@@ -56,6 +56,12 @@ Autres erreurs corrigées en cours de route (plus petites) : curseur de capacit�
 **Détection.** Aucun test ne l'avait vu ; la capture d'écran à 360 px montrait la page plus large que l'écran, confirmée en mesurant `scrollWidth`.
 **Correction.** `min-w-0` sur les `fieldset` et rangées de symboles refaites en 4 × 8 touches ; `scrollWidth` égal à la largeur de l'écran. Leçon : tester chaque nouvel écran à 360 px (DES-06), pas seulement au bureau.
 
+### 8. Une animation qui cassait le contraste, et un filtre de noms trop zélé
+
+**Ce qui s'est passé.** Deux fois dans la même série de changements : (a) une animation d'entrée qui faisait varier l'opacité des cartes a fait échouer la vérification de contraste d'axe (les couleurs sont mesurées en pleine transition) ; (b) le premier filtre de noms de salle refusait des mots légitimes (« Scunthorpe », « salopette », « Bordeleau ») parce qu'il cherchait des mots interdits à l'intérieur d'autres mots.
+**Détection.** Le test d'accessibilité existant pour (a) ; des tests unitaires de faux positifs écrits exprès pour (b), puis un ordre de vérification corrigé (longueur, caractères, lettres, lien, liste).
+**Correction.** Animations limitées au déplacement (sans opacité) ; mots courts ou ambigus retirés de la détection « collée », gardés seulement en comparaison mot entier. Leçon : un filtre de mots doit se tester avec des mots innocents autant qu'avec des mots interdits.
+
 ## Réflexion sur notre façon de travailler avec les agents
 
 _À rédiger par l'équipe, avec ses propres mots : ce qui a bien marché, ce qui a demandé de la vigilance, ce que nous referions autrement._

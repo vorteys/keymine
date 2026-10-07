@@ -1,5 +1,6 @@
 // CONF-06 / CONF-07 : les accents du français, classés par TYPE pour que l'hôte puisse en
 // privilégier ou en interdire certains (« jamais de tréma », « beaucoup de cédilles »…).
+// Les ligatures (œ, æ) ne sont pas un type à part : elles suivent l'option « Accents » en bloc.
 // Aucune dépendance serveur : partagé par le formulaire, le schéma et le générateur de texte.
 
 export const ACCENT_TYPES = [
@@ -8,7 +9,6 @@ export const ACCENT_TYPES = [
   "circonflexe",
   "trema",
   "cedille",
-  "ligature",
 ] as const;
 export type AccentType = (typeof ACCENT_TYPES)[number];
 
@@ -19,7 +19,6 @@ export const ACCENT_LETTERS: Record<AccentType, string> = {
   circonflexe: "âêîôû",
   trema: "äëïöüÿ",
   cedille: "ç",
-  ligature: "œæ",
 };
 
 const TYPE_OF = new Map<string, AccentType>();

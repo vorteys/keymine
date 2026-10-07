@@ -39,7 +39,8 @@ test("le formulaire de création enregistre bonus, accents, lettres et symboles 
   // L'aperçu respecte les choix : jamais de « e », jamais de tréma.
   const preview = page.getByTestId("text-preview");
   await expect(preview).not.toHaveText("…");
-  expect((await preview.textContent()) ?? "").not.toMatch(/[eEëï]/);
+  // L'aperçu attend que les réglages se calment (anti-saccade) : on laisse l'assertion réessayer.
+  await expect(preview).not.toHaveText(/[eEëï]/, { timeout: 10_000 });
 
   await page.getByRole("button", { name: "CREER LA SALLE" }).click();
   await page.waitForURL(/\/jouer\/[A-Z0-9]{6}/);
@@ -111,4 +112,47 @@ test("déjà dans une salle : pas de formulaire, on retourne dans la salle ou on
 
   await page.getByRole("button", { name: "QUITTER LA SALLE" }).click();
   await expect(page.getByRole("button", { name: "CREER LA SALLE" })).toBeVisible();
+});
+
+// Nom de salle : proposé d'avance, obligatoire, contrôlé par le serveur.
+test("le nom de la salle est proposé, obligatoire et filtré", async ({ page }) => {
+  const { username } = await registerViaApi(page.request, "nomsalle");
+  await page.goto("/jouer/creer");
+  const name = page.getByRole("textbox", { name: "Nom de la salle" });
+  await expect(name).toHaveValue(/^Salle de /);
+
+  await name.fill("ab");
+  await expect(page.getByRole("alert").filter({ hasText: "au moins 3 caractères" })).toBeVisible();
+  await page.getByRole("button", { name: "CREER LA SALLE" }).click();
+  await expect(page).toHaveURL(/\/jouer\/creer/); // refusé, on reste sur le formulaire
+
+  await name.fill("<b>salle</b>");
+  await expect(page.getByRole("alert").filter({ hasText: "Lettres, chiffres" })).toBeVisible();
+  await name.fill("quelle m3rde");
+  await expect(
+    page.getByRole("alert").filter({ hasText: "mot qui n'est pas permis" }),
+  ).toBeVisible();
+
+  await name.fill("Les  Champions");
+  await page.getByRole("button", { name: "CREER LA SALLE" }).click();
+  await page.waitForURL(/\/jouer\/[A-Z0-9]{6}/);
+  const code = page.url().split("/").pop()!;
+  const lobby = await (await page.request.get(`/api/lobbies/${code}`)).json();
+  expect(lobby.lobby.name).toBe("Les Champions");
+  expect(username).toBeTruthy();
+});
+
+test("l'API refuse un nom interdit et en propose un quand il manque", async ({ page }) => {
+  await registerViaApi(page.request, "nomapi");
+  const refused = await page.request.post("/api/lobbies", {
+    data: { name: "<script>alert(1)</script>" },
+  });
+  expect(refused.status()).toBe(400);
+  expect((await refused.json()).error).toMatch(/Lettres, chiffres|Letters, digits/);
+  const created = await page.request.post("/api/lobbies", { data: {} });
+  expect(created.ok()).toBe(true);
+  const { code } = await created.json();
+  const lobby = await (await page.request.get(`/api/lobbies/${code}`)).json();
+  expect(lobby.lobby.name).toMatch(/^(Salle de|Room of) /);
+  expect(lobby.lobby.name).not.toMatch(/sans nom/i);
 });

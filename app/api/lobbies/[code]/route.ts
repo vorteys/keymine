@@ -8,7 +8,8 @@ import { revokeAllInvites } from "@/lib/invites";
 import { applyLobbySettings } from "@/lib/lobby-settings";
 import { assertTransition } from "@/lib/race/state";
 import { loadLobbySnapshot, viewLobby, type Viewer } from "@/lib/lobby-snapshot";
-import { msg } from "@/lib/api-messages";
+import { msg, zodMessage } from "@/lib/api-messages";
+import { isNameChangeLimited } from "@/lib/name-limit";
 
 // Lecture HTTP de l'état d'une salle (repli si le WebSocket est indisponible).
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {
@@ -50,7 +51,11 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
       .execute();
     await revokeAllInvites(lobby.id); // SALLE-04 : plus aucun lien ne fonctionne
     // Une salle fermée ne retient plus personne : chacun peut en créer ou en rejoindre une autre (SALLE-06).
-    await db.updateTable("lobby_players").set({ active: false }).where("lobby_id", "=", lobby.id).execute();
+    await db
+      .updateTable("lobby_players")
+      .set({ active: false })
+      .where("lobby_id", "=", lobby.id)
+      .execute();
   }
 
   return NextResponse.json({ ok: true });
@@ -68,7 +73,20 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ co
     return NextResponse.json({ error: await msg("host_only_settings") }, { status: 403 });
   }
   const body = lobbyUpdateSchema.safeParse(await request.json().catch(() => null));
-  if (!body.success) return NextResponse.json({ error: await msg("bad_settings") }, { status: 400 });
+  if (!body.success) {
+    return NextResponse.json(
+      { error: await zodMessage(body.error, "bad_settings") },
+      { status: 400 },
+    );
+  }
+  // Renommer en boucle (spam de la liste publique) : au plus quelques changements de nom par minute.
+  if (
+    body.data.name !== undefined &&
+    body.data.name !== lobby.name &&
+    isNameChangeLimited(lobby.id)
+  ) {
+    return NextResponse.json({ error: await msg("name_rate") }, { status: 429 });
+  }
 
   const result = await applyLobbySettings(lobby, body.data);
   if (result.ok) return NextResponse.json({ ok: true });

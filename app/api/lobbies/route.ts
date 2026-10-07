@@ -4,7 +4,10 @@ import { getIdentity } from "@/lib/auth/identity";
 import { findActiveRoom } from "@/lib/lobby";
 import { createLobby } from "@/lib/lobby-create";
 import { lobbySettingsSchema } from "@/lib/lobby-schema";
-import { msg } from "@/lib/api-messages";
+import { msg, zodMessage } from "@/lib/api-messages";
+import { defaultRoomName } from "@/lib/room-name";
+import { translate } from "@/lib/i18n-dictionary";
+import { getRequestLang } from "@/lib/i18n-server";
 
 // COUR-16: liste des lobbys publics affichée à l'accueil.
 export async function GET() {
@@ -48,7 +51,10 @@ export async function GET() {
 export async function POST(request: Request) {
   const body = lobbySettingsSchema.safeParse(await request.json().catch(() => ({})));
   if (!body.success) {
-    return NextResponse.json({ error: await msg("bad_settings") }, { status: 400 });
+    return NextResponse.json(
+      { error: await zodMessage(body.error, "bad_settings") },
+      { status: 400 },
+    );
   }
 
   const identity = await getIdentity();
@@ -73,6 +79,13 @@ export async function POST(request: Request) {
       { status: 409 },
     );
   }
-  const code = await createLobby(identity.userId, body.data);
+  // Sans nom saisi : « Salle de {pseudo} » (jamais un nom vide ou « sans nom »).
+  const name =
+    body.data.name ??
+    defaultRoomName(
+      identity.displayName,
+      translate(await getRequestLang(), "create.default_name_prefix"),
+    );
+  const code = await createLobby(identity.userId, { ...body.data, name });
   return NextResponse.json({ code });
 }

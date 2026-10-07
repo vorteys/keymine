@@ -186,13 +186,46 @@ body {
   }
 
   .pixel-tri-key[data-wide="true"] {
-    width: auto;
-    min-width: 5.5rem;
+    width: 100%;
+    min-width: 6rem;
     height: auto;
-    min-height: 2.75rem;
+    min-height: 5rem;
     flex-direction: column;
-    gap: 4px;
-    padding: 4px 10px;
+    gap: 8px;
+    padding: 12px 10px;
+  }
+
+  /* Pastille de légende : un carré simple avec la marque de l'état (rien à déformer). */
+  .pixel-tri-swatch {
+    display: inline-flex;
+    width: 1.5rem;
+    height: 1.5rem;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid;
+    font-family: var(--font-pixel), monospace;
+    font-size: 0.7rem;
+    line-height: 1;
+  }
+
+  .pixel-tri-swatch[data-state="neutral"] {
+    background: #a8a8a8;
+    border-color: #e6e6e6 #555555 #555555 #e6e6e6;
+  }
+
+  .pixel-tri-swatch[data-state="wanted"] {
+    background: var(--color-green);
+    color: #ffffff;
+    border-color: var(--color-green-light) var(--color-green-dark) var(--color-green-dark)
+      var(--color-green-light);
+  }
+
+  .pixel-tri-swatch[data-state="forbidden"] {
+    background: var(--color-red);
+    color: #ffffff;
+    border-color: var(--color-red-light) var(--color-red-dark) var(--color-red-dark)
+      var(--color-red-light);
   }
 
   .pixel-tri-key::after {
@@ -358,6 +391,20 @@ body {
 
   .pixel-night > main > *:nth-child(n + 3) {
     animation-delay: 120ms;
+  }
+
+  /* Un bloc qui s'ouvre (carte de nombres, éditeur de salle…) se déplie en douceur. */
+  @keyframes pixel-reveal {
+    from {
+      transform: translateY(-6px) scale(0.98);
+    }
+    to {
+      transform: none;
+    }
+  }
+
+  .pixel-reveal {
+    animation: pixel-reveal 180ms ease-out both;
   }
 
   .progress-dot {

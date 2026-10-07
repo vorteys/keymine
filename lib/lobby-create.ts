@@ -6,7 +6,10 @@ import type { LobbiesTable } from "@/db/types";
 import { toAccentTypes, toBonusKinds } from "@/lib/lobby-choices";
 
 /** Crée une salle pour un compte avec ces réglages ; l'hôte y entre avec son rôle. Renvoie le code. */
-export async function createLobby(userId: string, s: LobbySettings): Promise<string> {
+export async function createLobby(
+  userId: string,
+  s: LobbySettings & { name: string },
+): Promise<string> {
   const code = await generateUniqueLobbyCode();
   const lobby = await db
     .insertInto("lobbies")
@@ -46,7 +49,9 @@ export async function createLobby(userId: string, s: LobbySettings): Promise<str
 }
 
 /** Les réglages d'une salle existante, tels qu'on les redonnerait à `createLobby` (REJOUER depuis l'historique). */
-export function settingsFromLobby(lobby: Selectable<LobbiesTable>): LobbySettings {
+export function settingsFromLobby(
+  lobby: Selectable<LobbiesTable>,
+): LobbySettings & { name: string } {
   return {
     name: lobby.name,
     access: lobby.access,

@@ -8,12 +8,16 @@ import { DEFAULT_SETTINGS, settingsToPayload, toggled, type SettingsState } from
 import { BOT_LEVELS } from "@/lib/race/bots";
 import type { BotLevel } from "@/db/types";
 import { useLanguage } from "@/lib/i18n";
+import { checkRoomName, normalizeRoomName } from "@/lib/room-name";
 
-export function CreateRoomForm() {
+export function CreateRoomForm({ defaultName = "" }: { defaultName?: string }) {
   const router = useRouter();
   const { t } = useLanguage();
   const [accountRequired, setAccountRequired] = useState(false);
-  const [settings, setSettings] = useState<SettingsState>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<SettingsState>({
+    ...DEFAULT_SETTINGS,
+    name: defaultName,
+  });
   const [bots, setBots] = useState<BotLevel[]>(["intermediaire", "expert"]);
   const [hostRole, setHostRole] = useState<"participant" | "spectator">("participant");
   const [pending, setPending] = useState(false);
@@ -21,6 +25,12 @@ export function CreateRoomForm() {
 
   async function createLobby() {
     setError(null);
+    // Le nom est obligatoire : on le vérifie ici pour répondre tout de suite (le serveur refait le contrôle).
+    const problem = checkRoomName(normalizeRoomName(settings.name));
+    if (problem) {
+      setError(t(`err.${problem}` as const));
+      return;
+    }
     setPending(true);
     try {
       const res = await fetch("/api/lobbies", {
@@ -67,13 +77,14 @@ export function CreateRoomForm() {
       </h1>
 
       <SettingsForm
+        requireName
         value={settings}
         onChange={(patch) => setSettings((prev) => ({ ...prev, ...patch }))}
         leftExtra={
           <>
             <div>
               <PixelLabel>{t("create.role")}</PixelLabel>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-2">
                 {(
                   [
                     ["participant", t("create.role_participant"), t("create.role_participant_sub")],

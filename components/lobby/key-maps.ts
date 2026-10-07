@@ -16,5 +16,12 @@ export const SYMBOL_ROWS: KeyRow[] = [
   { indent: 0, keys: [..."\";'<>,.?"] },
 ];
 
+// Chiffres : deux rangées de cinq, pour tenir à côté de la carte des lettres.
+export const DIGIT_ROWS: KeyRow[] = [
+  { indent: 0, keys: [..."12345"] },
+  { indent: 0, keys: [..."67890"] },
+];
+
 export const LETTERS = LETTER_ROWS.flatMap((row) => row.keys);
+export const DIGITS = DIGIT_ROWS.flatMap((row) => row.keys);
 export const SYMBOLS = SYMBOL_ROWS.flatMap((row) => row.keys);

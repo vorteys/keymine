@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { roomNameSchema } from "@/lib/room-name";
 import { ACCENT_TYPES } from "@/lib/text/accents";
 import { BONUS_KINDS } from "@/lib/race/bonus";
 
@@ -8,7 +9,8 @@ const accentType = z.enum(ACCENT_TYPES);
 const MAX_CHARS = 80;
 
 const lobbyFields = z.object({
-    name: z.string().trim().min(1).max(60).default("Partie sans nom"),
+    // Nom de la salle : contrôlé (longueur, caractères, liens, mots interdits). Sans nom, l'API en propose un.
+    name: roomNameSchema.optional(),
     access: z.enum(["public", "unlisted", "private"]).default("public"),
     hostRole: z.enum(["participant", "spectator"]).default("participant"),
     maxPlayers: z.number().int().min(2).max(30).default(30), // SALLE-05
@@ -25,7 +27,7 @@ const lobbyFields = z.object({
     // CONF-07 : lettres et symboles « à privilégier » (vert) et « interdits » (rouge) ; gris = ni l'un ni l'autre.
     includeChars: z.array(char).max(MAX_CHARS).default([]),
     excludeChars: z.array(char).max(MAX_CHARS).default([]),
-    // CONF-06 : même logique par type d'accent (grave, aigu, circonflexe, tréma, cédille, ligature).
+    // CONF-06 : même logique par type d'accent (grave, aigu, circonflexe, tréma, cédille).
     accentWanted: z.array(accentType).max(ACCENT_TYPES.length).default([]),
     accentForbidden: z.array(accentType).max(ACCENT_TYPES.length).default([]),
     errorMode: z.enum(["accumuler", "bloquer"]).default("accumuler"), // CONF-08

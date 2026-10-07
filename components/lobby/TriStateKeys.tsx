@@ -46,20 +46,14 @@ function TriStateKey({
 }
 
 /** Rappel des trois états, avec les mêmes touches que la carte (couleur, marque et trait). */
-function Legend() {
+export function Legend() {
   const { t } = useLanguage();
   return (
     <ul className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-lg text-[#3a3a3a]">
       {(["neutral", "wanted", "forbidden"] as const).map((state) => (
         <li key={state} className="flex items-center gap-1.5">
-          <span
-            aria-hidden="true"
-            className="pixel-tri-key"
-            style={{ width: "1.5rem", height: "1.5rem", fontSize: "0.6rem" }}
-            data-state={state}
-            data-mark={MARKS[state]}
-          >
-            A
+          <span aria-hidden="true" className="pixel-tri-swatch" data-state={state}>
+            {MARKS[state]}
           </span>
           {t(`set.legend_${state}`)}
         </li>
@@ -76,6 +70,7 @@ export function CharKeyMap({
   forbidden,
   onChange,
   disabled,
+  showLegend = true,
 }: {
   rows: KeyRow[];
   label: string;
@@ -83,11 +78,13 @@ export function CharKeyMap({
   forbidden: string[];
   onChange: (next: { wanted: string[]; forbidden: string[] }) => void;
   disabled?: boolean;
+  /** Faux quand une autre carte voisine affiche déjà la légende. */
+  showLegend?: boolean;
 }) {
   return (
-    <div>
-      <Legend />
-      <div role="group" aria-label={label} className="overflow-x-auto overflow-y-hidden pb-1">
+    <div className="max-w-full min-w-0">
+      {showLegend && <Legend />}
+      <div role="group" aria-label={label} className="overflow-x-auto overflow-y-hidden p-1 pb-2">
         <div className="flex w-max flex-col gap-1.5">
           {rows.map((row, i) => (
             <div
@@ -114,7 +111,7 @@ export function CharKeyMap({
   );
 }
 
-/** Types d'accents : grave, aigu, circonflexe, tréma, cédille, ligatures. */
+/** Types d'accents : grave, aigu, circonflexe, tréma, cédille. */
 export function AccentKeyMap({
   label,
   wanted,
@@ -130,7 +127,11 @@ export function AccentKeyMap({
   return (
     <div>
       <Legend />
-      <div role="group" aria-label={label} className="flex flex-wrap gap-1.5">
+      <div
+        role="group"
+        aria-label={label}
+        className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5"
+      >
         {ACCENT_TYPES.map((type) => (
           <TriStateKey
             key={type}
@@ -139,8 +140,8 @@ export function AccentKeyMap({
             state={choiceState(type, wanted, forbidden)}
             onCycle={() => onChange(cycleChoice(type, wanted, forbidden))}
           >
-            <span className="text-[0.65rem]">{t(`set.acc_${type}`)}</span>
-            <span className="text-base tracking-widest">{[...ACCENT_LETTERS[type]].join(" ")}</span>
+            <span className="text-xs">{t(`set.acc_${type}`)}</span>
+            <span className="text-2xl tracking-widest">{[...ACCENT_LETTERS[type]].join(" ")}</span>
           </TriStateKey>
         ))}
       </div>

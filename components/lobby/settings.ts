@@ -3,7 +3,8 @@ import type { LobbyView } from "@/lib/lobby-snapshot";
 import { toAccentTypes, toBonusKinds } from "@/lib/lobby-choices";
 import { BONUS_KINDS, type BonusKind } from "@/lib/race/bonus";
 import type { AccentType } from "@/lib/text/accents";
-import { LETTERS, SYMBOLS } from "./key-maps";
+import { normalizeRoomName } from "@/lib/room-name";
+import { DIGITS, LETTERS, SYMBOLS } from "./key-maps";
 
 // État du formulaire de réglages (création d'une salle et modification en
 // salle d'attente, CONF-12) et conversion vers/depuis l'API.
@@ -12,6 +13,8 @@ export type ErrorMode = "accumuler" | "bloquer";
 export type TextOption = "Majuscules" | "Ponctuation" | "Nombres" | "Accents";
 
 export type SettingsState = {
+  /** Nom de la salle ; vide = l'API propose « Salle de {pseudo} » (création) ou garde l'ancien (modification). */
+  name: string;
   access: Access;
   language: "fr" | "en";
   duration: number;
@@ -36,6 +39,7 @@ export type SettingsState = {
 export type ChoiceState = "neutral" | "wanted" | "forbidden";
 
 export const DEFAULT_SETTINGS: SettingsState = {
+  name: "",
   access: "public",
   language: "fr",
   duration: 300,
@@ -61,8 +65,17 @@ export function settingsToPayload(s: SettingsState) {
   const punctuation = s.options.includes("Ponctuation");
   // On n'envoie que ce que le formulaire montre : une carte masquée (option décochée) ne garde pas d'effet caché.
   const visibleChars = (chars: string[]) =>
-    random ? chars.filter((c) => LETTERS.includes(c) || (punctuation && SYMBOLS.includes(c))) : [];
+    random
+      ? chars.filter(
+          (c) =>
+            LETTERS.includes(c) ||
+            (punctuation && SYMBOLS.includes(c)) ||
+            (s.options.includes("Nombres") && DIGITS.includes(c)),
+        )
+      : [];
+  const name = normalizeRoomName(s.name);
   return {
+    ...(name ? { name } : {}),
     access: s.access,
     language: s.language,
     durationSeconds: s.duration,
@@ -92,6 +105,7 @@ export function settingsFromLobby(l: LobbyView["lobby"]): SettingsState {
   if (l.digits) options.push("Nombres");
   if (l.accents) options.push("Accents");
   return {
+    name: l.name,
     access: l.access as Access,
     language: l.language as "fr" | "en",
     duration: l.durationSeconds,

@@ -131,13 +131,13 @@ describe("types d'accents (CONF-06)", () => {
     expect(accentTypeOf("ô")).toBe("circonflexe");
     expect(accentTypeOf("ï")).toBe("trema");
     expect(accentTypeOf("ç")).toBe("cedille");
-    expect(accentTypeOf("œ")).toBe("ligature");
+    expect(accentTypeOf("œ")).toBeNull(); // les ligatures ne sont pas un type à part
     expect(accentTypeOf("e")).toBeNull();
     expect([...accentTypesIn("où êtes-vous ? déjà")].sort()).toEqual(["aigu", "circonflexe", "grave"]);
   });
 
   it("retire seulement les types demandés", () => {
-    expect(stripAccentTypes("garçon où naïf cœur été", ["cedille", "ligature"])).toBe("garcon où naïf coeur été");
+    expect(stripAccentTypes("garçon où naïf cœur été", ["cedille", "aigu"])).toBe("garcon où naïf cœur ete");
     expect(stripAccentTypes("Élève", ["aigu"])).toBe("Elève");
     expect(stripAccentTypes("été", [])).toBe("été");
   });

@@ -192,7 +192,8 @@ function randomText(options: GenerateOptions, corpus: Corpus, rng: Rng): string 
     }
   }
   const wantedSymbols = options.punctuation ? include.filter((c) => !IS_LETTER.test(c) && !/\d/.test(c)) : [];
-  return decorate(words, options, exclude, wantedSymbols, rng).join(" ");
+  const wantedDigits = options.digits ? include.filter((c) => /^\d$/.test(c)) : [];
+  return decorate(words, options, exclude, wantedSymbols, wantedDigits, rng).join(" ");
 }
 
 // Où se place chaque symbole demandé dans le mot (CONF-07, carte des symboles).
@@ -230,6 +231,7 @@ function decorate(
   options: GenerateOptions,
   exclude: string[],
   wantedSymbols: string[],
+  wantedDigits: string[],
   rng: Rng,
 ): string[] {
   let out = [...words];
@@ -240,11 +242,15 @@ function decorate(
 
   if (options.digits) {
     const digits = "0123456789".split("").filter((d) => !exclude.includes(d));
+    // Chiffres « souvent » (vert) : ils reviennent plus que les autres dans les nombres.
+    const favored = digits.filter((d) => wantedDigits.includes(d));
     if (digits.length > 0) {
       const count = Math.max(1, Math.round(out.length / 12));
       for (let i = 0; i < count; i++) {
         const size = 1 + Math.floor(rng() * 3);
-        const number = Array.from({ length: size }, () => pick(digits, rng)).join("");
+        const number = Array.from({ length: size }, () =>
+          favored.length > 0 && rng() < 0.7 ? pick(favored, rng) : pick(digits, rng),
+        ).join("");
         out.splice(Math.floor(rng() * (out.length + 1)), 0, number);
       }
     }

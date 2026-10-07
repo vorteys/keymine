@@ -11,7 +11,9 @@ export type IconName =
   | "kind"
   | "details"
   | "replay"
-  | "trash";
+  | "trash"
+  | "edit"
+  | "close";
 
 const PATHS: Record<IconName, string> = {
   // calendrier
@@ -35,6 +37,10 @@ const PATHS: Record<IconName, string> = {
   // lecture
   replay: "M4 2l10 6-10 6z",
   // corbeille
+  // crayon
+  edit: "M2 14l1-4 8-8 3 3-8 8zM9 4l3 3",
+  // croix
+  close: "M3 3l10 10M13 3 3 13",
   trash: "M2 4h12M6 4V2h4v2M3.5 4l1 10h7l1-10M6.5 7v5M9.5 7v5",
 };
 

@@ -21,7 +21,7 @@ import {
   type SettingsState,
   type TextOption,
 } from "./settings";
-import { AccentKeyMap, CharKeyMap } from "./TriStateKeys";
+import { AccentKeyMap, CharKeyMap, Legend } from "./TriStateKeys";
 
 // CONF-01 : de 15 secondes à 2 heures.
 export const DURATIONS = [15, 30, 60, 120, 300, 600, 1800, 3600, 7200] as const;
@@ -228,7 +228,7 @@ export function SettingsForm({
 
       <div>
         <PixelLabel>{t("set.access")}</PixelLabel>
-        <div className="grid grid-cols-1 min-[480px]:grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 gap-2 min-[480px]:grid-cols-3">
           {(
             [
               ["public", t("set.access_public"), t("set.access_public_sub")],
@@ -296,7 +296,7 @@ export function SettingsForm({
 
       <div>
         <PixelLabel>{t("set.errors")}</PixelLabel>
-        <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
           {(
             [
               ["accumuler", t("set.errors_accumulate"), t("set.errors_accumulate_sub")],
@@ -356,7 +356,7 @@ export function SettingsForm({
     <div className="flex flex-col gap-4">
       <div>
         <PixelLabel>{t("set.text_type")}</PixelLabel>
-        <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
           <Choice
             on={v.textType === "coherent"}
             onClick={() => onChange({ textType: "coherent" })}
@@ -374,7 +374,7 @@ export function SettingsForm({
 
       <div>
         <PixelLabel>{t("set.complexity")}</PixelLabel>
-        <div className="grid grid-cols-1 min-[480px]:grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 gap-2 min-[480px]:grid-cols-3">
           {(Object.keys(COMPLEXITY_KEYS) as Difficulty[]).map((level) => (
             <Choice
               key={level}
@@ -414,6 +414,9 @@ export function SettingsForm({
           ))}
         </div>
         <p className="mt-1.5 text-lg text-[#3a3a3a]">{t("set.options_note")}</p>
+        <div className="mt-3">
+          <Legend />
+        </div>
 
         {accents && (
           <div className="mt-4">
@@ -483,7 +486,6 @@ export function SettingsForm({
                 wanted={v.includeChars}
                 forbidden={v.excludeChars}
                 disabled={!random}
-                showLegend={false}
                 onChange={(next) =>
                   onChange({ includeChars: next.wanted, excludeChars: next.forbidden })
                 }

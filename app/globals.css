@@ -185,14 +185,32 @@ body {
     user-select: none;
   }
 
+  /* Carte d'un type d'accent : nom en haut, lettres sur une seule ligne dessous (police du texte,
+     pas la police pixel, trop large pour ces lettres accentuées). */
   .pixel-tri-key[data-wide="true"] {
     width: 100%;
-    min-width: 6rem;
     height: auto;
-    min-height: 5rem;
+    min-height: 4.5rem;
     flex-direction: column;
-    gap: 8px;
-    padding: 12px 10px;
+    gap: 4px;
+    padding: 10px 8px 8px;
+    font-family: var(--font-body), monospace;
+    text-align: center;
+  }
+
+  .pixel-accent-name {
+    font-size: 1.25rem;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .pixel-accent-letters {
+    font-size: 2rem;
+    line-height: 1;
+    letter-spacing: 0.14em;
+    padding-left: 0.14em;
+    white-space: nowrap;
   }
 
   /* Pastille de légende : un carré simple avec la marque de l'état (rien à déformer). */
@@ -405,6 +423,39 @@ body {
 
   .pixel-reveal {
     animation: pixel-reveal 180ms ease-out both;
+  }
+
+  /* Éditeur de salle : la hauteur passe de 0 à sa taille réelle ; on ne rogne le contenu que
+     pendant le mouvement (sinon les ombres et le focus des boutons seraient coupés). */
+  @keyframes pixel-unfold {
+    from {
+      grid-template-rows: 0fr;
+    }
+    to {
+      grid-template-rows: 1fr;
+    }
+  }
+
+  @keyframes pixel-unfold-clip {
+    0%,
+    99% {
+      overflow: hidden;
+      transform: translateY(-10px);
+    }
+    100% {
+      overflow: visible;
+      transform: none;
+    }
+  }
+
+  .pixel-unfold {
+    display: grid;
+    animation: pixel-unfold 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  .pixel-unfold-inner {
+    min-height: 0;
+    animation: pixel-unfold-clip 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   }
 
   .progress-dot {

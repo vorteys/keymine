@@ -70,7 +70,6 @@ export function CharKeyMap({
   forbidden,
   onChange,
   disabled,
-  showLegend = true,
 }: {
   rows: KeyRow[];
   label: string;
@@ -78,12 +77,9 @@ export function CharKeyMap({
   forbidden: string[];
   onChange: (next: { wanted: string[]; forbidden: string[] }) => void;
   disabled?: boolean;
-  /** Faux quand une autre carte voisine affiche déjà la légende. */
-  showLegend?: boolean;
 }) {
   return (
     <div className="max-w-full min-w-0">
-      {showLegend && <Legend />}
       <div role="group" aria-label={label} className="overflow-x-auto overflow-y-hidden p-1 pb-2">
         <div className="flex w-max flex-col gap-1.5">
           {rows.map((row, i) => (
@@ -126,12 +122,7 @@ export function AccentKeyMap({
   const { t } = useLanguage();
   return (
     <div>
-      <Legend />
-      <div
-        role="group"
-        aria-label={label}
-        className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5"
-      >
+      <div role="group" aria-label={label} className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {ACCENT_TYPES.map((type) => (
           <TriStateKey
             key={type}
@@ -140,8 +131,8 @@ export function AccentKeyMap({
             state={choiceState(type, wanted, forbidden)}
             onCycle={() => onChange(cycleChoice(type, wanted, forbidden))}
           >
-            <span className="text-xs">{t(`set.acc_${type}`)}</span>
-            <span className="text-2xl tracking-widest">{[...ACCENT_LETTERS[type]].join(" ")}</span>
+            <span className="pixel-accent-name">{t(`set.acc_${type}`)}</span>
+            <span className="pixel-accent-letters">{ACCENT_LETTERS[type]}</span>
           </TriStateKey>
         ))}
       </div>

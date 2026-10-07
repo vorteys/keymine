@@ -4,7 +4,11 @@ import { useParams, useRouter } from "next/navigation";
 import { participantName } from "@/lib/bot-name";
 import { useEffect, useRef, useState } from "react";
 import { InvitePanel } from "@/components/lobby/InvitePanel";
-import { HostSettingsEditor } from "@/components/lobby/HostSettingsEditor";
+import {
+  HostSettingsEditor,
+  type HostSettingsEditorHandle,
+} from "@/components/lobby/HostSettingsEditor";
+import { HistoryIcon } from "@/components/history/icons";
 import { PixelShell } from "@/components/PixelShell";
 import { PixelAvatar, PixelButton, PixelPanel, PixelSlot } from "@/components/ui";
 import { useLobbyLive } from "@/components/useLobbyLive";
@@ -32,6 +36,7 @@ export default function LobbyPage() {
   const [startError, setError] = useState<string | null>(null);
   const [entered, setEntered] = useState(false);
   const [editing, setEditing] = useState(false);
+  const editor = useRef<HostSettingsEditorHandle>(null);
   const joined = useRef(false);
   const { run, panel } = useRoomEntry(() => setEntered(true));
 
@@ -113,7 +118,7 @@ export default function LobbyPage() {
     <PixelShell active="jouer">
       {panel && <div className="mb-6">{panel}</div>}
       <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
-        <div className="flex-grow">
+        <div className="min-w-0 flex-grow">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
             <div>
               <div className="font-pixel mb-2.5 text-[10px] text-[#ffd84a]">
@@ -139,75 +144,91 @@ export default function LobbyPage() {
           </div>
 
           {editing && lobby?.isHost && (
-            <HostSettingsEditor code={code} lobby={lobby} onClose={() => setEditing(false)} />
+            <HostSettingsEditor
+              code={code}
+              lobby={lobby}
+              handle={editor}
+              onClose={() => setEditing(false)}
+            />
           )}
 
-          <PixelPanel className="p-5">
-            <div className="mb-3.5 flex items-center justify-between">
-              <span className="font-pixel text-sm text-[#2b2b2b]">
-                {t("lobby.players", { count: participants.length, max: lobby?.maxPlayers ?? "…" })}
-              </span>
-              <span className="text-2xl text-[#3a3a3a]">{t("lobby.spectators", { count: spectators.length })}</span>
-            </div>
-            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-              {participants.map((p, i) => (
-                <PixelSlot key={p.id} className="flex h-16 items-center gap-3 px-2.5">
-                  <PixelAvatar
-                    label={participantName(t, p)[0]?.toUpperCase() ?? "?"}
-                    color={p.isBot ? "#555555" : AVATAR_COLORS[i % AVATAR_COLORS.length]!}
-                    className="h-9 w-9 text-sm"
-                  />
-                  <div className="min-w-0 flex-grow leading-none">
-                    <div className="truncate text-2xl text-white">{participantName(t, p)}</div>
-                    <div className="font-pixel mt-1 text-[8px] text-[#ffe08a]">
-                      {p.isBot
-                        ? t("lobby.tag_bot")
-                        : !p.connected
-                          ? t("lobby.tag_offline")
-                          : p.isHost
-                            ? p.isSelf
-                              ? t("lobby.tag_host_you")
-                              : t("lobby.tag_host")
-                            : p.isSelf
-                              ? t("lobby.tag_you")
-                              : t("lobby.tag_ready")}
+          {!(editing && lobby?.isHost) && (
+            <PixelPanel className="pixel-reveal p-5">
+              <div className="mb-3.5 flex items-center justify-between">
+                <span className="font-pixel text-sm text-[#2b2b2b]">
+                  {t("lobby.players", {
+                    count: participants.length,
+                    max: lobby?.maxPlayers ?? "…",
+                  })}
+                </span>
+                <span className="text-2xl text-[#3a3a3a]">
+                  {t("lobby.spectators", { count: spectators.length })}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                {participants.map((p, i) => (
+                  <PixelSlot key={p.id} className="flex h-16 items-center gap-3 px-2.5">
+                    <PixelAvatar
+                      label={participantName(t, p)[0]?.toUpperCase() ?? "?"}
+                      color={p.isBot ? "#555555" : AVATAR_COLORS[i % AVATAR_COLORS.length]!}
+                      className="h-9 w-9 text-sm"
+                    />
+                    <div className="min-w-0 flex-grow leading-none">
+                      <div className="truncate text-2xl text-white">{participantName(t, p)}</div>
+                      <div className="font-pixel mt-1 text-[8px] text-[#ffe08a]">
+                        {p.isBot
+                          ? t("lobby.tag_bot")
+                          : !p.connected
+                            ? t("lobby.tag_offline")
+                            : p.isHost
+                              ? p.isSelf
+                                ? t("lobby.tag_host_you")
+                                : t("lobby.tag_host")
+                              : p.isSelf
+                                ? t("lobby.tag_you")
+                                : t("lobby.tag_ready")}
+                      </div>
                     </div>
-                  </div>
-                  {lobby?.isHost && !p.isHost && (
-                    <button
-                      type="button"
-                      onClick={() => void (p.isBot ? removeBot(p.id) : kick(p.id))}
-                      aria-label={p.isBot ? t("lobby.remove_bot", { name: participantName(t, p) }) : t("lobby.kick", { name: participantName(t, p) })}
-                      title={p.isBot ? t("lobby.remove_bot_title") : t("lobby.kick_title")}
-                      className="pixel-chip h-8 w-8 flex-none text-xl leading-none"
-                    >
-                      ×
-                    </button>
-                  )}
-                </PixelSlot>
-              ))}
-            </div>
-            {spectators.length > 0 && (
-              <ul aria-label={t("lobby.spectators_list")} className="mt-4 flex flex-wrap gap-2">
-                {spectators.map((p) => (
-                  <li key={p.id} className="pixel-chip flex items-center gap-2 text-xl">
-                    <span>{participantName(t, p)}</span>
                     {lobby?.isHost && !p.isHost && (
                       <button
                         type="button"
-                        onClick={() => void kick(p.id)}
-                        aria-label={t("lobby.kick", { name: participantName(t, p) })}
-                        title={t("lobby.kick_title")}
-                        className="leading-none"
+                        onClick={() => void (p.isBot ? removeBot(p.id) : kick(p.id))}
+                        aria-label={
+                          p.isBot
+                            ? t("lobby.remove_bot", { name: participantName(t, p) })
+                            : t("lobby.kick", { name: participantName(t, p) })
+                        }
+                        title={p.isBot ? t("lobby.remove_bot_title") : t("lobby.kick_title")}
+                        className="pixel-chip h-8 w-8 flex-none text-xl leading-none"
                       >
                         ×
                       </button>
                     )}
-                  </li>
+                  </PixelSlot>
                 ))}
-              </ul>
-            )}
-          </PixelPanel>
+              </div>
+              {spectators.length > 0 && (
+                <ul aria-label={t("lobby.spectators_list")} className="mt-4 flex flex-wrap gap-2">
+                  {spectators.map((p) => (
+                    <li key={p.id} className="pixel-chip flex items-center gap-2 text-xl">
+                      <span>{participantName(t, p)}</span>
+                      {lobby?.isHost && !p.isHost && (
+                        <button
+                          type="button"
+                          onClick={() => void kick(p.id)}
+                          aria-label={t("lobby.kick", { name: participantName(t, p) })}
+                          title={t("lobby.kick_title")}
+                          className="leading-none"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </PixelPanel>
+          )}
         </div>
 
         <div className="flex w-full flex-col gap-5 lg:w-96 lg:flex-none">
@@ -217,21 +238,34 @@ export default function LobbyPage() {
               {lobby?.isHost && (
                 <button
                   type="button"
-                  onClick={() => setEditing((v) => !v)}
+                  onClick={() => (editing ? editor.current?.requestClose() : setEditing(true))}
                   aria-expanded={editing}
-                  className="text-2xl text-[#2b2b2b] underline"
+                  data-variant={editing ? "slate" : "gold"}
+                  className="pixel-btn h-9 gap-2 px-3 text-[9px]"
                 >
-                  {t("lobby.edit")}
+                  <HistoryIcon name={editing ? "close" : "edit"} />
+                  {editing ? t("set.close") : t("lobby.edit")}
                 </button>
               )}
             </div>
             {[
               [t("lobby.s_language"), (lobby?.language ?? "fr").toUpperCase()],
-              [t("lobby.s_text"), lobby?.textType === "aleatoire" ? t("lobby.text_random") : t("lobby.text_coherent")],
-              [t("lobby.s_complexity"), t(COMPLEXITY_KEY[lobby?.complexity ?? "easy"] ?? "lobbies.easy")],
+              [
+                t("lobby.s_text"),
+                lobby?.textType === "aleatoire" ? t("lobby.text_random") : t("lobby.text_coherent"),
+              ],
+              [
+                t("lobby.s_complexity"),
+                t(COMPLEXITY_KEY[lobby?.complexity ?? "easy"] ?? "lobbies.easy"),
+              ],
               [t("lobby.s_length"), t("lobby.words", { count: lobby?.textLength ?? 40 })],
               [t("lobby.s_duration"), formatDuration(lang, lobby?.durationSeconds ?? 300)],
-              [t("lobby.s_errors"), lobby?.errorMode === "bloquer" ? t("lobby.errors_block") : t("lobby.errors_accumulate")],
+              [
+                t("lobby.s_errors"),
+                lobby?.errorMode === "bloquer"
+                  ? t("lobby.errors_block")
+                  : t("lobby.errors_accumulate"),
+              ],
             ].map(([k, v]) => (
               <div
                 key={k}
@@ -246,9 +280,7 @@ export default function LobbyPage() {
           {lobby?.isHost && (
             <PixelPanel className="flex flex-col gap-3 p-5">
               <span className="font-pixel text-sm text-[#2b2b2b]">{t("lobby.host_box")}</span>
-              <p className="text-xl text-[#3a3a3a]">
-                {t("lobby.host_note")}
-              </p>
+              <p className="text-xl text-[#3a3a3a]">{t("lobby.host_note")}</p>
               <div className="flex flex-wrap gap-2">
                 {BOT_LEVELS.map((lvl) => (
                   <button
@@ -261,7 +293,12 @@ export default function LobbyPage() {
                   </button>
                 ))}
               </div>
-              <PixelButton type="button" onClick={closeLobby} variant="red" className="h-12 text-[11px]">
+              <PixelButton
+                type="button"
+                onClick={closeLobby}
+                variant="red"
+                className="h-12 text-[11px]"
+              >
                 {t("lobby.close")}
               </PixelButton>
             </PixelPanel>

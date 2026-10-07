@@ -1,6 +1,15 @@
 import { Client } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { cookie, ORIGIN, open, startServer, waitFor, waitForAsync, type Message, type TestServer } from "./realtime-helpers";
+import {
+  cookie,
+  ORIGIN,
+  open,
+  startServer,
+  waitFor,
+  waitForAsync,
+  type Message,
+  type TestServer,
+} from "./realtime-helpers";
 
 // Course complète de bout en bout : démarrage par notification Postgres,
 // rejet des progressions impossibles, bots, fin, classement et persistance
@@ -57,7 +66,19 @@ async function seedRace(startsInMs = 1_000) {
 }
 
 const state = (m?: Message) =>
-  m as (Message & { phase: string; participants: { id: string; name: string; progress: number; isBot: boolean; status: string; rank: number }[] }) | undefined;
+  m as
+    | (Message & {
+        phase: string;
+        participants: {
+          id: string;
+          name: string;
+          progress: number;
+          isBot: boolean;
+          status: string;
+          rank: number;
+        }[];
+      })
+    | undefined;
 
 describe("course de bout en bout", () => {
   it("refuse une connexion de quelqu'un qui ne participe pas à la course", async () => {
@@ -71,6 +92,10 @@ describe("course de bout en bout", () => {
 
   it("déroule décompte, course, rejet d'un saut, abandon et classement", async () => {
     const { user, lobby, raceId } = await seedRace(1_000);
+    await client.query(`insert into lobby_players (lobby_id, user_id) values ($1, $2)`, [
+      lobby,
+      user,
+    ]);
     const conn = open(server.port, `/?race=${raceId}`, {
       Origin: ORIGIN,
       Cookie: await cookie("km_session", user, { username: "c" }),
@@ -87,7 +112,9 @@ describe("course de bout en bout", () => {
     await waitFor(() => state(conn.last("state"))?.phase === "racing", 6_000);
 
     // Un saut impossible est ignoré (COURSE-06).
-    conn.ws.send(JSON.stringify({ type: "progress", progressChars: TEXT.length - 1, errorCount: 0 }));
+    conn.ws.send(
+      JSON.stringify({ type: "progress", progressChars: TEXT.length - 1, errorCount: 0 }),
+    );
     // Un message invalide aussi (TECH-07).
     conn.ws.send("n'importe quoi");
     conn.ws.send(JSON.stringify({ type: "progress", progressChars: "beaucoup" }));
@@ -97,10 +124,20 @@ describe("course de bout en bout", () => {
 
     // Une progression plausible est acceptée.
     conn.ws.send(JSON.stringify({ type: "progress", progressChars: 6, errorCount: 1 }));
-    await waitFor(() => state(conn.last("state"))?.participants.find((p) => !p.isBot)?.progress === 6);
+    await waitFor(
+      () => state(conn.last("state"))?.participants.find((p) => !p.isBot)?.progress === 6,
+    );
 
     // Abandon : tout le monde a fini (le bot arrive tout seul) → résultats.
     conn.ws.send(JSON.stringify({ type: "abandon" }));
+    // Le joueur qui abandonne quitte la salle : il peut aller ailleurs et ne revient pas dans cette course.
+    await waitForAsync(async () => {
+      const { rows } = await client.query(
+        `select active from lobby_players where lobby_id = $1 and user_id = $2`,
+        [lobby, user],
+      );
+      return rows[0]?.active === false ? true : null;
+    });
     await waitFor(() => state(conn.last("state"))?.phase === "finished", 15_000);
 
     const rows = await waitForAsync(async () => {
@@ -118,7 +155,9 @@ describe("course de bout en bout", () => {
     const statuses = await waitForAsync(async () => {
       const lobbyRow = await client.query(`select status from lobbies where id = $1`, [lobby]);
       const raceRow = await client.query(`select status from races where id = $1`, [raceId]);
-      return lobbyRow.rows[0].status === "finished" && raceRow.rows[0].status === "finished" ? true : null;
+      return lobbyRow.rows[0].status === "finished" && raceRow.rows[0].status === "finished"
+        ? true
+        : null;
     });
     expect(statuses).toBe(true);
     conn.ws.close();

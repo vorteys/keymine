@@ -1,3 +1,4 @@
+import { sql } from "kysely";
 import { z } from "zod";
 import { db } from "@/lib/db";
 
@@ -17,18 +18,24 @@ export type PublicLobby = {
   hostName: string | null;
   players: number;
   capacity: number;
-  /** « lobby » : en attente ; « finished » : sur l'écran des résultats ; sinon course en cours. */
-  status: "lobby" | "countdown" | "racing" | "finished";
-  /** On peut rejoindre (SALLE-09) et il reste de la place (spectateur toujours possible, voir la salle). */
+  /** « lobby » : en attente ; « countdown » / « racing » : course en cours (la salle reste listée, SALLE-09). */
+  status: "lobby" | "countdown" | "racing";
+  /** Secondes restantes de la course en cours (mesurées au moment de la requête) ; null hors course. */
+  secondsLeft: number | null;
+  /** On peut rejoindre : salle en attente avec de la place (SALLE-09 : jamais pendant une course). */
   joinable: boolean;
 };
 
-export async function listPublicLobbies(filters: PublicLobbyFilters = {}, limit = 50): Promise<PublicLobby[]> {
+export async function listPublicLobbies(
+  filters: PublicLobbyFilters = {},
+  limit = 50,
+): Promise<PublicLobby[]> {
   let query = db
     .selectFrom("lobbies")
     .leftJoin("users", "users.id", "lobbies.host_user_id")
     .where("lobbies.access", "=", "public")
-    .where("lobbies.status", "in", ["lobby", "countdown", "racing", "finished"])
+    // Une salle disparaît de la liste dès la fin de la course (écran des résultats) ; elle y revient si l'hôte relance.
+    .where("lobbies.status", "in", ["lobby", "countdown", "racing"])
     .select((eb) => [
       "lobbies.code",
       "lobbies.name",
@@ -45,6 +52,18 @@ export async function listPublicLobbies(filters: PublicLobbyFilters = {}, limit 
         .where("lobby_players.role", "=", "participant")
         .where("lobby_players.active", "=", true)
         .as("player_count"),
+      eb
+        .selectFrom("races")
+        .select(
+          sql<number>`extract(epoch from (races.starts_at + make_interval(secs => races.duration_seconds) - now()))`.as(
+            "left",
+          ),
+        )
+        .whereRef("races.lobby_id", "=", "lobbies.id")
+        .where("races.status", "in", ["countdown", "racing"])
+        .orderBy("races.created_at", "desc")
+        .limit(1)
+        .as("seconds_left"),
     ]);
   if (filters.language) query = query.where("lobbies.language", "=", filters.language);
   if (filters.complexity) query = query.where("lobbies.complexity", "=", filters.complexity);
@@ -62,7 +81,9 @@ export async function listPublicLobbies(filters: PublicLobbyFilters = {}, limit 
       players,
       capacity: r.max_players,
       status: r.status as PublicLobby["status"],
-      joinable: (r.status === "lobby" || r.status === "finished") && players < r.max_players,
+      secondsLeft:
+        r.status === "lobby" ? null : Math.max(0, Math.ceil(Number(r.seconds_left ?? 0))),
+      joinable: r.status === "lobby" && players < r.max_players,
     };
   });
 }

@@ -183,7 +183,7 @@ test("abandonner ramène à la liste des lobbys et ferme la porte de cette cours
   await registerViaApi(page.request, "abandon");
   const code = await createRoomViaApi(page.request, {
     textLength: 10,
-    durationSeconds: 30,
+    durationSeconds: 15,
     comebackBonus: false,
   });
   await addBotViaApi(page.request, code, "noob");
@@ -199,4 +199,16 @@ test("abandonner ramène à la liste des lobbys et ferme la porte de cette cours
   // Revenir sur l'adresse de la course renvoie aussitôt aux lobbys.
   await page.goto(`/course/${code}`);
   await expect(page).toHaveURL("/", { timeout: 15_000 });
+
+  // Une fois la course finie, elle figure dans la section « abandons » de l'historique ;
+  // REJOUER ouvre une nouvelle salle (on n'était plus dans l'ancienne) avec les mêmes réglages.
+  await expect(async () => {
+    await page.goto("/historique?section=abandoned");
+    await expect(page.getByRole("listitem").filter({ hasText: "DATE" })).toHaveCount(1, {
+      timeout: 1_000,
+    });
+  }).toPass({ timeout: 45_000 });
+  await page.getByRole("button", { name: "REJOUER" }).click();
+  await expect(page).toHaveURL(/\/jouer\/[A-Z0-9]+$/, { timeout: 15_000 });
+  expect(page.url()).not.toContain(code);
 });

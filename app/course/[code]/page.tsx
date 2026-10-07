@@ -8,7 +8,7 @@ import type { RaceState } from "@/components/race/types";
 import { useRaceConnection } from "@/components/race/useRaceConnection";
 import { PixelButton, PixelPanel } from "@/components/ui";
 import { useLanguage } from "@/lib/i18n";
-import { formatNumber } from "@/lib/format";
+import { formatClock, formatNumber } from "@/lib/format";
 
 // Page de course : zone de frappe (COURSE-04), piste en direct (COURSE-05),
 // décompte 3-2-1 (COURSE-03), abandon avec confirmation (COURSE-07),
@@ -54,11 +54,6 @@ function useNow(stepMs: number): number {
     return () => clearInterval(id);
   }, [stepMs]);
   return now;
-}
-
-function formatClock(totalSeconds: number) {
-  const s = Math.max(0, Math.ceil(totalSeconds));
-  return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 }
 
 export default function CoursePage() {

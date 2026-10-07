@@ -183,8 +183,31 @@ function dispatchEvents(room: Room, events: EngineEvent[]) {
       for (const socket of room.sockets.get(event.racerId) ?? []) {
         send(socket, { type: "text", text: event.text, progress: event.progress });
       }
+    } else if (event.type === "abandoned") {
+      void releaseMember(room, event.racerId).catch((e) =>
+        console.error("[realtime] libération", e),
+      );
     }
   }
+}
+
+/**
+ * Un joueur qui abandonne (ou qui reste déconnecté trop longtemps) quitte la salle : il n'y est plus
+ * « actif », donc il peut créer ou rejoindre une autre salle (SALLE-06), et il ne peut pas revenir
+ * dans cette course (SALLE-09 : on ne rejoint pas une salle en cours de course).
+ * Ses résultats restent enregistrés et apparaissent dans la section « abandons » de son historique.
+ */
+async function releaseMember(room: Room, racerId: string) {
+  const racer = room.engine.racers.get(racerId);
+  if (!racer || racer.isBot || (!racer.userId && !racer.guestId)) return;
+  await db
+    .updateTable("lobby_players")
+    .set({ active: false })
+    .where("lobby_id", "=", room.lobbyId)
+    .where((eb) =>
+      racer.userId ? eb("user_id", "=", racer.userId) : eb("guest_id", "=", racer.guestId),
+    )
+    .execute();
 }
 
 async function tick(room: Room) {

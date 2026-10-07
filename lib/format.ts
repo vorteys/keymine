@@ -64,3 +64,9 @@ export function formatDuration(lang: SiteLang, seconds: number): string {
   const plural = lang === "fr" ? value >= 2 : value !== 1;
   return `${formatNumber(lang, value)} ${plural ? many : one}`;
 }
+
+/** Horloge « mm:ss » d'un compte à rebours (indépendante de la langue). */
+export function formatClock(totalSeconds: number): string {
+  const s = Math.max(0, Math.ceil(totalSeconds));
+  return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+}

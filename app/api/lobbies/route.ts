@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getIdentity } from "@/lib/auth/identity";
-import { findActiveRoom, generateUniqueLobbyCode } from "@/lib/lobby";
+import { findActiveRoom } from "@/lib/lobby";
+import { createLobby } from "@/lib/lobby-create";
 import { lobbySettingsSchema } from "@/lib/lobby-schema";
 import { msg } from "@/lib/api-messages";
 
@@ -52,7 +53,10 @@ export async function POST(request: Request) {
 
   const identity = await getIdentity();
   if (!identity) {
-    return NextResponse.json({ error: await msg("login_required"), code: "account_required" }, { status: 401 });
+    return NextResponse.json(
+      { error: await msg("login_required"), code: "account_required" },
+      { status: 401 },
+    );
   }
   // AUTH-03: un invité ne peut pas créer de salle.
   if (identity.kind !== "user") {
@@ -69,44 +73,6 @@ export async function POST(request: Request) {
       { status: 409 },
     );
   }
-  const code = await generateUniqueLobbyCode();
-  const s = body.data;
-
-  const lobby = await db
-    .insertInto("lobbies")
-    .values({
-      code,
-      host_user_id: identity.userId,
-      host_guest_id: null,
-      access: s.access,
-      name: s.name,
-      language: s.language,
-      max_players: s.maxPlayers,
-      duration_seconds: s.durationSeconds,
-      text_type: s.textType,
-      text_length: s.textLength,
-      complexity: s.complexity,
-      error_mode: s.errorMode,
-      penalty_seconds: s.penaltySeconds,
-      allow_uppercase: s.uppercase,
-      allow_punctuation: s.punctuation,
-      allow_digits: s.digits,
-      allow_accents: s.accents,
-      include_chars: s.includeChars,
-      exclude_chars: s.excludeChars,
-      comeback_bonus: s.comebackBonus,
-    })
-    .returning(["id", "code"])
-    .executeTakeFirstOrThrow();
-
-  await db
-    .insertInto("lobby_players")
-    .values({
-      lobby_id: lobby.id,
-      user_id: identity.userId,
-      role: s.hostRole,
-    })
-    .execute();
-
-  return NextResponse.json({ code: lobby.code });
+  const code = await createLobby(identity.userId, body.data);
+  return NextResponse.json({ code });
 }

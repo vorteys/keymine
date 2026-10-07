@@ -2,6 +2,7 @@ import Link from "next/link";
 import { DeleteHistoryButton } from "@/components/history/DeleteHistoryButton";
 import { HistoryControls } from "@/components/history/HistoryControls";
 import { HistoryIcon } from "@/components/history/icons";
+import { ReplayButton } from "@/components/history/ReplayButton";
 import { PixelShell } from "@/components/PixelShell";
 import { PixelButton, PixelChip, PixelPanel } from "@/components/ui";
 import { peekIdentity } from "@/lib/auth/identity";
@@ -135,7 +136,10 @@ export default async function HistoriquePage({ searchParams }: PageProps<"/histo
         >
           {t("hist.details")}
         </Link>
-        <DeleteHistoryButton raceId={r.raceId} />
+        <span className="flex flex-wrap items-center gap-4">
+          {history.section !== "spectated" && <ReplayButton raceId={r.raceId} />}
+          <DeleteHistoryButton raceId={r.raceId} />
+        </span>
       </div>
     </li>
   );

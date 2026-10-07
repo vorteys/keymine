@@ -14,7 +14,14 @@ afterAll(async () => {
 
 const suffix = () => Math.random().toString(36).slice(2, 8);
 
-async function lobby(opts: { access?: string; language?: string; complexity?: string; status?: string; max?: number; name: string }) {
+async function lobby(opts: {
+  access?: string;
+  language?: string;
+  complexity?: string;
+  status?: string;
+  max?: number;
+  name: string;
+}) {
   const host = (
     await client.query<{ id: string }>(
       `insert into users (username, password_hash, display_name) values ($1, 'x', $2) returning id`,
@@ -37,7 +44,10 @@ async function lobby(opts: { access?: string; language?: string; complexity?: st
       ],
     )
   ).rows[0];
-  await client.query(`insert into lobby_players (lobby_id, user_id) values ($1, $2)`, [row.id, host]);
+  await client.query(`insert into lobby_players (lobby_id, user_id) values ($1, $2)`, [
+    row.id,
+    host,
+  ]);
   return row;
 }
 
@@ -50,15 +60,53 @@ describe("explorateur de salles publiques (JOIN-02)", () => {
     await lobby({ name: `fermee-${tag}`, status: "closed" });
     await lobby({ name: `course-${tag}`, status: "racing" });
     // un spectateur et un joueur inactif ne comptent pas dans l'effectif
-    await client.query(`insert into lobby_players (lobby_id, guest_id, guest_name, role) values ($1, $2, 'S', 'spectator')`, [open.id, `g-${suffix()}`]);
-    await client.query(`insert into lobby_players (lobby_id, guest_id, guest_name, active) values ($1, $2, 'X', false)`, [open.id, `g-${suffix()}`]);
+    await client.query(
+      `insert into lobby_players (lobby_id, guest_id, guest_name, role) values ($1, $2, 'S', 'spectator')`,
+      [open.id, `g-${suffix()}`],
+    );
+    await client.query(
+      `insert into lobby_players (lobby_id, guest_id, guest_name, active) values ($1, $2, 'X', false)`,
+      [open.id, `g-${suffix()}`],
+    );
 
     const list = (await listPublicLobbies()).filter((l) => l.name.endsWith(tag));
     expect(list.map((l) => l.name).sort()).toEqual([`course-${tag}`, `ouverte-${tag}`]);
 
     const found = list.find((l) => l.code === open.code)!;
-    expect(found).toMatchObject({ players: 1, capacity: 10, status: "lobby", joinable: true, hostName: `Hote ouverte-${tag}` });
-    expect(list.find((l) => l.name === `course-${tag}`)).toMatchObject({ status: "racing", joinable: false });
+    expect(found).toMatchObject({
+      players: 1,
+      capacity: 10,
+      status: "lobby",
+      joinable: true,
+      hostName: `Hote ouverte-${tag}`,
+    });
+    expect(list.find((l) => l.name === `course-${tag}`)).toMatchObject({
+      status: "racing",
+      joinable: false,
+    });
+  });
+
+  it("une course en cours reste listée avec son temps restant, sans pouvoir être rejointe (SALLE-09)", async () => {
+    const tag = suffix();
+    const running = await lobby({ name: `en-cours-${tag}`, status: "racing", max: 10 });
+    await client.query(
+      `insert into races (lobby_id, text_content, language, status, starts_at, duration_seconds)
+       values ($1, 'abc', 'fr', 'racing', now() - interval '40 seconds', 100)`,
+      [running.id],
+    );
+    const found = (await listPublicLobbies()).find((l) => l.code === running.code)!;
+    expect(found).toMatchObject({ status: "racing", joinable: false });
+    expect(found.secondsLeft).toBeGreaterThanOrEqual(58);
+    expect(found.secondsLeft).toBeLessThanOrEqual(61);
+  });
+
+  it("une salle disparaît de la liste quand la course est finie, et une salle en attente n'a pas de temps restant", async () => {
+    const tag = suffix();
+    const waiting = await lobby({ name: `attente-${tag}` });
+    await lobby({ name: `terminee-${tag}`, status: "finished" });
+    const list = (await listPublicLobbies()).filter((l) => l.name.endsWith(tag));
+    expect(list.map((l) => l.name)).toEqual([`attente-${tag}`]);
+    expect(list.find((l) => l.code === waiting.code)?.secondsLeft).toBeNull();
   });
 
   it("filtre par langue et par complexité", async () => {
@@ -67,7 +115,10 @@ describe("explorateur de salles publiques (JOIN-02)", () => {
     await lobby({ name: `en-facile-${tag}`, language: "en", complexity: "easy" });
     await lobby({ name: `en-dur-${tag}`, language: "en", complexity: "hard" });
     const names = async (f: Parameters<typeof listPublicLobbies>[0]) =>
-      (await listPublicLobbies(f)).filter((l) => l.name.endsWith(tag)).map((l) => l.name).sort();
+      (await listPublicLobbies(f))
+        .filter((l) => l.name.endsWith(tag))
+        .map((l) => l.name)
+        .sort();
 
     expect(await names({ language: "en" })).toEqual([`en-dur-${tag}`, `en-facile-${tag}`]);
     expect(await names({ complexity: "easy" })).toEqual([`en-facile-${tag}`, `fr-facile-${tag}`]);
@@ -77,7 +128,10 @@ describe("explorateur de salles publiques (JOIN-02)", () => {
   it("une salle pleine n'est pas joignable", async () => {
     const tag = suffix();
     const full = await lobby({ name: `pleine-${tag}`, max: 2 });
-    await client.query(`insert into lobby_players (lobby_id, guest_id, guest_name) values ($1, $2, 'B')`, [full.id, `g-${suffix()}`]);
+    await client.query(
+      `insert into lobby_players (lobby_id, guest_id, guest_name) values ($1, $2, 'B')`,
+      [full.id, `g-${suffix()}`],
+    );
     const found = (await listPublicLobbies()).find((l) => l.code === full.code)!;
     expect(found).toMatchObject({ players: 2, capacity: 2, joinable: false });
   });

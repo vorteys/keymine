@@ -157,6 +157,23 @@ test("marteler le clavier est pénalisé : la pénalité s'ajoute au temps d'arr
     .first()
     .click();
   await expect(heatmap).toBeVisible();
+
+  // HIST-01 : la course figure dans l'historique, avec des champs étiquetés ; on peut la supprimer.
+  await page.goto("/historique");
+  const card = page.getByRole("listitem").filter({ hasText: "DATE" });
+  await expect(card).toHaveCount(1);
+  await expect(card).toContainText("RANG");
+  await expect(card).toContainText("MPM");
+  await expect(card).toContainText("PRECISION");
+  await page.getByRole("button", { name: "SUPPRIMER" }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Supprimer cette course de ton historique ?" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "ANNULER" }).click();
+  await expect(card).toHaveCount(1); // annuler ne supprime rien
+  await page.getByRole("button", { name: "SUPPRIMER" }).click();
+  await page.getByRole("button", { name: "OUI, SUPPRIMER" }).click();
+  await expect(page.getByText("Aucune course terminée pour l'instant.")).toBeVisible();
 });
 
 // COURSE-07 : après un abandon, retour à la liste des lobbys ; on ne revient pas dans la course abandonnée.

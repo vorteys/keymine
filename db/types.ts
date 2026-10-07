@@ -144,6 +144,7 @@ export interface RaceParticipantsTable {
   text_length: number | null;
   finish_ms: number | null;
   penalty_ms: Generated<number>;
+  hidden_from_history: Generated<boolean>;
   bonuses: Generated<unknown>;
   wpm_series: Generated<unknown>;
   key_correct: Generated<unknown>;

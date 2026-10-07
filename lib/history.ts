@@ -1,10 +1,29 @@
+import { sql } from "kysely";
 import { db } from "@/lib/db";
 import type { ParticipantStatus } from "@/db/types";
+import {
+  HISTORY_SECTIONS,
+  HISTORY_SORTS,
+  type HistoryDirection,
+  type HistorySection,
+  type HistorySort,
+} from "@/lib/history-config";
 
-// HIST-01 : historique paginé des courses terminées d'un compte.
+export { HISTORY_SECTIONS, HISTORY_SORTS };
+export type { HistoryDirection, HistorySection, HistorySort };
+
+// HIST-01 : historique paginé des courses terminées d'un compte, en trois sections :
+// les courses jouées, les abandons, et les courses regardées en spectateur.
 // Les courses non terminées (en cours, ou interrompues sans résultat) n'y figurent pas.
 
 export const HISTORY_PAGE_SIZE = 10;
+
+export type HistoryQuery = {
+  section: HistorySection;
+  sort: HistorySort;
+  dir: HistoryDirection;
+  page: number;
+};
 
 export type HistoryRow = {
   raceId: string;
@@ -15,38 +34,83 @@ export type HistoryRow = {
   wpm: number;
   accuracy: number;
   status: ParticipantStatus;
+  /** Section « spectateur » : le vainqueur de la course regardée. */
+  winnerName: string | null;
+  winnerWpm: number | null;
 };
 
-export type HistoryPage = {
+export type HistoryCounts = Record<HistorySection, number>;
+
+export type HistoryPage = HistoryQuery & {
   rows: HistoryRow[];
-  page: number;
   pages: number;
   total: number;
+  counts: HistoryCounts;
 };
 
+type RawParam = string | string[] | undefined;
+
+function first(value: RawParam): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
 /** Numéro de page demandé (query string) ramené à un entier ≥ 1. */
-export function parsePage(value: string | string[] | undefined): number {
-  const raw = Array.isArray(value) ? value[0] : value;
-  const n = Number.parseInt(raw ?? "1", 10);
+export function parsePage(value: RawParam): number {
+  const n = Number.parseInt(first(value) ?? "1", 10);
   return Number.isFinite(n) && n >= 1 ? Math.min(n, 100_000) : 1;
 }
 
-export async function loadHistory(userId: string, requestedPage: number): Promise<HistoryPage> {
+/** Paramètres d'URL de l'historique : toute valeur inconnue retombe sur la valeur par défaut. */
+export function parseHistoryQuery(query: Record<string, RawParam>): HistoryQuery {
+  const section = HISTORY_SECTIONS.find((s) => s === first(query.section)) ?? "played";
+  // La section « spectateur » n'a pas de MPM ni de rang personnels : seul le tri par date a un sens.
+  const sort =
+    section === "spectated"
+      ? "date"
+      : (HISTORY_SORTS.find((s) => s === first(query.sort)) ?? "date");
+  const dir: HistoryDirection = first(query.dir) === "asc" ? "asc" : "desc";
+  return { section, sort, dir, page: parsePage(query.page) };
+}
+
+function baseFor(userId: string, section: HistorySection) {
   const base = db
     .selectFrom("race_participants")
     .innerJoin("races", "races.id", "race_participants.race_id")
     .where("race_participants.user_id", "=", userId)
-    .where("race_participants.role", "=", "participant")
+    .where("race_participants.hidden_from_history", "=", false)
     .where("races.status", "=", "finished");
+  if (section === "spectated") return base.where("race_participants.role", "=", "spectator");
+  const played = base.where("race_participants.role", "=", "participant");
+  return section === "abandoned"
+    ? played.where("race_participants.status", "=", "abandoned")
+    : played.where("race_participants.status", "<>", "abandoned");
+}
 
-  const totalRow = await base
+async function countFor(userId: string, section: HistorySection): Promise<number> {
+  const row = await baseFor(userId, section)
     .select((eb) => eb.fn.countAll<string>().as("total"))
     .executeTakeFirstOrThrow();
-  const total = Number(totalRow.total);
-  const pages = Math.max(1, Math.ceil(total / HISTORY_PAGE_SIZE));
-  const page = Math.min(requestedPage, pages);
+  return Number(row.total);
+}
 
-  const rows = await base
+export async function loadHistory(
+  userId: string,
+  query: Partial<HistoryQuery> & { page: number } = { page: 1 },
+): Promise<HistoryPage> {
+  const section = query.section ?? "played";
+  const sort = section === "spectated" ? "date" : (query.sort ?? "date");
+  const dir = query.dir ?? "desc";
+
+  const counts: HistoryCounts = {
+    played: await countFor(userId, "played"),
+    abandoned: await countFor(userId, "abandoned"),
+    spectated: await countFor(userId, "spectated"),
+  };
+  const total = counts[section];
+  const pages = Math.max(1, Math.ceil(total / HISTORY_PAGE_SIZE));
+  const page = Math.min(Math.max(1, query.page), pages);
+
+  let select = baseFor(userId, section)
     .innerJoin("lobbies", "lobbies.id", "races.lobby_id")
     .select([
       "races.id as race_id",
@@ -63,16 +127,47 @@ export async function loadHistory(userId: string, requestedPage: number): Promis
           .whereRef("rp.race_id", "=", "races.id")
           .where("rp.role", "=", "participant")
           .as("participant_count"),
-    ])
-    .orderBy("races.created_at", "desc")
+      (eb) =>
+        eb
+          .selectFrom("race_participants as w")
+          .select("w.display_name")
+          .whereRef("w.race_id", "=", "races.id")
+          .where("w.role", "=", "participant")
+          .where("w.rank", "=", 1)
+          .limit(1)
+          .as("winner_name"),
+      (eb) =>
+        eb
+          .selectFrom("race_participants as w")
+          .select("w.wpm")
+          .whereRef("w.race_id", "=", "races.id")
+          .where("w.role", "=", "participant")
+          .where("w.rank", "=", 1)
+          .limit(1)
+          .as("winner_wpm"),
+    ]);
+
+  // Tri demandé, puis la date en départage (toujours la plus récente d'abord) pour un ordre stable.
+  if (sort === "wpm")
+    select = select.orderBy(sql`race_participants.wpm ${sql.raw(dir)} nulls last`);
+  else if (sort === "rank")
+    select = select.orderBy(sql`race_participants.rank ${sql.raw(dir)} nulls last`);
+  else select = select.orderBy(sql`races.created_at ${sql.raw(dir)}`);
+  if (sort !== "date") select = select.orderBy("races.created_at", "desc");
+
+  const rows = await select
     .limit(HISTORY_PAGE_SIZE)
     .offset((page - 1) * HISTORY_PAGE_SIZE)
     .execute();
 
   return {
+    section,
+    sort,
+    dir,
     page,
     pages,
     total,
+    counts,
     rows: rows.map((r) => ({
       raceId: r.race_id,
       lobbyCode: r.lobby_code,
@@ -82,6 +177,20 @@ export async function loadHistory(userId: string, requestedPage: number): Promis
       wpm: r.wpm ?? 0,
       accuracy: r.accuracy ?? 100,
       status: r.status,
+      winnerName: r.winner_name ?? null,
+      winnerWpm: r.winner_wpm ?? null,
     })),
   };
+}
+
+/** Retire une course de l'historique du compte (toutes ses lignes : joueur ou spectateur). Renvoie vrai si quelque chose a été masqué. */
+export async function hideFromHistory(userId: string, raceId: string): Promise<boolean> {
+  const result = await db
+    .updateTable("race_participants")
+    .set({ hidden_from_history: true })
+    .where("user_id", "=", userId)
+    .where("race_id", "=", raceId)
+    .where("hidden_from_history", "=", false)
+    .executeTakeFirst();
+  return Number(result.numUpdatedRows) > 0;
 }

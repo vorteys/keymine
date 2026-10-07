@@ -1,6 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Client } from "pg";
-import { HISTORY_PAGE_SIZE, loadHistory, parsePage } from "@/lib/history";
+import {
+  HISTORY_PAGE_SIZE,
+  hideFromHistory,
+  loadHistory,
+  parseHistoryQuery,
+  parsePage,
+} from "@/lib/history";
 import { isPersonalRecord, latestFinishedRaceId, loadRaceResults } from "@/lib/results";
 
 // HIST-01 (pagination), HIST-02 (résultats d'une course passée), RES-04 (record).
@@ -32,7 +38,13 @@ async function newLobby(host: string) {
 }
 
 /** Course terminée (ou non) avec le joueur à un MPM donné + un bot adverse. */
-async function race(lobbyId: string, userId: string, wpm: number, minutesAgo: number, status = "finished") {
+async function race(
+  lobbyId: string,
+  userId: string,
+  wpm: number,
+  minutesAgo: number,
+  status = "finished",
+) {
   const { rows } = await client.query<{ id: string }>(
     `insert into races (lobby_id, text_content, language, status, starts_at, duration_seconds, created_at)
      values ($1, 'abc def', 'fr', $2, now(), 30, now() - ($3 || ' minutes')::interval) returning id`,
@@ -71,7 +83,7 @@ describe("historique paginé (HIST-01)", () => {
     for (let i = 0; i < total; i++) await race(lobby.id, user, 30 + i, total - i);
     await race(lobby.id, user, 99, 0, "racing"); // en cours : exclue
 
-    const first = await loadHistory(user, 1);
+    const first = await loadHistory(user, { page: 1 });
     expect(first.total).toBe(total);
     expect(first.pages).toBe(2);
     expect(first.rows).toHaveLength(HISTORY_PAGE_SIZE);
@@ -79,11 +91,11 @@ describe("historique paginé (HIST-01)", () => {
     expect(first.rows[0].participantCount).toBe(2);
     expect(first.rows[0].lobbyCode).toBe(lobby.code);
 
-    const second = await loadHistory(user, 2);
+    const second = await loadHistory(user, { page: 2 });
     expect(second.rows).toHaveLength(3);
     expect(second.rows.at(-1)?.wpm).toBe(30);
 
-    const beyond = await loadHistory(user, 99);
+    const beyond = await loadHistory(user, { page: 99 });
     expect(beyond.page).toBe(2); // page hors limites ramenée à la dernière
   });
 
@@ -92,8 +104,110 @@ describe("historique paginé (HIST-01)", () => {
     const b = await newUser();
     const lobby = await newLobby(a);
     await race(lobby.id, a, 50, 5);
-    expect((await loadHistory(b, 1)).total).toBe(0);
-    expect((await loadHistory(b, 1)).rows).toEqual([]);
+    expect((await loadHistory(b, { page: 1 })).total).toBe(0);
+    expect((await loadHistory(b, { page: 1 })).rows).toEqual([]);
+  });
+});
+
+/** Passe la ligne du joueur dans la course à un autre statut / rang / rôle. */
+async function setRow(raceId: string, userId: string, set: string) {
+  await client.query(`update race_participants set ${set} where race_id = $1 and user_id = $2`, [
+    raceId,
+    userId,
+  ]);
+}
+
+describe("sections, tri et suppression de l'historique (HIST-01)", () => {
+  it("sépare courses jouées, abandons et courses regardées en spectateur", async () => {
+    const user = await newUser();
+    const lobby = await newLobby(user);
+    const played = await race(lobby.id, user, 50, 30);
+    const quit = await race(lobby.id, user, 12, 20);
+    await setRow(quit, user, `status = 'abandoned', rank = 2`);
+    const watched = await race(lobby.id, user, 0, 10);
+    await setRow(watched, user, `role = 'spectator', status = 'finished', rank = null, wpm = null`);
+    await client.query(`update race_participants set rank = 1 where race_id = $1 and is_bot`, [watched]);
+
+    const playedPage = await loadHistory(user, { page: 1 });
+    expect(playedPage.counts).toEqual({ played: 1, abandoned: 1, spectated: 1 });
+    expect(playedPage.rows.map((r) => r.raceId)).toEqual([played]);
+
+    expect(
+      (await loadHistory(user, { section: "abandoned", page: 1 })).rows.map((r) => r.raceId),
+    ).toEqual([quit]);
+
+    const spectated = await loadHistory(user, { section: "spectated", page: 1 });
+    expect(spectated.rows.map((r) => r.raceId)).toEqual([watched]);
+    expect(spectated.rows[0]).toMatchObject({ winnerName: "Bot", winnerWpm: 20, participantCount: 1 });
+  });
+
+  it("trie par date, MPM ou classement, dans les deux sens", async () => {
+    const user = await newUser();
+    const lobby = await newLobby(user);
+    const slow = await race(lobby.id, user, 30, 30); // la plus ancienne
+    const fast = await race(lobby.id, user, 90, 20);
+    const mid = await race(lobby.id, user, 60, 10); // la plus récente
+    await setRow(slow, user, `rank = 3`);
+    await setRow(mid, user, `rank = 2`);
+    const ids = async (sort: "date" | "wpm" | "rank", dir: "asc" | "desc") =>
+      (await loadHistory(user, { sort, dir, page: 1 })).rows.map((r) => r.raceId);
+
+    expect(await ids("date", "desc")).toEqual([mid, fast, slow]);
+    expect(await ids("date", "asc")).toEqual([slow, fast, mid]);
+    expect(await ids("wpm", "desc")).toEqual([fast, mid, slow]);
+    expect(await ids("wpm", "asc")).toEqual([slow, mid, fast]);
+    expect(await ids("rank", "asc")).toEqual([fast, mid, slow]);
+    expect(await ids("rank", "desc")).toEqual([slow, mid, fast]);
+  });
+
+  it("supprimer une course ne la masque que pour ce compte et ne touche pas les statistiques", async () => {
+    const { loadProfileStats } = await import("@/lib/stats");
+    const user = await newUser();
+    const other = await newUser();
+    const lobby = await newLobby(user);
+    const raceId = await race(lobby.id, user, 70, 5);
+    await client.query(
+      `insert into race_participants (race_id, user_id, display_name, status, wpm, rank) values ($1, $2, 'Autre', 'finished', 40, 2)`,
+      [raceId, other],
+    );
+    const before = await loadProfileStats(user);
+
+    expect(await hideFromHistory(user, raceId)).toBe(true);
+    expect(await hideFromHistory(user, raceId)).toBe(false); // déjà supprimée
+    expect((await loadHistory(user, { page: 1 })).total).toBe(0);
+    expect((await loadHistory(other, { page: 1 })).total).toBe(1);
+    expect(await loadProfileStats(user)).toEqual(before);
+    expect((await loadRaceResults(raceId))?.rows).toHaveLength(3); // la course et ses résultats subsistent
+    expect(await hideFromHistory(other, "00000000-0000-4000-8000-000000000000")).toBe(false);
+  });
+});
+
+describe("paramètres d'URL de l'historique", () => {
+  it("retombent sur des valeurs sûres", () => {
+    expect(parseHistoryQuery({})).toEqual({
+      section: "played",
+      sort: "date",
+      dir: "desc",
+      page: 1,
+    });
+    expect(parseHistoryQuery({ section: "x", sort: "y", dir: "z", page: "-2" })).toEqual({
+      section: "played",
+      sort: "date",
+      dir: "desc",
+      page: 1,
+    });
+    expect(parseHistoryQuery({ section: "abandoned", sort: "wpm", dir: "asc", page: "3" })).toEqual(
+      {
+        section: "abandoned",
+        sort: "wpm",
+        dir: "asc",
+        page: 3,
+      },
+    );
+  });
+
+  it("la section spectateur n'a que le tri par date", () => {
+    expect(parseHistoryQuery({ section: "spectated", sort: "wpm" }).sort).toBe("date");
   });
 });
 
@@ -132,9 +246,15 @@ describe("statistiques du profil (AUTH-06)", () => {
     await race(lobby.id, user, 40, 30); // rang 1
     await race(lobby.id, user, 60, 20); // rang 1
     const lost = await race(lobby.id, user, 50, 10);
-    await client.query(`update race_participants set rank = 2 where race_id = $1 and user_id = $2`, [lost, user]);
+    await client.query(
+      `update race_participants set rank = 2 where race_id = $1 and user_id = $2`,
+      [lost, user],
+    );
     const quit = await race(lobby.id, user, 10, 5);
-    await client.query(`update race_participants set status = 'abandoned', rank = 2 where race_id = $1 and user_id = $2`, [quit, user]);
+    await client.query(
+      `update race_participants set status = 'abandoned', rank = 2 where race_id = $1 and user_id = $2`,
+      [quit, user],
+    );
 
     const stats = await loadProfileStats(user);
     expect(stats).toMatchObject({ bestWpm: 60, races: 3, wins: 2 });

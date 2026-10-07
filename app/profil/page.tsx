@@ -18,7 +18,8 @@ export const generateMetadata = pageMetadata("title.profile");
 
 export default async function ProfilPage() {
   const [identity, lang] = await Promise.all([peekIdentity(), getRequestLang()]);
-  const t = (key: DictKey, params?: Record<string, string | number>) => translate(lang, key, params);
+  const t = (key: DictKey, params?: Record<string, string | number>) =>
+    translate(lang, key, params);
 
   if (!identity || identity.kind !== "user") {
     return (
@@ -70,7 +71,7 @@ export default async function ProfilPage() {
     })
     .join(" ");
 
-  const history = (await loadHistory(identity.userId, 1)).rows.slice(0, 6);
+  const history = (await loadHistory(identity.userId, { page: 1 })).rows.slice(0, 6);
 
   const rankLabel = (r: number | null) => (r ? `#${r}` : "—");
 
@@ -89,13 +90,18 @@ export default async function ProfilPage() {
             <p className="text-center text-xl leading-tight text-[#3a3a3a]">
               {t("profile.created", { date: formatDate(lang, user.created_at) })}
             </p>
-            <ProfileEditor displayName={user.display_name} hasPhoto={user.avatar_source === "upload" && user.avatar_url !== null} />
+            <ProfileEditor
+              displayName={user.display_name}
+              hasPhoto={user.avatar_source === "upload" && user.avatar_url !== null}
+            />
           </div>
 
           <div className="pixel-panel flex flex-col gap-2.5 p-5">
             <div className="flex items-center justify-between">
               <span className="font-pixel text-sm">{t("profile.streak")}</span>
-              <span className="text-2xl text-[#3a3a3a]">{t("profile.streak_days", { count: user.current_streak_days })}</span>
+              <span className="text-2xl text-[#3a3a3a]">
+                {t("profile.streak_days", { count: user.current_streak_days })}
+              </span>
             </div>
             <div className="mt-1.5 flex gap-2">
               <PixelSlot className="flex h-16 flex-1 flex-col items-center justify-center gap-1 leading-none">
@@ -122,8 +128,14 @@ export default async function ProfilPage() {
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
             {[
               [t("profile.best"), `${formatNumber(lang, stats.bestWpm)} ${t("race.wpm")}`],
-              [t("profile.average"), `${stats.avgWpm != null ? formatNumber(lang, stats.avgWpm) : "—"} ${t("race.wpm")}`],
-              [t("profile.accuracy"), stats.avgAccuracy != null ? formatPercent(lang, stats.avgAccuracy, 1) : "—"],
+              [
+                t("profile.average"),
+                `${stats.avgWpm != null ? formatNumber(lang, stats.avgWpm) : "—"} ${t("race.wpm")}`,
+              ],
+              [
+                t("profile.accuracy"),
+                stats.avgAccuracy != null ? formatPercent(lang, stats.avgAccuracy, 1) : "—",
+              ],
               [t("profile.races"), formatNumber(lang, stats.races)],
               [t("profile.wins"), formatNumber(lang, stats.wins)],
               [t("profile.streak"), t("profile.streak_days", { count: user.current_streak_days })],
@@ -137,7 +149,9 @@ export default async function ProfilPage() {
 
           <div className="pixel-panel p-5">
             <div className="mb-2.5 flex items-center justify-between">
-              <span className="font-pixel text-sm">{t("profile.progress", { count: points.length })}</span>
+              <span className="font-pixel text-sm">
+                {t("profile.progress", { count: points.length })}
+              </span>
             </div>
             <div className="border-4 border-black bg-[#1b1b1b] p-2">
               {points.length > 1 ? (
@@ -193,7 +207,9 @@ export default async function ProfilPage() {
                 className="flex items-center justify-between border-b-2 border-dotted border-[#8b8b8b] py-1 text-xl hover:bg-[#00000010]"
               >
                 <span>{formatDate(lang, h.playedAt)}</span>
-                <b className="font-normal">{formatNumber(lang, h.wpm)} {t("race.wpm")}</b>
+                <b className="font-normal">
+                  {formatNumber(lang, h.wpm)} {t("race.wpm")}
+                </b>
                 <span className="font-pixel text-[10px]">{rankLabel(h.rank)}</span>
               </Link>
             ))}

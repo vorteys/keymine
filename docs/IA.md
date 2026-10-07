@@ -10,7 +10,7 @@
 - [`AGENTS.md`](../AGENTS.md) : règles du projet pour les agents (règles non négociables du cahier des charges, architecture, commandes, pièges d'environnement, règles de commit et de tests).
 - [`CLAUDE.md`](../CLAUDE.md) : renvoie vers `AGENTS.md`.
 
-## Trois situations où l'IA s'est trompée
+## Situations où l'IA s'est trompée
 
 ### 1. Une matrice d'exigences avec de faux identifiants
 
@@ -32,10 +32,16 @@
 
 Autres erreurs corrigées en cours de route (plus petites) : curseur de capacité allant jusqu'à 100 alors que la validation serveur plafonne à 30 (le formulaire aurait été refusé), copie de travail effacée par une option `rsync` trop large, types `ws` manquants qui cassaient `tsc`. Les premiers tests dans un vrai navigateur ont aussi révélé quatre défauts que lint, types et tests unitaires ne voyaient pas : deux erreurs d'hydratation React sur la page de création de salle (durée formatée par `Intl` avec une espace insécable différente entre Node et Chrome, aperçu de texte tiré au hasard côté serveur), un changement de langue qui ne rafraîchissait pas les pages rendues côté serveur, et des textes illisibles en thème clair (couleurs fixes sur fond variable). Une capture d'écran de la page des résultats a ensuite montré un graphique vide : le serveur annonçait la fin de la course avant d'avoir écrit les résultats en base, et la page s'ouvrait sur des données incomplètes (ordre corrigé, test navigateur ajouté).
 
+### 4. Des passages de corpus transcrits de mémoire
+
+**Ce qui s'est passé.** L'agent avait écrit de mémoire les extraits d'œuvres du domaine public du corpus de textes, en les présentant comme des passages réels.
+**Détection.** Vérification mot à mot de chacun des 21 passages contre Project Gutenberg : quatre coquilles (« Et bonjour » au lieu de « Hé ! bonjour » chez La Fontaine, « monsieur le baron » au lieu de « M. le baron » dans Candide, la ponctuation du Petit Poucet, une phrase de Dorian Gray coupée en plein milieu).
+**Correction.** Passages corrigés ; les adaptations volontaires (vers fondus en prose, tirets longs remplacés par des virgules, graphie modernisée) sont documentées en tête de `db/seed-data/corpus.ts`.
+
 ## Réflexion sur notre façon de travailler avec les agents
 
 _À rédiger par l'équipe, avec ses propres mots : ce qui a bien marché, ce qui a demandé de la vigilance, ce que nous referions autrement._
 
 ## Limites connues liées à l'IA
 
-- Les passages du corpus de textes (`db/seed-data/corpus.ts`) ont été transcrits de mémoire par l'agent : ils sont du domaine public, mais chaque passage doit être **re-vérifié** contre Wikisource ou Project Gutenberg avant la remise finale.
+- Les passages du corpus de textes (`db/seed-data/corpus.ts`) ont été vérifiés contre Project Gutenberg mais pas contre Wikisource (inaccessible depuis l'environnement de travail) ; une relecture rapide sur Wikisource avant la remise reste souhaitable pour les textes français.

@@ -1,8 +1,13 @@
 // Passages du domaine public pour le texte cohérent (CONF-03). Chaque auteur
-// est mort depuis plus de 70 ans. Les passages sont des extraits courts
-// transcrits pour le projet ; la source (œuvre, auteur) est conservée en base.
-// À re-vérifier contre Wikisource / Project Gutenberg avant la remise finale
-// (voir docs/IA.md : transcription de mémoire, risque de coquille).
+// est mort depuis plus de 70 ans. Les passages sont des extraits courts ; la
+// source (œuvre, auteur) est conservée en base.
+//
+// Vérifiés mot à mot contre Project Gutenberg (voir docs/IA.md : ils avaient été
+// transcrits de mémoire, quatre coquilles ont été corrigées). Adaptations
+// volontaires pour un jeu de frappe : les vers sont fondus en prose, les tirets
+// longs sont remplacés par des virgules (introuvables au clavier), la graphie de
+// 1759 de « Vestphalie » est modernisée, et certains extraits s'arrêtent à la fin
+// d'une proposition. Wikisource n'était pas accessible depuis l'environnement de travail.
 
 export type SeedPassage = { language: "fr" | "en"; title: string; source: string; content: string };
 
@@ -19,7 +24,7 @@ export const PASSAGES: SeedPassage[] = [
     title: "Le Corbeau et le Renard",
     source: "Jean de La Fontaine, Fables (domaine public)",
     content:
-      "Maître Corbeau, sur un arbre perché, tenait en son bec un fromage. Maître Renard, par l'odeur alléché, lui tint à peu près ce langage : Et bonjour, Monsieur du Corbeau. Que vous êtes joli ! que vous me semblez beau !",
+      "Maître Corbeau, sur un arbre perché, tenait en son bec un fromage. Maître Renard, par l'odeur alléché, lui tint à peu près ce langage : Hé ! bonjour, Monsieur du Corbeau. Que vous êtes joli ! que vous me semblez beau !",
   },
   {
     language: "fr",
@@ -40,7 +45,7 @@ export const PASSAGES: SeedPassage[] = [
     title: "Le Petit Poucet",
     source: "Charles Perrault, Histoires ou contes du temps passé (domaine public)",
     content:
-      "Il était une fois un bûcheron et une bûcheronne qui avaient sept enfants, tous garçons. L'aîné n'avait que dix ans, et le plus jeune n'en avait que sept.",
+      "Il était une fois un bûcheron et une bûcheronne qui avaient sept enfants, tous garçons ; l'aîné n'avait que dix ans, et le plus jeune n'en avait que sept.",
   },
   {
     language: "fr",
@@ -61,7 +66,7 @@ export const PASSAGES: SeedPassage[] = [
     title: "Candide",
     source: "Voltaire (domaine public)",
     content:
-      "Il y avait en Westphalie, dans le château de monsieur le baron de Thunder-ten-tronckh, un jeune garçon à qui la nature avait donné les mœurs les plus douces.",
+      "Il y avait en Westphalie, dans le château de M. le baron de Thunder-ten-tronckh, un jeune garçon à qui la nature avait donné les mœurs les plus douces.",
   },
   {
     language: "fr",
@@ -158,7 +163,7 @@ export const PASSAGES: SeedPassage[] = [
     title: "The Picture of Dorian Gray",
     source: "Oscar Wilde (public domain)",
     content:
-      "The studio was filled with the rich odour of roses, and when the light summer wind stirred amidst the trees of the garden, there came through the open door the heavy scent of the lilac.",
+      "The studio was filled with the rich odour of roses, and when the light summer wind stirred amidst the trees of the garden, there came through the open door the heavy scent of the lilac, or the more delicate perfume of the pink-flowering thorn.",
   },
   {
     language: "en",

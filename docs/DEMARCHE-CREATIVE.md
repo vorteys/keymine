@@ -37,8 +37,8 @@ Le but est de créer un site qui attire les jeunes des écoles. Pour ça, je vou
 **Variantes et usages.**
 
 - Version complète (`logo/keymine-logo.png`, 1024 × 768) : pour les documents et les présentations.
-- Version carrée recadrée sur le cercle (`logo/keymine-icone.png`) : pour l'icône de l'onglet du navigateur (favicon, `app/favicon.ico` et `app/icon.png`).
-- Dans l'en-tête du site, je n'ai pas remis l'image entière : le mot est reconstitué avec de petites touches de clavier (K, E, Y) suivies de « MINE », pour rester lisible et léger sur téléphone.
+- Version ronde (`logo/keymine-rond.png`) : juste le cercle noir et ce qu'il contient, coins transparents. Elle sert d'icône d'onglet (favicon, `app/favicon.ico` et `app/icon.png`) et de logo dans l'en-tête du site (`public/logo-rond.png`).
+- Dans l'en-tête, le cercle est accompagné du mot reconstitué avec de petites touches de clavier (K, E, Y) suivies de « MINE » : à cette taille, le texte du logo serait trop petit pour être lu, alors on le répète en grand à côté. Sur un très petit téléphone (moins de 440 px de large), je garde seulement le cercle et « MINE » pour que l'en-tête tienne.
 
 ## Moodboard
 
@@ -92,5 +92,5 @@ Pourquoi deux polices : Press Start 2P est très large et fatigue vite à lire s
 - **Le style « bloc ».** Boutons, panneaux et touches ont des bords carrés, une bordure noire épaisse, un petit relief (un côté clair en haut à gauche, un côté foncé en bas à droite) et une ombre dure qui ne se floute pas. Ça donne l'impression de blocs en pixels, comme dans Minecraft. Au survol, un bouton se soulève un peu ; quand on clique, il s'enfonce, pour que ça réagisse comme une vraie touche.
 - **Les couleurs ont toujours le même sens.** Vert = on avance (jouer, créer, enregistrer). Or = action secondaire ou à remarquer (générer un lien, modifier les réglages). Rouge = on supprime ou on ferme. Gris = annuler ou fermer sans rien changer. La même logique sert pour les touches des lettres et des accents dans le formulaire de création : gris = neutre, vert = « souvent », rouge = « jamais ». Et la couleur n'est jamais seule : une petite marque (+ ou ×) et un trait sur le texte aident les personnes qui ne voient pas bien les couleurs.
 - **Thème sombre et thème clair.** Le thème sombre (fond brun terre, panneaux crème) est celui que j'ai pensé en premier. Le thème clair garde les mêmes panneaux sur un fond sable. Le site choisit selon le choix de la personne, sinon selon la préférence de son appareil, et le thème est posé avant l'affichage de la page pour éviter un flash de la mauvaise couleur. Un bouton dans l'en-tête permet d'alterner.
-- **L'en-tête et le logo.** Les lettres K, E et Y sont de petites touches de clavier (la touche E est verte), comme dans le logo, suivies de « MINE ». L'icône de l'onglet du navigateur est le logo rond.
+- **L'en-tête et le logo.** Le logo rond est tout à gauche de l'en-tête, suivi des lettres K, E et Y en petites touches de clavier (la touche E est verte), puis de « MINE ». L'icône de l'onglet du navigateur est le même logo rond.
 - **Sur téléphone.** Les pages tiennent sans défilement horizontal à 360 px de large : les grilles de boutons passent en une colonne, et les grandes cartes (touches du clavier) défilent à l'intérieur de leur zone.

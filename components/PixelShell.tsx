@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { PixelAvatar } from "./ui";
@@ -50,10 +51,17 @@ export function PixelShell({
 
       <header className="flex h-16 items-center gap-2 border-b-4 border-black bg-[#241a10] px-3 sm:gap-6 sm:px-8">
         <Link href="/" className="flex shrink-0 items-center gap-1">
-          <span className="pixel-key">K</span>
-          <span className="pixel-key bg-[#7fc45a]">E</span>
-          <span className="pixel-key">Y</span>
-          <span className="font-pixel ml-1 text-xs text-white sm:ml-2 sm:text-lg [text-shadow:3px_3px_0_#000]">
+          <Image
+            src="/logo-rond.png"
+            alt=""
+            width={44}
+            height={44}
+            className="mr-1 h-9 w-9 sm:mr-2 sm:h-11 sm:w-11"
+          />
+          <span className="pixel-key max-[439px]:hidden">K</span>
+          <span className="pixel-key bg-[#7fc45a] max-[439px]:hidden">E</span>
+          <span className="pixel-key max-[439px]:hidden">Y</span>
+          <span className="font-pixel ml-1 text-xs text-white [text-shadow:3px_3px_0_#000] sm:ml-2 sm:text-lg">
             MINE
           </span>
         </Link>
@@ -108,12 +116,17 @@ export function PixelShell({
               src={viewer?.kind === "user" ? viewer.avatarUrl : null}
             />
             <span className="hidden max-w-40 truncate sm:inline">{viewerName}</span>
-            <span className="sr-only sm:hidden">{viewer?.kind === "user" ? t("a11y.profile_link") : t("a11y.login_link")}</span>
+            <span className="sr-only sm:hidden">
+              {viewer?.kind === "user" ? t("a11y.profile_link") : t("a11y.login_link")}
+            </span>
           </Link>
         )}
       </header>
 
-      <nav aria-label={t("a11y.main_nav")} className="flex gap-1.5 border-b-4 border-black bg-[#241a10] px-4 pb-3 sm:hidden">
+      <nav
+        aria-label={t("a11y.main_nav")}
+        className="flex gap-1.5 border-b-4 border-black bg-[#241a10] px-4 pb-3 sm:hidden"
+      >
         <Link href="/jouer/creer" data-active={active === "jouer"} className="pixel-nav-link">
           {t("nav.jouer")}
         </Link>

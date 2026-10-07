@@ -158,8 +158,24 @@ test("marteler le clavier est pénalisé : la pénalité s'ajoute au temps d'arr
     .click();
   await expect(heatmap).toBeVisible();
 
-  // HIST-01 : la course figure dans l'historique, avec des champs étiquetés ; on peut la supprimer.
-  await page.goto("/historique");
+  // Stats : la course récente y figure avec les mêmes infos et les mêmes boutons que dans l'historique.
+  await page.goto("/profil");
+  const recent = page.getByRole("list", { name: "HISTORIQUE" }).getByRole("listitem");
+  await expect(recent).toHaveCount(1);
+  await expect(recent).toContainText("Course jouée");
+  for (const name of ["DETAILS", "REJOUER", "SUPPRIMER"]) {
+    await expect(recent.getByRole(name === "DETAILS" ? "link" : "button", { name })).toBeVisible();
+  }
+  await expect(page.getByRole("link", { name: "VOIR TOUT L'HISTORIQUE" })).toBeVisible();
+
+  // HIST-01 : la course figure dans l'historique (section « Courses » par défaut), avec des champs
+  // étiquetés ; on peut la supprimer.
+  await page.getByRole("link", { name: "VOIR TOUT L'HISTORIQUE" }).click();
+  await expect(page).toHaveURL(/\/historique/);
+  await expect(page.getByRole("link", { name: /^COURSES \(1\)/ })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
   const card = page.getByRole("listitem").filter({ hasText: "DATE" });
   await expect(card).toHaveCount(1);
   await expect(card).toContainText("RANG");

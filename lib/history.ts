@@ -12,8 +12,8 @@ import {
 export { HISTORY_SECTIONS, HISTORY_SORTS };
 export type { HistoryDirection, HistorySection, HistorySort };
 
-// HIST-01 : historique paginé des courses terminées d'un compte, en trois sections :
-// les courses jouées, les abandons, et les courses regardées en spectateur.
+// HIST-01 : historique paginé des courses terminées d'un compte, en quatre sections :
+// toutes les courses, celles jouées, celles regardées en spectateur et les abandons.
 // Les courses non terminées (en cours, ou interrompues sans résultat) n'y figurent pas.
 
 export const HISTORY_PAGE_SIZE = 10;
@@ -34,6 +34,8 @@ export type HistoryRow = {
   wpm: number;
   accuracy: number;
   status: ParticipantStatus;
+  /** Rôle du compte dans cette course : joueur ou spectateur. */
+  role: "participant" | "spectator";
   /** Section « spectateur » : le vainqueur de la course regardée. */
   winnerName: string | null;
   winnerWpm: number | null;
@@ -62,7 +64,7 @@ export function parsePage(value: RawParam): number {
 
 /** Paramètres d'URL de l'historique : toute valeur inconnue retombe sur la valeur par défaut. */
 export function parseHistoryQuery(query: Record<string, RawParam>): HistoryQuery {
-  const section = HISTORY_SECTIONS.find((s) => s === first(query.section)) ?? "played";
+  const section = HISTORY_SECTIONS.find((s) => s === first(query.section)) ?? "all";
   // La section « spectateur » n'a pas de MPM ni de rang personnels : seul le tri par date a un sens.
   const sort =
     section === "spectated"
@@ -79,6 +81,7 @@ function baseFor(userId: string, section: HistorySection) {
     .where("race_participants.user_id", "=", userId)
     .where("race_participants.hidden_from_history", "=", false)
     .where("races.status", "=", "finished");
+  if (section === "all") return base;
   if (section === "spectated") return base.where("race_participants.role", "=", "spectator");
   const played = base.where("race_participants.role", "=", "participant");
   return section === "abandoned"
@@ -97,11 +100,12 @@ export async function loadHistory(
   userId: string,
   query: Partial<HistoryQuery> & { page: number } = { page: 1 },
 ): Promise<HistoryPage> {
-  const section = query.section ?? "played";
+  const section = query.section ?? "all";
   const sort = section === "spectated" ? "date" : (query.sort ?? "date");
   const dir = query.dir ?? "desc";
 
   const counts: HistoryCounts = {
+    all: await countFor(userId, "all"),
     played: await countFor(userId, "played"),
     abandoned: await countFor(userId, "abandoned"),
     spectated: await countFor(userId, "spectated"),
@@ -120,6 +124,7 @@ export async function loadHistory(
       "race_participants.wpm",
       "race_participants.accuracy",
       "race_participants.status",
+      "race_participants.role",
       (eb) =>
         eb
           .selectFrom("race_participants as rp")
@@ -177,6 +182,7 @@ export async function loadHistory(
       wpm: r.wpm ?? 0,
       accuracy: r.accuracy ?? 100,
       status: r.status,
+      role: r.role,
       winnerName: r.winner_name ?? null,
       winnerWpm: r.winner_wpm ?? null,
     })),

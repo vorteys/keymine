@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PixelButton } from "@/components/ui";
 import { useLanguage } from "@/lib/i18n";
+import { HistoryIcon } from "./icons";
 
 // Supprime une course de son historique, après confirmation (<dialog> natif : le focus est piégé
 // dans la boîte et Échap la ferme).
@@ -34,8 +35,10 @@ export function DeleteHistoryButton({ raceId }: { raceId: string }) {
       <button
         type="button"
         onClick={() => dialog.current?.showModal()}
-        className="font-pixel min-h-9 text-[9px] text-[#9b2d20] underline"
+        data-variant="red"
+        className="pixel-btn h-10 gap-2 px-3 text-[9px]"
       >
+        <HistoryIcon name="trash" />
         {t("hist.delete")}
       </button>
       <dialog

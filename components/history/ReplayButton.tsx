@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/lib/i18n";
+import { HistoryIcon } from "./icons";
 
 // REJOUER : ouvre une nouvelle salle avec les mêmes réglages que cette course, puis y emmène l'hôte.
 
@@ -36,8 +37,10 @@ export function ReplayButton({ raceId }: { raceId: string }) {
         type="button"
         onClick={() => void replay()}
         disabled={busy}
-        className="font-pixel min-h-9 text-[9px] text-[#2f6b18] underline disabled:opacity-60"
+        data-variant="green"
+        className="pixel-btn h-10 gap-2 px-3 text-[9px]"
       >
+        <HistoryIcon name="replay" />
         {t("hist.replay")}
       </button>
       {problem && (

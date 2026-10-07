@@ -1,9 +1,10 @@
 import { PixelShell } from "@/components/PixelShell";
-import Link from "next/link";
 import { PixelAvatar, PixelButton, PixelKeyboard, PixelSlot } from "@/components/ui";
 import { formatDate, formatNumber, formatPercent } from "@/lib/format";
 import { loadHistory } from "@/lib/history";
 import { loadProfileStats } from "@/lib/stats";
+import { HistoryCard } from "@/components/history/HistoryCard";
+import { ProgressChart } from "@/components/ProgressChart";
 import { ProfileEditor } from "@/components/ProfileEditor";
 import { getRequestLang, pageMetadata } from "@/lib/i18n-server";
 import { translate, type DictKey } from "@/lib/i18n-dictionary";
@@ -12,6 +13,9 @@ import { LogoutButton } from "@/components/LogoutButton";
 import { db } from "@/lib/db";
 import { peekIdentity } from "@/lib/auth/identity";
 import { heatmapRowsFromCounts } from "@/lib/heatmap";
+
+// Nombre de courses récentes affichées dans Stats ; la page Historique les montre toutes.
+const RECENT_RACES = 5;
 
 export const dynamic = "force-dynamic";
 export const generateMetadata = pageMetadata("title.profile");
@@ -53,27 +57,27 @@ export default async function ProfilPage() {
   }
   const heatmapRows = heatmapRowsFromCounts(correct, errors);
 
+  // Progression : toute course réellement courue (terminée ou arrêtée par le temps) a un MPM ;
+  // seuls les abandons n'en ont pas de significatif.
   const progression = await db
     .selectFrom("race_participants")
     .select(["wpm", "created_at"])
     .where("user_id", "=", identity.userId)
-    .where("status", "=", "finished")
+    .where("role", "=", "participant")
+    .where("status", "in", ["finished", "timeout"])
+    .where("wpm", "is not", null)
     .orderBy("created_at", "desc")
     .limit(20)
     .execute();
-  const points = [...progression].reverse().filter((p) => p.wpm != null);
-  const maxWpm = Math.max(10, ...points.map((p) => p.wpm ?? 0));
-  const progressionPoints = points
-    .map((p, i) => {
-      const x = points.length > 1 ? (i / (points.length - 1)) * 720 : 0;
-      const y = 200 - ((p.wpm ?? 0) / maxWpm) * 170;
-      return `${Math.round(x)},${Math.round(y)}`;
-    })
-    .join(" ");
+  const points = [...progression]
+    .reverse()
+    .map((p) => ({ wpm: p.wpm ?? 0, at: new Date(p.created_at) }));
 
-  const history = (await loadHistory(identity.userId, { page: 1 })).rows.slice(0, 6);
-
-  const rankLabel = (r: number | null) => (r ? `#${r}` : "—");
+  // Les mêmes cartes que la page Historique (mêmes infos, mêmes actions) : les plus récentes seulement.
+  const history = (await loadHistory(identity.userId, { section: "all", page: 1 })).rows.slice(
+    0,
+    RECENT_RACES,
+  );
 
   return (
     <PixelShell active="stats">
@@ -154,29 +158,14 @@ export default async function ProfilPage() {
               </span>
             </div>
             <div className="border-4 border-black bg-[#1b1b1b] p-2">
-              {points.length > 1 ? (
-                <svg
-                  viewBox="0 0 720 220"
-                  width="100%"
-                  role="img"
-                  aria-label={t("profile.progress_aria")}
-                >
-                  <g stroke="#3a3a3a" strokeWidth="1">
-                    <line x1="0" y1="50" x2="720" y2="50" />
-                    <line x1="0" y1="100" x2="720" y2="100" />
-                    <line x1="0" y1="150" x2="720" y2="150" />
-                    <line x1="0" y1="200" x2="720" y2="200" />
-                  </g>
-                  <polyline
-                    fill="none"
-                    stroke="#7fd36a"
-                    strokeWidth="4"
-                    points={progressionPoints}
-                  />
-                  <text x="8" y="30" fill="#ffefb3" fontSize="14" fontFamily="monospace">
-                    {t("profile.record", { value: Math.round(user.best_wpm) })}
-                  </text>
-                </svg>
+              {points.length > 0 ? (
+                <ProgressChart
+                  data={points}
+                  lang={lang}
+                  label={t("profile.progress_aria")}
+                  averageLabel={t("profile.progress_average")}
+                  wpmLabel={t("race.wpm")}
+                />
               ) : (
                 <p className="p-6 text-center text-2xl text-[#8b8b8b]">
                   {t("profile.progress_empty")}
@@ -196,29 +185,24 @@ export default async function ProfilPage() {
           </div>
 
           <div className="pixel-panel p-5">
-            <div className="font-pixel mb-2.5 text-sm">{t("profile.history")}</div>
-            {history.length === 0 && (
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="font-pixel text-sm">{t("profile.history")}</h2>
+              <PixelButton href="/historique" variant="gold" className="h-11 px-5 text-[10px]">
+                {t("hist.see_all")}
+              </PixelButton>
+            </div>
+            {history.length === 0 ? (
               <p className="text-xl text-[#3a3a3a]">{t("profile.history_empty")}</p>
+            ) : (
+              <ul aria-label={t("profile.history")} className="flex flex-col gap-3">
+                {history.map((h) => (
+                  <HistoryCard key={h.raceId} row={h} lang={lang} />
+                ))}
+              </ul>
             )}
-            {history.map((h) => (
-              <Link
-                key={h.raceId}
-                href={`/resultats/${h.lobbyCode}?course=${h.raceId}`}
-                className="flex items-center justify-between border-b-2 border-dotted border-[#8b8b8b] py-1 text-xl hover:bg-[#00000010]"
-              >
-                <span>{formatDate(lang, h.playedAt)}</span>
-                <b className="font-normal">
-                  {formatNumber(lang, h.wpm)} {t("race.wpm")}
-                </b>
-                <span className="font-pixel text-[10px]">{rankLabel(h.rank)}</span>
-              </Link>
-            ))}
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <PixelButton href="/historique" variant="gold" className="h-11 px-5 text-[10px]">
-              {t("res.history")}
-            </PixelButton>
+          <div className="flex justify-end">
             <LogoutButton />
           </div>
         </div>

@@ -128,8 +128,17 @@ describe("sections, tri et suppression de l'historique (HIST-01)", () => {
     await setRow(watched, user, `role = 'spectator', status = 'finished', rank = null, wpm = null`);
     await client.query(`update race_participants set rank = 1 where race_id = $1 and is_bot`, [watched]);
 
-    const playedPage = await loadHistory(user, { page: 1 });
-    expect(playedPage.counts).toEqual({ played: 1, abandoned: 1, spectated: 1 });
+    // Par défaut : toutes les courses, avec le rôle de chaque ligne.
+    const everything = await loadHistory(user, { page: 1 });
+    expect(everything.section).toBe("all");
+    expect(everything.counts).toEqual({ all: 3, played: 1, abandoned: 1, spectated: 1 });
+    expect(everything.rows.map((r) => [r.raceId, r.role, r.status])).toEqual([
+      [watched, "spectator", "finished"],
+      [quit, "participant", "abandoned"],
+      [played, "participant", "finished"],
+    ]);
+
+    const playedPage = await loadHistory(user, { section: "played", page: 1 });
     expect(playedPage.rows.map((r) => r.raceId)).toEqual([played]);
 
     expect(
@@ -185,13 +194,13 @@ describe("sections, tri et suppression de l'historique (HIST-01)", () => {
 describe("paramètres d'URL de l'historique", () => {
   it("retombent sur des valeurs sûres", () => {
     expect(parseHistoryQuery({})).toEqual({
-      section: "played",
+      section: "all",
       sort: "date",
       dir: "desc",
       page: 1,
     });
     expect(parseHistoryQuery({ section: "x", sort: "y", dir: "z", page: "-2" })).toEqual({
-      section: "played",
+      section: "all",
       sort: "date",
       dir: "desc",
       page: 1,

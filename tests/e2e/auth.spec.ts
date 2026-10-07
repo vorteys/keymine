@@ -6,10 +6,10 @@ import { PASSWORD, registerViaApi, uniqueName } from "./helpers";
 test("créer un compte, se déconnecter, se reconnecter", async ({ page }) => {
   const username = uniqueName("e2e");
   await page.goto("/connexion");
-  await page.getByRole("button", { name: "CRÉER UN COMPTE" }).first().click();
+  await page.getByRole("button", { name: "CREER UN COMPTE" }).first().click();
   await page.getByLabel("NOM D'UTILISATEUR").fill(username);
   await page.getByLabel("MOT DE PASSE").fill(PASSWORD);
-  await page.getByRole("button", { name: "CRÉER LE COMPTE" }).click();
+  await page.getByRole("button", { name: "CREER LE COMPTE" }).click();
   await expect(page).toHaveURL("/");
   // L'en-tête affiche le pseudo de la personne connectée et mène à son profil.
   await expect(page.getByRole("banner").getByRole("link", { name: username })).toHaveAttribute(
@@ -21,7 +21,7 @@ test("créer un compte, se déconnecter, se reconnecter", async ({ page }) => {
   await expect(
     page.getByRole("main").getByText(username.toUpperCase(), { exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "DÉCONNEXION" }).click();
+  await page.getByRole("button", { name: "DECONNEXION" }).click();
 
   await page.goto("/connexion");
   await page.getByLabel("NOM D'UTILISATEUR").fill(username);

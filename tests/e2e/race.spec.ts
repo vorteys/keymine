@@ -40,7 +40,7 @@ test("course complète : hôte + invité + bot, résultats, rejouer (COURSE-03/0
   const guest = await joinAsGuest(guestContext, code, guestName);
   await expect(host.getByText(guestName).first()).toBeVisible();
 
-  await host.getByRole("button", { name: "DÉMARRER" }).click();
+  await host.getByRole("button", { name: "DEMARRER" }).click();
   await expect(host).toHaveURL(new RegExp(`/course/${code}`), { timeout: 15_000 });
   await expect(guest).toHaveURL(new RegExp(`/course/${code}`), { timeout: 15_000 });
 

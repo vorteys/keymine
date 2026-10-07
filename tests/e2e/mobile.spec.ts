@@ -22,14 +22,14 @@ test("360 px : salle d'attente, profil, historique et course (message clavier ph
   }
 
   await page.goto(`/jouer/${code}`);
-  await page.getByRole("button", { name: "DÉMARRER" }).click();
+  await page.getByRole("button", { name: "DEMARRER" }).click();
   await expect(page).toHaveURL(new RegExp(`/course/${code}`), { timeout: 15_000 });
-  await expect(page.getByRole("heading", { name: "UN CLAVIER PHYSIQUE EST RECOMMANDÉ" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "UN CLAVIER PHYSIQUE EST RECOMMANDE" })).toBeVisible();
   await expect(page.getByRole("group", { name: "Texte à taper" })).toHaveCount(0);
   await expectNoHorizontalScroll("course");
 
   // Le lien vers les résultats est proposé ; une fois la course terminée (15 s), la page est lisible sur mobile.
-  await expect(page.getByRole("link", { name: "VOIR LES RÉSULTATS" })).toHaveAttribute("href", `/resultats/${code}`);
+  await expect(page.getByRole("link", { name: "VOIR LES RESULTATS" })).toHaveAttribute("href", `/resultats/${code}`);
   await expect(async () => {
     await page.goto(`/resultats/${code}`);
     await expect(page.getByRole("table")).toBeVisible({ timeout: 1_000 });

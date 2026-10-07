@@ -17,7 +17,7 @@ test("course à 30 participants : la piste reste fluide (PERF-03)", async ({ pag
     }).observe({ entryTypes: ["longtask"] });
   });
   await page.goto(`/jouer/${code}`);
-  await page.getByRole("button", { name: "DÉMARRER" }).click();
+  await page.getByRole("button", { name: "DEMARRER" }).click();
   await expect(page).toHaveURL(new RegExp(`/course/${code}`), { timeout: 15_000 });
   await expect(page.getByText("La course commence…")).toBeHidden({ timeout: 15_000 });
   await expect(page.getByRole("list", { name: "Piste de progression" }).getByRole("listitem")).toHaveCount(30);

@@ -76,8 +76,10 @@ Voir `.env.example`.
 | `bun run lint` / `bun run typecheck` | Qualité du code |
 | `bun run test` | Tests unitaires (Vitest) |
 | `bun run test:db` | Tests d'intégration contre PostgreSQL (`DATABASE_URL` migrée requis) |
-| `bun run test:e2e` | Tests de bout en bout (Playwright) |
+| `bun run test:e2e` | Tests de bout en bout (Playwright, Chromium) : base migrée requise ; Playwright démarre `bun run start` et `bun run realtime` s'ils ne tournent pas (faire `bun run build` avant) |
 | `bun run build` / `bun run start` | Production |
+
+Pour les tests de bout en bout, installer le navigateur une fois (`bunx playwright install chromium`) ; si Chromium est ailleurs, indiquer son chemin dans `PLAYWRIGHT_CHROMIUM_EXECUTABLE`.
 
 `bun run scripts/build-with-db.ts <commande>` démarre un Postgres embarqué
 jetable, migre, exécute la commande puis l'arrête (ex. `… bun run test:db`).

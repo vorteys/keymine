@@ -202,14 +202,29 @@ Choix pour CONF-06/07 : en mode cohérent, les options (accents, ponctuation, ma
 - Invités : pseudonyme (3 à 20 caractères) dans un cookie JWT signé ; un invité **ne crée pas** de salle et ne peut pas être hôte.
 - Validation : Zod sur toutes les routes et tous les messages temps réel ; requêtes SQL paramétrées (Kysely) ; WebSocket protégé par origine + cookie ; limitation de débit des messages.
 
+### Invitations, expulsions et limitation des tentatives (SALLE-03, 04, 07, 10)
+
+- **Liens d'invitation** : jeton aléatoire de 256 bits stocké en base (`lobby_invites`), plusieurs liens par salle avec libellé et statut (non utilisé, utilisé par…, révoqué). Au premier usage, le lien est lié à la personne **et à son adresse IP** par une mise à jour atomique (`where claimed_ip is null`) : si deux personnes cliquent en même temps, une seule gagne. Ensuite seule la même IP peut le réutiliser. L'IP est la dernière entrée de `X-Forwarded-For` : cela suppose le reverse proxy du déploiement (voir `DEPLOIEMENT.md`).
+- **Accès** : publique (listée), sur code (non listée, code ou lien), privée (lien seulement, l'hôte et les personnes déjà présentes restent admis). Le code seul ne suffit jamais pour une salle privée.
+- **Expulsion** : la ligne `lobby_players` est supprimée, une ligne de `lobby_bans` interdit le retour (compte ou invité) et les liens utilisés par cette personne sont révoqués. Tous les liens deviennent invalides à la fermeture de la salle.
+- **Force brute (SALLE-10)** : 10 tentatives *échouées* par minute et par IP (code inconnu, salle privée sans lien, lien invalide), puis 429. Les entrées réussies ne comptent pas, pour qu'une classe derrière une même IP puisse jouer.
+
+### Fin de course et résultats (RES-02)
+
+À la fin d'une course, le serveur temps réel écrit **d'abord** les résultats en base (classement, MPM, précision, série de MPM, touches), **puis** annonce la fin aux clients. Les clients redirigent vers `/resultats/<code>` dès qu'ils reçoivent l'annonce : dans l'ordre inverse, la page s'ouvrait sur des données incomplètes (bug trouvé par un test navigateur). Aucun autre tick ne diffuse pendant l'écriture.
+
+### Interface : langue et identité
+
+La langue est décidée côté serveur (cookie `km_lang`, sinon `Accept-Language`) ; changer de langue réécrit le cookie et rafraîchit les pages rendues côté serveur. Les erreurs d'API sont traduites côté serveur (`lib/api-messages.ts`) et les noms de bots sont recomposés depuis leur niveau (`lib/bot-name.ts`). L'identité affichée dans l'en-tête (pseudo, photo ou « Invité ») est lue une fois dans `app/layout.tsx` et passée par un contexte (`lib/viewer.tsx`). Tout texte tiré au hasard (aperçu des réglages) n'est calculé qu'après l'hydratation, et les formats qui dépendent des données `Intl` (espaces insécables) sont écrits à la main pour la durée : sinon Node et le navigateur produisent des textes différents et React échoue à l'hydratation.
+
 ## 10. Stratégie de tests
 
 | Niveau | Outil | Ce qui est couvert |
 | --- | --- | --- |
 | Unitaires | Vitest | Génération et complexité du texte, protocole Zod, limiteur, authentification WebSocket, bots, états. |
 | Intégration base | Vitest + Postgres réel (`bun run test:db`) | Contraintes SALLE-06, notifications, balayage d'hôte, règles d'entrée en salle, seed idempotent, serveur temps réel complet avec vrais cookies. |
-| Bout en bout | Playwright | Parcours principaux (accueil, création, entrée en salle). |
-| CI | GitHub Actions | Lint, typecheck, tests unitaires ; Postgres 18 pour migrations, tests base, build et e2e. |
+| Bout en bout | Playwright (Chromium) | 21 tests : accueil, langue et thème, 360 px, inscription/connexion par mot de passe, salle privée par lien, course complète hôte + invité + bot jusqu'aux résultats et « rejouer », expulsion, réglages en direct, actions réservées à l'hôte (401/403), 30 participants (images/s), audit d'accessibilité axe dans les deux thèmes. |
+| CI | GitHub Actions | Lint, typecheck, tests unitaires ; Postgres 18 pour migrations, tests base, build et e2e (Playwright démarre aussi le serveur temps réel). |
 
 ## 11. Décisions notables (ADR courts)
 

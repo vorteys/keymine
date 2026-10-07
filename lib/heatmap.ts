@@ -2,10 +2,11 @@
 // corrects/erreurs par caractère (STAT-3/STAT-5). UI-6: la couleur n'est
 // jamais la seule information — le pourcentage exact est toujours affiché
 // à côté, donc lisible aussi pour les daltoniens.
+// `indent`: décalage de la rangée, en nombre de touches.
 const LAYOUT: { indent: string; letters: string[] }[] = [
-  { indent: "0%", letters: ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"] },
-  { indent: "4.5%", letters: ["a", "s", "d", "f", "g", "h", "j", "k", "l"] },
-  { indent: "9.5%", letters: ["z", "x", "c", "v", "b", "n", "m"] },
+  { indent: "0", letters: ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"] },
+  { indent: "0.5", letters: ["a", "s", "d", "f", "g", "h", "j", "k", "l"] },
+  { indent: "1", letters: ["z", "x", "c", "v", "b", "n", "m"] },
 ];
 
 export function heatmapRowsFromCounts(

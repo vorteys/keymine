@@ -119,22 +119,45 @@ export function heatColor(pct: number) {
 
 export const keyboardRows: { indent: string; keys: [string, number][] }[] = [
   {
-    indent: "0%",
+    indent: "0",
     keys: [
-      ["Q", 94], ["W", 91], ["E", 98], ["R", 96], ["T", 95],
-      ["Y", 88], ["U", 93], ["I", 97], ["O", 92], ["P", 79],
+      ["Q", 94],
+      ["W", 91],
+      ["E", 98],
+      ["R", 96],
+      ["T", 95],
+      ["Y", 88],
+      ["U", 93],
+      ["I", 97],
+      ["O", 92],
+      ["P", 79],
     ],
   },
   {
-    indent: "4.5%",
+    indent: "0.5",
     keys: [
-      ["A", 97], ["S", 95], ["D", 96], ["F", 98], ["G", 90],
-      ["H", 94], ["J", 96], ["K", 93], ["L", 91],
+      ["A", 97],
+      ["S", 95],
+      ["D", 96],
+      ["F", 98],
+      ["G", 90],
+      ["H", 94],
+      ["J", 96],
+      ["K", 93],
+      ["L", 91],
     ],
   },
   {
-    indent: "9.5%",
-    keys: [["Z", 68], ["X", 74], ["C", 90], ["V", 92], ["B", 89], ["N", 95], ["M", 96]],
+    indent: "1",
+    keys: [
+      ["Z", 68],
+      ["X", 74],
+      ["C", 90],
+      ["V", 92],
+      ["B", 89],
+      ["N", 95],
+      ["M", 96],
+    ],
   },
 ];
 
@@ -150,18 +173,29 @@ export function PixelKeyboard({
 }) {
   return (
     // 360 px (DES-06) : le clavier garde une taille lisible et défile dans sa zone plutôt que de faire défiler la page.
-    <div className="overflow-x-auto" role="group" aria-label={label} tabIndex={label ? 0 : undefined}>
-      <div className={`flex min-w-[30rem] flex-col gap-2 ${className}`}>
+    // Le padding absorbe l'agrandissement d'une touche au survol : sans lui, la zone afficherait des barres de défilement.
+    <div
+      className="overflow-x-auto overflow-y-hidden p-3"
+      role="group"
+      aria-label={label}
+      tabIndex={label ? 0 : undefined}
+    >
+      <div className={`pixel-keymap flex w-max flex-col gap-2 ${className}`}>
         {rows.map((row, i) => (
-          <div key={i} className="flex gap-2" style={{ marginLeft: row.indent }}>
+          // `indent` est un décalage en nombre de touches (0, 0.5, 1), comme sur un vrai clavier.
+          <div
+            key={i}
+            className="flex gap-2"
+            style={{ marginLeft: `calc((var(--key) + 0.5rem) * ${row.indent})` }}
+          >
             {row.keys.map(([letter, pct]) => (
               <div
                 key={letter}
                 className="pixel-keymap-key font-pixel"
                 style={{ background: heatColor(pct) }}
               >
-                <b className="text-base font-normal sm:text-lg">{letter}</b>
-                <span className="text-xs sm:text-sm">{pct}</span>
+                <b className="pixel-keymap-letter">{letter}</b>
+                <span className="pixel-keymap-pct">{pct}</span>
               </div>
             ))}
           </div>

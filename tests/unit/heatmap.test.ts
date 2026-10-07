@@ -19,4 +19,8 @@ describe("heatmapRowsFromCounts", () => {
     expect(rows).toHaveLength(3);
     expect(rows.flatMap((r) => r.keys)).toHaveLength(26);
   });
+
+  it("décale les rangées d'un nombre de touches (0, 0,5, 1) comme un vrai clavier", () => {
+    expect(heatmapRowsFromCounts({}, {}).map((r) => r.indent)).toEqual(["0", "0.5", "1"]);
+  });
 });

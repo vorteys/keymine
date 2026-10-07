@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Client } from "pg";
 import { isBanned, kickPlayer } from "@/lib/bans";
-import { createInvite, listInvites, redeemInvite, revokeAllInvites, revokeInvite } from "@/lib/invites";
+import { MAX_INVITES_PER_LOBBY, createInvite, listInvites, redeemInvite, revokeAllInvites, revokeInvite } from "@/lib/invites";
 import { isJoinRateLimited, JOIN_ATTEMPT_LIMIT, recordFailedJoin } from "@/lib/join-limit";
 import { joinLobby } from "@/lib/lobby";
 import { needsInvite } from "@/lib/lobby-access";
@@ -108,10 +108,20 @@ describe("liens d'invitation (SALLE-04)", () => {
     const invite = (await createInvite(lobby.id))!;
     expect(await revokeInvite(lobby.id, invite.id)).toBe(true);
     expect(await redeemInvite(invite.token, guest(), "192.0.2.1")).toEqual({ ok: false, reason: "revoked" });
+    expect(await listInvites(lobby.id)).toEqual([]);
 
     const other = (await createInvite(lobby.id))!;
     await client.query(`update lobbies set status = 'closed' where id = $1`, [lobby.id]);
     expect(await redeemInvite(other.token, guest(), "192.0.2.1")).toEqual({ ok: false, reason: "closed" });
+  });
+
+  it("un lien révoqué libère sa place dans la limite de liens", async () => {
+    const { lobby } = await room();
+    const first = (await createInvite(lobby.id))!;
+    for (let i = 1; i < MAX_INVITES_PER_LOBBY; i++) await createInvite(lobby.id);
+    expect(await createInvite(lobby.id)).toBeNull();
+    await revokeInvite(lobby.id, first.id);
+    expect(await createInvite(lobby.id)).not.toBeNull();
   });
 
   it("la fermeture de la salle révoque tous les liens", async () => {
@@ -119,7 +129,7 @@ describe("liens d'invitation (SALLE-04)", () => {
     await createInvite(lobby.id);
     await createInvite(lobby.id);
     await revokeAllInvites(lobby.id);
-    expect((await listInvites(lobby.id)).map((i) => i.status)).toEqual(["revoked", "revoked"]);
+    expect(await listInvites(lobby.id)).toEqual([]);
   });
 });
 
@@ -136,7 +146,7 @@ describe("expulsion (SALLE-07)", () => {
     expect((await client.query(`select 1 from lobby_players where id = $1`, [player.id])).rowCount).toBe(0);
     expect(await isBanned(lobby.id, bob)).toBe(true);
     expect(await joinLobby(lobby, bob)).toEqual({ ok: false, reason: "banned" });
-    expect((await listInvites(lobby.id))[0].status).toBe("revoked");
+    expect(await listInvites(lobby.id)).toEqual([]);
     expect(await redeemInvite(invite.token, bob, "192.0.2.7")).toEqual({ ok: false, reason: "revoked" });
   });
 

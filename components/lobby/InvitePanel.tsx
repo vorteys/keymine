@@ -8,7 +8,7 @@ import type { InviteView } from "@/lib/invites";
 type ApiInvite = Omit<InviteView, "createdAt"> & { createdAt: string };
 
 // SALLE-04 : l'hôte génère un lien par invité, le copie et suit son statut
-// (non utilisé, utilisé par qui, révoqué). `refreshKey` change à chaque mise à jour
+// (non utilisé, utilisé par qui) ; un lien révoqué disparaît de la liste. `refreshKey` change à chaque mise à jour
 // en direct de la salle, ce qui recharge la liste.
 export function InvitePanel({ code, refreshKey }: { code: string; refreshKey: unknown }) {
   const { t } = useLanguage();
@@ -64,14 +64,12 @@ export function InvitePanel({ code, refreshKey }: { code: string; refreshKey: un
   }
 
   const statusText = (i: ApiInvite) =>
-    i.status === "used" ? t("invite.used_by", { name: i.usedBy ?? "?" }) : i.status === "revoked" ? t("invite.revoked") : t("invite.unused");
+    i.status === "used" ? t("invite.used_by", { name: i.usedBy ?? "?" }) : t("invite.unused");
 
   return (
     <PixelPanel className="flex flex-col gap-3 p-5">
       <h2 className="font-pixel text-sm text-[#2b2b2b]">{t("invite.title")}</h2>
-      <p className="text-xl text-[#3a3a3a]">
-        {t("invite.note")}
-      </p>
+      <p className="text-xl text-[#3a3a3a]">{t("invite.note")}</p>
       <form
         className="flex gap-2"
         onSubmit={(e) => {
@@ -98,26 +96,25 @@ export function InvitePanel({ code, refreshKey }: { code: string; refreshKey: un
       )}
       <ul className="flex flex-col gap-2">
         {invites.map((i) => (
-          <li key={i.id} className="flex flex-wrap items-center gap-2 border-b-2 border-dotted border-[#8b8b8b] pb-2">
+          <li
+            key={i.id}
+            className="flex flex-wrap items-center gap-2 border-b-2 border-dotted border-[#8b8b8b] pb-2"
+          >
             <div className="min-w-0 flex-grow leading-tight">
               <div className="truncate text-xl">{i.label ?? t("invite.guest")}</div>
               <div className="text-lg text-[#3a3a3a]">{statusText(i)}</div>
             </div>
-            {i.status !== "revoked" && (
-              <>
-                <button type="button" onClick={() => void copy(i.token)} className="pixel-chip text-lg">
-                  {copied === i.token ? t("invite.copied") : t("invite.copy")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void revoke(i.id)}
-                  aria-label={t("invite.revoke_aria", { name: i.label ?? "" })}
-                  className="pixel-chip text-lg"
-                >
-                  {t("invite.revoke")}
-                </button>
-              </>
-            )}
+            <button type="button" onClick={() => void copy(i.token)} className="pixel-chip text-lg">
+              {copied === i.token ? t("invite.copied") : t("invite.copy")}
+            </button>
+            <button
+              type="button"
+              onClick={() => void revoke(i.id)}
+              aria-label={t("invite.revoke_aria", { name: i.label ?? "" })}
+              className="pixel-chip text-lg"
+            >
+              {t("invite.revoke")}
+            </button>
           </li>
         ))}
         {invites.length === 0 && <li className="text-xl text-[#3a3a3a]">{t("invite.none")}</li>}

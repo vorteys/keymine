@@ -11,7 +11,7 @@ export type InviteView = {
   id: string;
   token: string;
   label: string | null;
-  status: "unused" | "used" | "revoked";
+  status: "unused" | "used";
   usedBy: string | null;
   createdAt: Date;
 };
@@ -23,6 +23,7 @@ export async function createInvite(lobbyId: string, label?: string | null) {
     .selectFrom("lobby_invites")
     .select((eb) => eb.fn.countAll<string>().as("n"))
     .where("lobby_id", "=", lobbyId)
+    .where("revoked_at", "is", null)
     .executeTakeFirst();
   if (Number(count?.n ?? 0) >= MAX_INVITES_PER_LOBBY) return null;
   return db
@@ -32,18 +33,21 @@ export async function createInvite(lobbyId: string, label?: string | null) {
     .executeTakeFirstOrThrow();
 }
 
+// Un lien révoqué disparaît de la liste (et ne compte plus dans la limite) pour que l'hôte
+// puisse réinviter la personne ; la ligne reste en base pour que le lien soit refusé (« révoqué »).
 export async function listInvites(lobbyId: string): Promise<InviteView[]> {
   const rows = await db
     .selectFrom("lobby_invites")
     .selectAll()
     .where("lobby_id", "=", lobbyId)
+    .where("revoked_at", "is", null)
     .orderBy("created_at", "asc")
     .execute();
   return rows.map((r) => ({
     id: r.id,
     token: r.token,
     label: r.label,
-    status: r.revoked_at ? "revoked" : r.claimed_at ? "used" : "unused",
+    status: r.claimed_at ? "used" : "unused",
     usedBy: r.claimed_name,
     createdAt: new Date(r.created_at),
   }));
@@ -61,14 +65,19 @@ export async function revokeInvite(lobbyId: string, inviteId: string): Promise<b
 }
 
 /** Révoque tous les liens utilisés par cette personne (expulsion, SALLE-07). */
-export async function revokeInvitesOf(lobbyId: string, who: { userId?: string | null; guestId?: string | null }) {
+export async function revokeInvitesOf(
+  lobbyId: string,
+  who: { userId?: string | null; guestId?: string | null },
+) {
   await db
     .updateTable("lobby_invites")
     .set({ revoked_at: new Date() })
     .where("lobby_id", "=", lobbyId)
     .where("revoked_at", "is", null)
     .where((eb) =>
-      who.userId ? eb("claimed_user_id", "=", who.userId) : eb("claimed_guest_id", "=", who.guestId ?? ""),
+      who.userId
+        ? eb("claimed_user_id", "=", who.userId)
+        : eb("claimed_guest_id", "=", who.guestId ?? ""),
     )
     .execute();
 }
@@ -92,7 +101,11 @@ export type RedeemResult =
  * (mise à jour atomique : un seul gagnant si deux personnes cliquent en même
  * temps) ; ensuite seule la même adresse IP est acceptée.
  */
-export async function redeemInvite(token: string, identity: Identity, ip: string): Promise<RedeemResult> {
+export async function redeemInvite(
+  token: string,
+  identity: Identity,
+  ip: string,
+): Promise<RedeemResult> {
   const invite = await db
     .selectFrom("lobby_invites")
     .innerJoin("lobbies", "lobbies.id", "lobby_invites.lobby_id")
@@ -128,7 +141,11 @@ export async function redeemInvite(token: string, identity: Identity, ip: string
       .executeTakeFirst();
     if (Number(claimed.numUpdatedRows) > 0) return ok;
     // Quelqu'un l'a pris entre-temps : on retombe sur la vérification d'IP.
-    const fresh = await db.selectFrom("lobby_invites").select("claimed_ip").where("id", "=", invite.id).executeTakeFirst();
+    const fresh = await db
+      .selectFrom("lobby_invites")
+      .select("claimed_ip")
+      .where("id", "=", invite.id)
+      .executeTakeFirst();
     return fresh?.claimed_ip === ip ? ok : { ok: false, reason: "wrong_ip" };
   }
 

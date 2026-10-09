@@ -50,3 +50,14 @@ Les migrations déjà appliquées sont ignorées ; le seed est idempotent.
 - Le WebSocket ne se connecte pas : vérifier que l'URL du site (`DOMAIN`) est exactement celle du navigateur (l'origine est contrôlée) et que `docker compose logs realtime` ne montre pas d'erreur.
 - Changer de domaine : modifier `DOMAIN` puis reconstruire (`--build`), car l'adresse du WebSocket est figée dans le code client au build.
 - OAuth (optionnel) : enregistrer les callbacks `https://<domaine>/api/auth/discord/callback` et `/api/auth/github/callback`.
+
+## 6. Sécurité du serveur
+
+Le déploiement n'expose que les ports 80 et 443 (Caddy) ; Postgres, le site et le serveur temps réel restent dans le réseau interne de Docker. Mesures prises sur le VPS :
+
+- pare-feu `ufw` actif (SSH, 80 et 443 seulement) ;
+- `fail2ban` (prison `sshd`) pour bannir les adresses qui multiplient les échecs de connexion SSH ;
+- mises à jour de sécurité automatiques (`unattended-upgrades`), plus une mise à jour manuelle (`apt update && apt upgrade -y`) suivie d'un redémarrage quand le noyau change ;
+- connexion SSH par mot de passe désactivée (`PasswordAuthentication no` dans `/etc/ssh/sshd_config.d/00-no-password.conf`) : l'accès se fait par la console web du fournisseur.
+
+Vérification rapide : `ufw status`, `fail2ban-client status sshd`, `last -n 6`, `ss -tlnp` et `docker ps`.
